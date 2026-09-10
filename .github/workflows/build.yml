@@ -8,26 +8,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java 11
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.24.0'
 
-      - name: Force recreate android directory with correct structure
+      - name: Clean and create project structure
         run: |
           rm -rf android
-          flutter create --platforms=android --org com.kuanyngne --project-name kuanyngne .
-          yes | flutter doctor --android-licenses || true
+          flutter create --platforms=android --org com.kuanyngne --project-name studious_waffle .
 
-      - name: Get dependencies
+      - name: Fetch dependencies
         run: flutter pub get
 
-      - name: Build Debug APK with verbose output
+      - name: Build Debug APK
         run: flutter build apk --debug --no-tree-shake-icons
 
       - name: Upload APK Artifact
