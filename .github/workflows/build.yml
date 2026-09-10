@@ -18,20 +18,17 @@ jobs:
         with:
           flutter-version: '3.24.x'
 
-      - name: Re-create Android project clean
+      - name: Clean project cache & recreate Android
         run: |
-          rm -rf android
+          rm -rf .dart_tool build android
+          flutter clean
           flutter create --platforms=android --org com.kuanyngne --project-name studious_waffle .
-          cd android && chmod +x gradlew
 
-      - name: Accept Android Licenses
-        run: yes | flutter doctor --android-licenses || true
-
-      - name: Fetch Pub Packages
+      - name: Get dependencies
         run: flutter pub get
 
       - name: Build Debug APK
-        run: flutter build apk --debug --verbose
+        run: flutter build apk --debug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
