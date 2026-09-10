@@ -8,28 +8,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java 11
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.24.0'
 
-      - name: Generate Android project files
-        run: flutter create --platforms=android --project-name=studious_waffle .
+      - name: Re-create Android folder cleanly
+        run: |
+          rm -rf android
+          flutter create --platforms=android --project-name=kuanyngne .
 
-      - name: Accept Android licenses
-        run: yes | flutter doctor --android-licenses || true
+      - name: Fetch Pub Packages
+        run: flutter pub get
 
-      - run: flutter pub get
-
-      - name: Build APK
+      - name: Build Debug APK
         run: flutter build apk --debug
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
