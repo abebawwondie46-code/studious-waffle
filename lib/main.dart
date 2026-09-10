@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const KuanyngneApp());
@@ -14,16 +13,44 @@ class KuanyngneApp extends StatelessWidget {
       title: 'kuanyngne',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF121216),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Color(0xFF18181C),
-          selectedItemColor: Color(0xFFFE2C55),
-          unselectedItemColor: Colors.grey,
+        scaffoldBackgroundColor: const Color(0xFF0D0D13),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFFF2A5F),
+          secondary: Color(0xFF00E5FF),
+          surface: Color(0xFF161622),
         ),
       ),
       home: const MainNavigationScreen(),
     );
   }
+}
+
+class VideoModel {
+  final String id;
+  final String username;
+  final String userAvatar;
+  final String videoUrl;
+  final String caption;
+  final String songTitle;
+  int likes;
+  int commentsCount;
+  int shares;
+  bool isLiked;
+  bool isFollowing;
+
+  VideoModel({
+    required this.id,
+    required this.username,
+    required this.userAvatar,
+    required this.videoUrl,
+    required this.caption,
+    required this.songTitle,
+    required this.likes,
+    required this.commentsCount,
+    required this.shares,
+    this.isLiked = false,
+    this.isFollowing = false,
+  });
 }
 
 class MainNavigationScreen extends StatefulWidget {
@@ -36,7 +63,7 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
+  final List<Widget> _screens = [
     const VideoFeedScreen(),
     const ExploreScreen(),
     const UploadScreen(),
@@ -49,7 +76,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -59,29 +86,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           });
         },
         type: BottomNavigationBarType.fixed,
-        items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Feed'),
-          const BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
+        backgroundColor: const Color(0xFF0D0D13),
+        selectedItemColor: const Color(0xFFFF2A5F),
+        unselectedItemColor: Colors.white54,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        items: const [
           BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFE2C55),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.add, color: Colors.white, size: 20),
-            ),
+            icon: Icon(Icons.home_filled),
+            label: 'Feed',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_box, size: 32, color: Color(0xFFFF2A5F)),
             label: 'Upload',
           ),
-          const BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Activity'),
-          const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications),
+            label: 'Activity',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
   }
 }
 
-// ---------------- Scrollable Feed Screen ----------------
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -90,230 +126,109 @@ class VideoFeedScreen extends StatefulWidget {
 }
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
-  final List<Map<String, dynamic>> _videos = [
-    {
-      'username': '@tech_creator',
-      'caption': 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
-      'audio': 'Trending Beats 2026',
-      'likes': 8400,
-      'comments': 120,
-      'shares': 48,
-      'url': 'https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1187-large.mp4',
-    },
-    {
-      'username': '@kuanyngne_official',
-      'caption': 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne',
-      'audio': 'Original Audio - kuanyngne Sound',
-      'likes': 12500,
-      'comments': 343,
-      'shares': 93,
-      'url': 'https://assets.mixkit.co/videos/preview/mixkit-vertical-video-of-a-full-moon-42885-large.mp4',
-    },
+  final PageController _pageController = PageController();
+  int _selectedFeedTab = 1; // 0: Friends, 1: For You, 2: Following
+
+  final List<VideoModel> _videos = [
+    VideoModel(
+      id: 'v1',
+      username: '@kuanyngne_official',
+      userAvatar: 'https://via.placeholder.com/150',
+      videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
+      caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
+      songTitle: 'Original Audio - kuanyngne Sound',
+      likes: 12500,
+      commentsCount: 342,
+      shares: 89,
+    ),
+    VideoModel(
+      id: 'v2',
+      username: '@tech_creator',
+      userAvatar: 'https://via.placeholder.com/150',
+      videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
+      caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
+      songTitle: 'Trending Beats 2026',
+      likes: 8400,
+      commentsCount: 120,
+      shares: 45,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
-      scrollDirection: Axis.vertical,
-      itemCount: _videos.length,
-      itemBuilder: (context, index) {
-        return SingleVideoItem(videoData: _videos[index]);
-      },
-    );
-  }
-}
-
-class SingleVideoItem extends StatefulWidget {
-  final Map<String, dynamic> videoData;
-  const SingleVideoItem({super.key, required this.videoData});
-
-  @override
-  State<SingleVideoItem> createState() => _SingleVideoItemState();
-}
-
-class _SingleVideoItemState extends State<SingleVideoItem> {
-  late VideoPlayerController _controller;
-  bool _isLiked = false;
-  late int _likeCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _likeCount = widget.videoData['likes'];
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoData['url']))
-      ..initialize().then((_) {
-        setState(() {});
-        _controller.play();
-        _controller.setLooping(true);
-      });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _showCommentsModal() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF18181C),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          height: 350,
-          child: Column(
-            children: [
-              Text(
-                'Comments (${widget.videoData['comments']})',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const Divider(color: Colors.white24),
-              const Expanded(
-                child: Center(
-                  child: Text('No comments yet. Be the first!', style: TextStyle(color: Colors.grey)),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                if (_controller.value.isPlaying) {
-                  _controller.pause();
-                } else {
-                  _controller.play();
-                }
-              });
+          PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            itemCount: _videos.length,
+            itemBuilder: (context, index) {
+              return VideoTile(video: _videos[index]);
             },
-            child: Center(
-              child: _controller.value.isInitialized
-                  ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.movie_creation_outlined, size: 80, color: Colors.grey),
-                        SizedBox(height: 12),
-                        Text('Video Playing...', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                      ],
-                    ),
-            ),
           ),
-          Positioned(
-            right: 12,
-            bottom: 80,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isLiked = !_isLiked;
-                      _isLiked ? _likeCount++ : _likeCount--;
-                    });
-                  },
-                  child: Column(
+          // Top Bar for Search, Friends, For You & Add Friend
+          SafeArea(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 28),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Add Friends feature clicked!')),
+                      );
+                    },
+                  ),
+                  Row(
                     children: [
-                      Icon(
-                        Icons.favorite,
-                        color: _isLiked ? const Color(0xFFFE2C55) : Colors.white,
-                        size: 38,
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedFeedTab = 0),
+                        child: Text(
+                          'Friends',
+                          style: TextStyle(
+                            color: _selectedFeedTab == 0 ? Colors.white : Colors.white54,
+                            fontWeight: _selectedFeedTab == 0 ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text('$_likeCount', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: _showCommentsModal,
-                  child: Column(
-                    children: [
-                      const Icon(Icons.message, color: Colors.white, size: 34),
-                      const SizedBox(height: 4),
-                      Text('${widget.videoData['comments']}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Link copied to clipboard!')),
-                    );
-                  },
-                  child: Column(
-                    children: [
-                      const Icon(Icons.share, color: Colors.white, size: 34),
-                      const SizedBox(height: 4),
-                      Text('${widget.videoData['shares']}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 12,
-            bottom: 20,
-            right: 80,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.videoData['username'],
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  widget.videoData['caption'],
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(Icons.music_note, color: Colors.white, size: 16),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        widget.videoData['audio'],
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: 15),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedFeedTab = 1),
+                        child: Text(
+                          'For You',
+                          style: TextStyle(
+                            color: _selectedFeedTab == 1 ? Colors.white : Colors.white54,
+                            fontWeight: _selectedFeedTab == 1 ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                // የበፊቷ የቀይ መስመር (Progress Bar)
-                Container(
-                  height: 3,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFE2C55),
-                    borderRadius: BorderRadius.circular(2),
+                      const SizedBox(width: 15),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedFeedTab = 2),
+                        child: Text(
+                          'Following',
+                          style: TextStyle(
+                            color: _selectedFeedTab == 2 ? Colors.white : Colors.white54,
+                            fontWeight: _selectedFeedTab == 2 ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.search, color: Colors.white, size: 28),
+                    onPressed: () {
+                      showSearch(context: context, delegate: VideoSearchDelegate());
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -322,7 +237,308 @@ class _SingleVideoItemState extends State<SingleVideoItem> {
   }
 }
 
-// ---------------- Explore Screen ----------------
+class VideoTile extends StatefulWidget {
+  final VideoModel video;
+
+  const VideoTile({super.key, required this.video});
+
+  @override
+  State<VideoTile> createState() => _VideoTileState();
+}
+
+class _VideoTileState extends State<VideoTile> {
+  bool _isPlaying = true;
+  double _playbackPosition = 0.3;
+
+  void _showCommentsBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF161622),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            height: 450,
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${widget.video.commentsCount} Comments',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: 5,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0xFFFF2A5F),
+                          child: Icon(Icons.person, color: Colors.white),
+                        ),
+                        title: Text('User_${index + 1}'),
+                        subtitle: const Text('Awesome 5-minute content on kuanyngne! 🔥'),
+                        trailing: const Icon(Icons.favorite_border, size: 16),
+                      );
+                    },
+                  ),
+                ),
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Add a comment...',
+                    filled: true,
+                    fillColor: Colors.black26,
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.send, color: Color(0xFFFF2A5F)),
+                      onPressed: () {
+                        setState(() {
+                          widget.video.commentsCount++;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _isPlaying = !_isPlaying;
+            });
+          },
+          child: Container(
+            color: Colors.black,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _isPlaying ? Icons.movie_creation : Icons.play_circle_fill,
+                    size: 80,
+                    color: Colors.white38,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _isPlaying ? 'Video Playing...' : 'Paused',
+                    style: const TextStyle(color: Colors.white54, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        Positioned(
+          bottom: 20,
+          left: 0,
+          right: 0,
+          child: Column(
+            children: [
+              SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 2,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                  activeTrackColor: const Color(0xFFFF2A5F),
+                  inactiveTrackColor: Colors.white24,
+                  thumbColor: const Color(0xFFFF2A5F),
+                ),
+                child: Slider(
+                  value: _playbackPosition,
+                  onChanged: (val) {
+                    setState(() {
+                      _playbackPosition = val;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        Positioned(
+          left: 16,
+          bottom: 40,
+          right: 90,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.video.username,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.video.caption,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.music_note, size: 16, color: Colors.white70),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      widget.video.songTitle,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        Positioned(
+          right: 16,
+          bottom: 40,
+          child: Column(
+            children: [
+              // User Avatar with Follow (+) Button
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Color(0xFF161622),
+                    child: Icon(Icons.person, color: Colors.white),
+                  ),
+                  Positioned(
+                    bottom: -8,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            widget.video.isFollowing = !widget.video.isFollowing;
+                          });
+                        },
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF2A5F),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            widget.video.isFollowing ? Icons.check : Icons.add,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    widget.video.isLiked = !widget.video.isLiked;
+                    if (widget.video.isLiked) {
+                      widget.video.likes++;
+                    } else {
+                      widget.video.likes--;
+                    }
+                  });
+                },
+                child: Column(
+                  children: [
+                    Icon(
+                      widget.video.isLiked ? Icons.favorite : Icons.favorite_border,
+                      size: 38,
+                      color: widget.video.isLiked ? const Color(0xFFFF2A5F) : Colors.white,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${widget.video.likes}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: () => _showCommentsBottomSheet(context),
+                child: Column(
+                  children: [
+                    const Icon(Icons.comment, size: 36, color: Colors.white),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${widget.video.commentsCount}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    widget.video.shares++;
+                  });
+                },
+                child: Column(
+                  children: [
+                    const Icon(Icons.share, size: 34, color: Colors.white),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${widget.video.shares}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
 
@@ -330,57 +546,16 @@ class ExploreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Explore', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text('Explore kuanyngne'),
+        backgroundColor: const Color(0xFF0D0D13),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Search videos, creators...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: const Color(0xFF1E1E24),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.8,
-                ),
-                itemCount: 4,
-                itemBuilder: (context, index) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E24),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.play_circle_fill, size: 40, color: Colors.white54),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+      body: const Center(
+        child: Text('Trending 5-Minute Videos & Creators'),
       ),
     );
   }
 }
 
-// ---------------- Upload Screen ----------------
 class UploadScreen extends StatelessWidget {
   const UploadScreen({super.key});
 
@@ -388,68 +563,45 @@ class UploadScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Upload Video (Up to 5 Min)', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text('Upload Video (Up to 5 Min)'),
+        backgroundColor: const Color(0xFF0D0D13),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Container(
               height: 200,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E28),
-                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFF161622),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white12),
               ),
-              child: Column(
+              child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.cloud_upload, size: 50, color: Color(0xFFFE2C55)),
-                  SizedBox(height: 16),
-                  Text(
-                    'Select Video File (Max 5 Minutes)',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
+                children: [
+                  Icon(Icons.cloud_upload, size: 50, color: Color(0xFFFF2A5F)),
+                  SizedBox(height: 8),
+                  Text('Select Video File (Max 5 Minutes)'),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            TextField(
+            const SizedBox(height: 16),
+            const TextField(
               decoration: InputDecoration(
-                hintText: 'Caption & Hashtags',
-                hintStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: const Color(0xFF1E1E28),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Colors.white24),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFFE2C55)),
-                ),
+                labelText: 'Caption & Hashtags',
+                border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFE2C55),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                ),
-                onPressed: () {},
-                child: const Text(
-                  'Upload Video',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF2A5F),
+                minimumSize: const Size(double.infinity, 50),
               ),
+              onPressed: () {},
+              child: const Text('Publish Video', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),
@@ -458,7 +610,6 @@ class UploadScreen extends StatelessWidget {
   }
 }
 
-// ---------------- Activity Screen ----------------
 class ActivityScreen extends StatelessWidget {
   const ActivityScreen({super.key});
 
@@ -466,28 +617,16 @@ class ActivityScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text('Notifications'),
+        backgroundColor: const Color(0xFF0D0D13),
       ),
-      body: ListView.builder(
-        itemCount: 3,
-        itemBuilder: (context, index) {
-          return const ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Color(0xFFFE2C55),
-              child: Icon(Icons.favorite, color: Colors.white),
-            ),
-            title: Text('New Like on your video', style: TextStyle(color: Colors.white)),
-            subtitle: Text('2 hours ago', style: TextStyle(color: Colors.grey)),
-          );
-        },
+      body: const Center(
+        child: Text('All Notifications & Likes'),
       ),
     );
   }
 }
 
-// ---------------- Profile Screen ----------------
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -495,9 +634,14 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text('My Profile'),
+        backgroundColor: const Color(0xFF0D0D13),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: Center(
         child: Column(
@@ -508,28 +652,99 @@ class ProfileScreen extends StatelessWidget {
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [Color(0xFFFE2C55), Color(0xFF25F4EE)],
+                  colors: [Color(0xFFFF2A5F), Color(0xFF00E5FF)],
                 ),
               ),
               child: const CircleAvatar(
-                radius: 50,
-                backgroundColor: Color(0xFF121216),
-                child: Icon(Icons.person, size: 60, color: Colors.white),
+                radius: 45,
+                backgroundColor: Color(0xFF0D0D13),
+                child: Icon(Icons.person, size: 45, color: Colors.white),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 15),
             const Text(
               '@kuanyngne_creator',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             const SizedBox(height: 8),
             const Text(
               '5-Minute High Quality Video Creator',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
+              style: TextStyle(color: Colors.white54, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            // User Statistics (Following, Followers, Likes)
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _ProfileStatColumn(count: '128', label: 'Following'),
+                SizedBox(width: 30),
+                _ProfileStatColumn(count: '12.4K', label: 'Followers'),
+                SizedBox(width: 30),
+                _ProfileStatColumn(count: '85.2K', label: 'Likes'),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProfileStatColumn extends StatelessWidget {
+  final String count;
+  final String label;
+
+  const _ProfileStatColumn({required this.count, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          count,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+// Search Delegate UI
+class VideoSearchDelegate extends SearchDelegate {
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () => query = '',
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return Center(
+      child: Text('Search Results for "$query"'),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return const Center(
+      child: Text('Search videos, creators, or hashtags...'),
     );
   }
 }
