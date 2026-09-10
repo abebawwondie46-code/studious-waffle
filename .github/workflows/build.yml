@@ -18,11 +18,10 @@ jobs:
         with:
           flutter-version: '3.24.x'
 
-      - name: Clean project cache & recreate Android
+      - name: Setup Android project
         run: |
-          rm -rf .dart_tool build android
-          flutter clean
-          flutter create --platforms=android --org com.kuanyngne --project-name studious_waffle .
+          rm -rf android
+          flutter create --platforms=android --org com.kuanyngne --project-name kuanyngne .
 
       - name: Get dependencies
         run: flutter pub get
