@@ -8,24 +8,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.x'
 
-      - name: Enable Android platform
-        run: flutter config --enable-android
-
-      - name: Ensure Android folder exists
-        run: |
-          if [ ! -d "android" ]; then
-            flutter create . --offline
-          fi
+      - name: Generate Android project files
+        run: flutter create --platforms=android .
 
       - run: flutter pub get
 
@@ -34,4 +22,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: build/app/outputs/flutter-apk/app-debug.apk          path: build/app/outputs/flutter-apk/app-debug.apk
