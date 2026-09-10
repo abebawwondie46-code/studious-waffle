@@ -8,11 +8,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java 11
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
 
       - uses: subosito/flutter-action@v2
         with:
@@ -21,10 +21,13 @@ jobs:
       - name: Generate Android project files
         run: flutter create --platforms=android --project-name=studious_waffle .
 
+      - name: Accept Android licenses
+        run: yes | flutter doctor --android-licenses || true
+
       - run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --debug --suppress-analytics
+        run: flutter build apk --debug
 
       - uses: actions/upload-artifact@v4
         with:
