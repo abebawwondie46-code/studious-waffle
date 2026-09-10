@@ -1,5 +1,5 @@
 name: kuanyngne
-description: "A new Flutter video sharing project."
+description: "A TikTok-style video sharing app."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  video_player: ^2.8.2
 
 dev_dependencies:
   flutter_test:
