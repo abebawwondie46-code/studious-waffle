@@ -34,8 +34,10 @@ class VideoModel {
   final String songTitle;
   int likes;
   int commentsCount;
+  int savedCount;
   int shares;
   bool isLiked;
+  bool isSaved;
   bool isFollowing;
 
   VideoModel({
@@ -47,8 +49,10 @@ class VideoModel {
     required this.songTitle,
     required this.likes,
     required this.commentsCount,
+    this.savedCount = 1200,
     required this.shares,
     this.isLiked = false,
+    this.isSaved = false,
     this.isFollowing = false,
   });
 }
@@ -94,22 +98,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_filled),
-            label: 'Feed',
+            label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.explore),
-            label: 'Explore',
+            icon: Icon(Icons.people_outline),
+            label: 'Friends',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box, size: 32, color: Color(0xFFFF2A5F)),
-            label: 'Upload',
+            label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Activity',
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Inbox',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+            icon: Icon(Icons.person_outline),
             label: 'Profile',
           ),
         ],
@@ -127,7 +131,7 @@ class VideoFeedScreen extends StatefulWidget {
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
-  int _selectedFeedTab = 1; // 0: Friends, 1: For You, 2: Following
+  int _selectedFeedTab = 2; // 0: Live, 1: Friends, 2: For You, 3: Following
 
   final List<VideoModel> _videos = [
     VideoModel(
@@ -139,7 +143,8 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
       songTitle: 'Original Audio - kuanyngne Sound',
       likes: 12500,
       commentsCount: 342,
-      shares: 89,
+      savedCount: 2409,
+      shares: 751,
     ),
     VideoModel(
       id: 'v2',
@@ -150,7 +155,8 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
       songTitle: 'Trending Beats 2026',
       likes: 8400,
       commentsCount: 120,
-      shares: 45,
+      savedCount: 890,
+      shares: 310,
     ),
   ];
 
@@ -167,7 +173,6 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
               return VideoTile(video: _videos[index]);
             },
           ),
-          // Top Bar for Search, Friends, For You & Add Friend
           SafeArea(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -175,31 +180,15 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 28),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Add Friends feature clicked!')),
-                      );
-                    },
+                    icon: const Icon(Icons.live_tv_rounded, color: Colors.white, size: 26),
+                    onPressed: () {},
                   ),
                   Row(
                     children: [
                       GestureDetector(
-                        onTap: () => setState(() => _selectedFeedTab = 0),
-                        child: Text(
-                          'Friends',
-                          style: TextStyle(
-                            color: _selectedFeedTab == 0 ? Colors.white : Colors.white54,
-                            fontWeight: _selectedFeedTab == 0 ? FontWeight.bold : FontWeight.normal,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      GestureDetector(
                         onTap: () => setState(() => _selectedFeedTab = 1),
                         child: Text(
-                          'For You',
+                          'Friends',
                           style: TextStyle(
                             color: _selectedFeedTab == 1 ? Colors.white : Colors.white54,
                             fontWeight: _selectedFeedTab == 1 ? FontWeight.bold : FontWeight.normal,
@@ -207,14 +196,38 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 15),
+                      const SizedBox(width: 14),
                       GestureDetector(
                         onTap: () => setState(() => _selectedFeedTab = 2),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'For You',
+                              style: TextStyle(
+                                color: _selectedFeedTab == 2 ? Colors.white : Colors.white54,
+                                fontWeight: _selectedFeedTab == 2 ? FontWeight.bold : FontWeight.normal,
+                                fontSize: 16,
+                              ),
+                            ),
+                            if (_selectedFeedTab == 2)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                height: 2,
+                                width: 24,
+                                color: Colors.white,
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedFeedTab = 3),
                         child: Text(
                           'Following',
                           style: TextStyle(
-                            color: _selectedFeedTab == 2 ? Colors.white : Colors.white54,
-                            fontWeight: _selectedFeedTab == 2 ? FontWeight.bold : FontWeight.normal,
+                            color: _selectedFeedTab == 3 ? Colors.white : Colors.white54,
+                            fontWeight: _selectedFeedTab == 3 ? FontWeight.bold : FontWeight.normal,
                             fontSize: 16,
                           ),
                         ),
@@ -246,9 +259,25 @@ class VideoTile extends StatefulWidget {
   State<VideoTile> createState() => _VideoTileState();
 }
 
-class _VideoTileState extends State<VideoTile> {
+class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMixin {
   bool _isPlaying = true;
   double _playbackPosition = 0.3;
+  late AnimationController _discController;
+
+  @override
+  void initState() {
+    super.initState();
+    _discController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _discController.dispose();
+    super.dispose();
+  }
 
   void _showCommentsBottomSheet(BuildContext context) {
     showModalBottomSheet(
@@ -263,14 +292,14 @@ class _VideoTileState extends State<VideoTile> {
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          child: Container(
+          child: SizedBox(
             height: 450,
-            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(
                   child: Container(
+                    margin: const EdgeInsets.only(top: 10),
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
@@ -279,15 +308,13 @@ class _VideoTileState extends State<VideoTile> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  '${widget.video.commentsCount} Comments',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    '${widget.video.commentsCount} Comments',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
-                const SizedBox(height: 12),
                 Expanded(
                   child: ListView.builder(
                     itemCount: 5,
@@ -298,29 +325,32 @@ class _VideoTileState extends State<VideoTile> {
                           child: Icon(Icons.person, color: Colors.white),
                         ),
                         title: Text('User_${index + 1}'),
-                        subtitle: const Text('Awesome 5-minute content on kuanyngne! 🔥'),
+                        subtitle: const Text('Awesome content! 🔥'),
                         trailing: const Icon(Icons.favorite_border, size: 16),
                       );
                     },
                   ),
                 ),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Add a comment...',
-                    filled: true,
-                    fillColor: Colors.black26,
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.send, color: Color(0xFFFF2A5F)),
-                      onPressed: () {
-                        setState(() {
-                          widget.video.commentsCount++;
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      borderSide: BorderSide.none,
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Add a comment...',
+                      filled: true,
+                      fillColor: Colors.black26,
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.send, color: Color(0xFFFF2A5F)),
+                        onPressed: () {
+                          setState(() {
+                            widget.video.commentsCount++;
+                          });
+                          Navigator.pop(context);
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
@@ -340,6 +370,11 @@ class _VideoTileState extends State<VideoTile> {
           onTap: () {
             setState(() {
               _isPlaying = !_isPlaying;
+              if (_isPlaying) {
+                _discController.repeat();
+              } else {
+                _discController.stop();
+              }
             });
           },
           child: Container(
@@ -364,36 +399,34 @@ class _VideoTileState extends State<VideoTile> {
           ),
         ),
 
+        // Progress Bar (Slider)
         Positioned(
-          bottom: 20,
+          bottom: 12,
           left: 0,
           right: 0,
-          child: Column(
-            children: [
-              SliderTheme(
-                data: SliderThemeData(
-                  trackHeight: 2,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                  activeTrackColor: const Color(0xFFFF2A5F),
-                  inactiveTrackColor: Colors.white24,
-                  thumbColor: const Color(0xFFFF2A5F),
-                ),
-                child: Slider(
-                  value: _playbackPosition,
-                  onChanged: (val) {
-                    setState(() {
-                      _playbackPosition = val;
-                    });
-                  },
-                ),
-              ),
-            ],
+          child: SliderTheme(
+            data: SliderThemeData(
+              trackHeight: 2,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
+              activeTrackColor: Colors.white,
+              inactiveTrackColor: Colors.white24,
+              thumbColor: Colors.white,
+            ),
+            child: Slider(
+              value: _playbackPosition,
+              onChanged: (val) {
+                setState(() {
+                  _playbackPosition = val;
+                });
+              },
+            ),
           ),
         ),
 
+        // Bottom Left Video Details
         Positioned(
           left: 16,
-          bottom: 40,
+          bottom: 35,
           right: 90,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,19 +464,27 @@ class _VideoTileState extends State<VideoTile> {
           ),
         ),
 
+        // Right Action Sidebar
         Positioned(
-          right: 16,
-          bottom: 40,
+          right: 12,
+          bottom: 30,
           child: Column(
             children: [
-              // User Avatar with Follow (+) Button
+              // User Avatar with (+) Follow
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  const CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Color(0xFF161622),
-                    child: Icon(Icons.person, color: Colors.white),
+                  Container(
+                    padding: const EdgeInsets.all(1.5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const CircleAvatar(
+                      radius: 23,
+                      backgroundColor: Color(0xFF161622),
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
                   ),
                   Positioned(
                     bottom: -8,
@@ -473,6 +514,8 @@ class _VideoTileState extends State<VideoTile> {
                 ],
               ),
               const SizedBox(height: 20),
+
+              // Like Button
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -487,11 +530,11 @@ class _VideoTileState extends State<VideoTile> {
                 child: Column(
                   children: [
                     Icon(
-                      widget.video.isLiked ? Icons.favorite : Icons.favorite_border,
+                      widget.video.isLiked ? Icons.favorite : Icons.favorite_rounded,
                       size: 38,
                       color: widget.video.isLiked ? const Color(0xFFFF2A5F) : Colors.white,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       '${widget.video.likes}',
                       style: const TextStyle(color: Colors.white, fontSize: 12),
@@ -499,13 +542,15 @@ class _VideoTileState extends State<VideoTile> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Comment Button
               GestureDetector(
                 onTap: () => _showCommentsBottomSheet(context),
                 child: Column(
                   children: [
-                    const Icon(Icons.comment, size: 36, color: Colors.white),
-                    const SizedBox(height: 4),
+                    const Icon(Icons.comment_rounded, size: 36, color: Colors.white),
+                    const SizedBox(height: 2),
                     Text(
                       '${widget.video.commentsCount}',
                       style: const TextStyle(color: Colors.white, fontSize: 12),
@@ -513,7 +558,38 @@ class _VideoTileState extends State<VideoTile> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Save / Bookmark Button
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    widget.video.isSaved = !widget.video.isSaved;
+                    if (widget.video.isSaved) {
+                      widget.video.savedCount++;
+                    } else {
+                      widget.video.savedCount--;
+                    }
+                  });
+                },
+                child: Column(
+                  children: [
+                    Icon(
+                      widget.video.isSaved ? Icons.bookmark : Icons.bookmark_rounded,
+                      size: 36,
+                      color: widget.video.isSaved ? Colors.amber : Colors.white,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${widget.video.savedCount}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Share Button (Modern TikTok Curved Arrow)
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -522,13 +598,37 @@ class _VideoTileState extends State<VideoTile> {
                 },
                 child: Column(
                   children: [
-                    const Icon(Icons.share, size: 34, color: Colors.white),
-                    const SizedBox(height: 4),
+                    Transform.scale(
+                      scaleX: -1, // Flip arrow horizontally
+                      child: const Icon(Icons.reply_sharp, size: 38, color: Colors.white),
+                    ),
+                    const SizedBox(height: 2),
                     Text(
                       '${widget.video.shares}',
                       style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Rotating Vinyl Music Album Disc
+              RotationTransition(
+                turns: _discController,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF161622),
+                    shape: BoxShape.circle,
+                    gradient: SweepGradient(
+                      colors: [Colors.black, Colors.white12, Colors.black],
+                    ),
+                  ),
+                  child: const CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.black,
+                    child: Icon(Icons.music_note, size: 12, color: Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -672,7 +772,6 @@ class ProfileScreen extends StatelessWidget {
               style: TextStyle(color: Colors.white54, fontSize: 13),
             ),
             const SizedBox(height: 20),
-            // User Statistics (Following, Followers, Likes)
             const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -714,7 +813,6 @@ class _ProfileStatColumn extends StatelessWidget {
   }
 }
 
-// Search Delegate UI
 class VideoSearchDelegate extends SearchDelegate {
   @override
   List<Widget>? buildActions(BuildContext context) {
