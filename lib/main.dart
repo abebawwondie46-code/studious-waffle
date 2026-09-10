@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const KuanyngneApp());
@@ -27,24 +28,69 @@ class MainFeedScreen extends StatefulWidget {
 
 class _MainFeedScreenState extends State<MainFeedScreen> {
   int _selectedIndex = 0;
+  late VideoPlayerController _controller;
+  bool _isLiked = false;
+  bool _isSaved = false;
+  int _likeCount = 12400;
+
+  // Sample network video
+  final String sampleVideoUrl =
+      'https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1187-large.mp4';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(sampleVideoUrl))
+      ..initialize().then((_) {
+        setState(() {});
+        _controller.play();
+        _controller.setLooping(true);
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Background Video Placeholder
-          Container(
-            color: Colors.black,
-            child: const Center(
+          // Video Player Background with Play/Pause on Tap
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                if (_controller.value.isPlaying) {
+                  _controller.pause();
+                } else {
+                  _controller.play();
+                }
+              });
+            },
+            child: Center(
+              child: _controller.value.isInitialized
+                  ? AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: VideoPlayer(_controller),
+                    )
+                  : const CircularProgressIndicator(color: Colors.white),
+            ),
+          ),
+
+          // Play Icon Overlay when paused
+          if (_controller.value.isInitialized && !_controller.value.isPlaying)
+            const Center(
               child: Icon(
-                Icons.play_circle_outline,
+                Icons.play_arrow,
                 size: 80,
                 color: Colors.white54,
               ),
             ),
-          ),
-          
+
           // Right Side Action Buttons
           Positioned(
             right: 12,
@@ -52,18 +98,59 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildActionButton(Icons.favorite, '12.4K'),
-                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isLiked = !_isLiked;
+                      _isLiked ? _likeCount++ : _likeCount--;
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.favorite,
+                        color: _isLiked ? Colors.red : Colors.white,
+                        size: 38,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$_likeCount',
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
                 _buildActionButton(Icons.comment, '1,024'),
-                const SizedBox(height: 16),
-                _buildActionButton(Icons.bookmark, '432'),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isSaved = !_isSaved;
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.bookmark,
+                        color: _isSaved ? Colors.yellow : Colors.white,
+                        size: 38,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Save',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
                 _buildActionButton(Icons.share, 'Share'),
               ],
             ),
           ),
 
-          // Bottom Left Video Description
+          // Bottom Left Video Information
           Positioned(
             left: 12,
             bottom: 20,
@@ -82,7 +169,7 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Welcome to kuanyngne video feed! #flutter #tiktok #app',
+                  'Welcome to kuanyngne video feed! Tap screen to play/pause. #flutter #tiktok',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.white70, fontSize: 14),
@@ -117,7 +204,7 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
   Widget _buildActionButton(IconData icon, String label) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 32),
+        Icon(icon, color: Colors.white, size: 36),
         const SizedBox(height: 4),
         Text(
           label,
