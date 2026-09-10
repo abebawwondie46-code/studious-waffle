@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const KuanyngneApp());
@@ -135,12 +136,13 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
   int _selectedFeedTab = 2; // 0: Live, 1: Friends, 2: For You, 3: Following
 
+  // ከኢንተርኔት የሚጫኑ የቀጥታ ቪዲዮዎች (Online Live Video URLs)
   final List<VideoModel> _videos = [
     VideoModel(
       id: 'v1',
       username: '@kuanyngne_official',
       userAvatar: 'https://via.placeholder.com/150',
-      videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
       songTitle: 'Original Audio - kuanyngne Sound',
       likes: 12500,
@@ -152,7 +154,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
       id: 'v2',
       username: '@tech_creator',
       userAvatar: 'https://via.placeholder.com/150',
-      videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
       caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
       songTitle: 'Trending Beats 2026',
       likes: 8400,
@@ -262,8 +264,10 @@ class VideoTile extends StatefulWidget {
 }
 
 class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMixin {
+  late VideoPlayerController _videoController;
+  bool _isInitialized = false;
   bool _isPlaying = true;
-  double _playbackPosition = 0.3;
+  double _playbackPosition = 0.0;
   bool _showDoubleTapHeart = false;
   double _playbackSpeed = 1.0;
   late AnimationController _discController;
@@ -275,15 +279,34 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
       vsync: this,
       duration: const Duration(seconds: 5),
     )..repeat();
+
+    // የኢንተርኔት ቪዲዮ መያያዣ (Network Video Player Initialization)
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.video.videoUrl))
+      ..initialize().then((_) {
+        setState(() {
+          _isInitialized = true;
+        });
+        _videoController.play();
+        _videoController.setLooping(true);
+      });
+
+    _videoController.addListener(() {
+      if (_videoController.value.isInitialized) {
+        setState(() {
+          _playbackPosition = _videoController.value.position.inMilliseconds /
+              _videoController.value.duration.inMilliseconds;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _videoController.dispose();
     _discController.dispose();
     super.dispose();
   }
 
-  // Share BottomSheet Options
   void _showShareOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -382,7 +405,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
     );
   }
 
-  // Quality Selector Dialog
   void _showQualitySelector() {
     showDialog(
       context: context,
@@ -499,7 +521,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Main Gesture Detector for Tap & Double Tap
+        // Internet Live Video Screen Display
         GestureDetector(
           onDoubleTap: () {
             setState(() {
@@ -521,8 +543,10 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             setState(() {
               _isPlaying = !_isPlaying;
               if (_isPlaying) {
+                _videoController.play();
                 _discController.repeat();
               } else {
+                _videoController.pause();
                 _discController.stop();
               }
             });
@@ -530,26 +554,27 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           child: Container(
             color: Colors.black,
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _isPlaying ? Icons.movie_creation : Icons.play_circle_fill,
-                    size: 80,
-                    color: Colors.white38,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _isPlaying ? 'Video Playing...' : 'Paused',
-                    style: const TextStyle(color: Colors.white54, fontSize: 16),
-                  ),
-                ],
-              ),
+              child: _isInitialized
+                  ? AspectRatio(
+                      aspectRatio: _videoController.value.aspectRatio,
+                      child: VideoPlayer(_videoController),
+                    )
+                  : const CircularProgressIndicator(color: Color(0xFFFF2A5F)),
             ),
           ),
         ),
 
-        // Double Tap Animated Heart Overlay
+        // Pause Icon Overlay
+        if (!_isPlaying)
+          const Center(
+            child: Icon(
+              Icons.play_circle_fill,
+              size: 80,
+              color: Colors.white54,
+            ),
+          ),
+
+        // Double Tap Animated Heart
         if (_showDoubleTapHeart)
           const Center(
             child: Icon(
@@ -559,7 +584,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ),
           ),
 
-        // Quality Switcher Tag (Top Right - Exclusive Feature)
+        // Quality Switcher Tag (Top Right)
         Positioned(
           top: 50,
           right: 16,
@@ -600,6 +625,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                 } else {
                   _playbackSpeed = 1.0;
                 }
+                _videoController.setPlaybackSpeed(_playbackSpeed);
               });
             },
             child: Container(
@@ -616,7 +642,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Progress Bar (Slider)
+        // Progress Bar (Slider synced with Network Video)
         Positioned(
           bottom: 12,
           left: 0,
@@ -630,10 +656,13 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               thumbColor: Colors.white,
             ),
             child: Slider(
-              value: _playbackPosition,
+              value: _playbackPosition.clamp(0.0, 1.0),
               onChanged: (val) {
                 setState(() {
                   _playbackPosition = val;
+                  final duration = _videoController.value.duration;
+                  final newPosition = duration * val;
+                  _videoController.seekTo(newPosition);
                 });
               },
             ),
@@ -806,7 +835,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
-              // Share Button (Triggers Social Apps Bottom Sheet)
+              // Share Button
               GestureDetector(
                 onTap: () => _showShareOptions(context),
                 child: Column(
@@ -825,7 +854,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 18),
 
-              // Rotating Vinyl Music Album Disc
+              // Rotating Vinyl Music Disc
               RotationTransition(
                 turns: _discController,
                 child: Container(
