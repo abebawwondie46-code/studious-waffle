@@ -43,9 +43,9 @@ class _FeedScreenState extends State<FeedScreen> {
           Positioned.fill(
             child: Container(
               color: Colors.black,
-              child: Column(
+              child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Icon(Icons.movie_creation_outlined, size: 80, color: Colors.white54),
                   SizedBox(height: 12),
                   Text(
