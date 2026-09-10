@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Supabase Initialization (የእርስዎን URL እና AnonKey እዚህ ጋር ይተኩ)
+  await Supabase.initialize(
+    url: 'YOUR_SUPABASE_URL',
+    anonKey: 'YOUR_SUPABASE_ANON_KEY',
+  );
+
   runApp(const KuanyngneApp());
 }
+
+final supabase = Supabase.instance.client;
 
 class KuanyngneApp extends StatelessWidget {
   const KuanyngneApp({super.key});
@@ -58,6 +69,21 @@ class VideoModel {
     this.isFollowing = false,
     this.currentQuality = '1080p',
   });
+
+  factory VideoModel.fromMap(Map<String, dynamic> map) {
+    return VideoModel(
+      id: map['id']?.toString() ?? '',
+      username: map['username'] ?? '@user',
+      userAvatar: map['user_avatar'] ?? 'https://via.placeholder.com/150',
+      videoUrl: map['video_url'] ?? '',
+      caption: map['caption'] ?? '',
+      songTitle: map['song_title'] ?? 'Original Sound',
+      likes: map['likes'] ?? 0,
+      commentsCount: map['comments_count'] ?? 0,
+      savedCount: map['saved_count'] ?? 0,
+      shares: map['shares'] ?? 0,
+    );
+  }
 }
 
 class MainNavigationScreen extends StatefulWidget {
@@ -134,47 +160,63 @@ class VideoFeedScreen extends StatefulWidget {
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
-  int _selectedFeedTab = 2; // 0: Live, 1: Friends, 2: For You, 3: Following
+  int _selectedFeedTab = 2;
 
-  // ከኢንተርኔት የሚጫኑ የቀጥታ ቪዲዮዎች (Online Live Video URLs)
-  final List<VideoModel> _videos = [
-    VideoModel(
-      id: 'v1',
-      username: '@kuanyngne_official',
-      userAvatar: 'https://via.placeholder.com/150',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
-      songTitle: 'Original Audio - kuanyngne Sound',
-      likes: 12500,
-      commentsCount: 342,
-      savedCount: 2409,
-      shares: 751,
-    ),
-    VideoModel(
-      id: 'v2',
-      username: '@tech_creator',
-      userAvatar: 'https://via.placeholder.com/150',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
-      songTitle: 'Trending Beats 2026',
-      likes: 8400,
-      commentsCount: 121,
-      savedCount: 890,
-      shares: 316,
-    ),
-  ];
+  // Fetch Videos directly from Supabase Database Stream
+  final Stream<List<Map<String, dynamic>>> _videosStream =
+      supabase.from('videos').stream(primaryKey: ['id']);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          PageView.builder(
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            itemCount: _videos.length,
-            itemBuilder: (context, index) {
-              return VideoTile(video: _videos[index]);
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _videosStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFF2A5F)),
+                );
+              }
+              if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                // Fallback Sample Videos if Supabase Table is empty
+                final fallbackVideos = [
+                  VideoModel(
+                    id: 'v1',
+                    username: '@kuanyngne_official',
+                    userAvatar: 'https://via.placeholder.com/150',
+                    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+                    caption: 'Welcome to kuanyngne! Professional Video Sharing Feed 🔥 #kuanyngne',
+                    songTitle: 'Original Audio - kuanyngne Sound',
+                    likes: 12500,
+                    commentsCount: 342,
+                    savedCount: 2409,
+                    shares: 751,
+                  ),
+                ];
+                return PageView.builder(
+                  controller: _pageController,
+                  scrollDirection: Axis.vertical,
+                  itemCount: fallbackVideos.length,
+                  itemBuilder: (context, index) {
+                    return VideoTile(video: fallbackVideos[index]);
+                  },
+                );
+              }
+
+              final videos = snapshot.data!
+                  .map((data) => VideoModel.fromMap(data))
+                  .toList();
+
+              return PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.vertical,
+                itemCount: videos.length,
+                itemBuilder: (context, index) {
+                  return VideoTile(video: videos[index]);
+                },
+              );
             },
           ),
           SafeArea(
@@ -280,18 +322,19 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
       duration: const Duration(seconds: 5),
     )..repeat();
 
-    // የኢንተርኔት ቪዲዮ መያያዣ (Network Video Player Initialization)
     _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.video.videoUrl))
       ..initialize().then((_) {
-        setState(() {
-          _isInitialized = true;
-        });
-        _videoController.play();
-        _videoController.setLooping(true);
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+          _videoController.play();
+          _videoController.setLooping(true);
+        }
       });
 
     _videoController.addListener(() {
-      if (_videoController.value.isInitialized) {
+      if (_videoController.value.isInitialized && mounted) {
         setState(() {
           _playbackPosition = _videoController.value.position.inMilliseconds /
               _videoController.value.duration.inMilliseconds;
@@ -305,6 +348,25 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
     _videoController.dispose();
     _discController.dispose();
     super.dispose();
+  }
+
+  // Update Likes in Supabase
+  Future<void> _toggleLikeInSupabase() async {
+    setState(() {
+      widget.video.isLiked = !widget.video.isLiked;
+      if (widget.video.isLiked) {
+        widget.video.likes++;
+      } else {
+        widget.video.likes--;
+      }
+    });
+
+    try {
+      await supabase
+          .from('videos')
+          .update({'likes': widget.video.likes})
+          .eq('id', widget.video.id);
+    } catch (_) {}
   }
 
   void _showShareOptions(BuildContext context) {
@@ -379,7 +441,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
 
   Widget _buildShareAppTile(IconData icon, String name, Color color) {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         setState(() {
           widget.video.shares++;
         });
@@ -387,6 +449,12 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Shared to $name!')),
         );
+        try {
+          await supabase
+              .from('videos')
+              .update({'shares': widget.video.shares})
+              .eq('id', widget.video.id);
+        } catch (_) {}
       },
       child: Container(
         margin: const EdgeInsets.only(right: 18),
@@ -521,15 +589,11 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Internet Live Video Screen Display
         GestureDetector(
           onDoubleTap: () {
+            _toggleLikeInSupabase();
             setState(() {
               _showDoubleTapHeart = true;
-              if (!widget.video.isLiked) {
-                widget.video.isLiked = true;
-                widget.video.likes++;
-              }
             });
             Future.delayed(const Duration(milliseconds: 800), () {
               if (mounted) {
@@ -564,7 +628,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Pause Icon Overlay
         if (!_isPlaying)
           const Center(
             child: Icon(
@@ -574,7 +637,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ),
           ),
 
-        // Double Tap Animated Heart
         if (_showDoubleTapHeart)
           const Center(
             child: Icon(
@@ -584,7 +646,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ),
           ),
 
-        // Quality Switcher Tag (Top Right)
         Positioned(
           top: 50,
           right: 16,
@@ -611,7 +672,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Playback Speed Controller Button
         Positioned(
           top: 90,
           right: 16,
@@ -642,7 +702,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Progress Bar (Slider synced with Network Video)
         Positioned(
           bottom: 12,
           left: 0,
@@ -669,7 +728,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Bottom Left Video Details
         Positioned(
           left: 16,
           bottom: 35,
@@ -710,13 +768,11 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Right Action Sidebar
         Positioned(
           right: 12,
           bottom: 30,
           child: Column(
             children: [
-              // User Avatar with (+) Follow
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -761,18 +817,8 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 20),
 
-              // Like Button
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    widget.video.isLiked = !widget.video.isLiked;
-                    if (widget.video.isLiked) {
-                      widget.video.likes++;
-                    } else {
-                      widget.video.likes--;
-                    }
-                  });
-                },
+                onTap: _toggleLikeInSupabase,
                 child: Column(
                   children: [
                     Icon(
@@ -790,7 +836,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
-              // Comment Button
               GestureDetector(
                 onTap: () => _showCommentsBottomSheet(context),
                 child: Column(
@@ -806,7 +851,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
-              // Save / Bookmark Button
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -835,7 +879,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
-              // Share Button
               GestureDetector(
                 onTap: () => _showShareOptions(context),
                 child: Column(
@@ -854,7 +897,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 18),
 
-              // Rotating Vinyl Music Disc
               RotationTransition(
                 turns: _discController,
                 child: Container(
@@ -892,7 +934,7 @@ class ExploreScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF0D0D13),
       ),
       body: const Center(
-        child: Text('Trending 5-Minute Videos & Creators'),
+        child: Text('Trending Videos & Creators'),
       ),
     );
   }
@@ -905,7 +947,7 @@ class UploadScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Upload Video (Up to 5 Min)'),
+        title: const Text('Upload Video'),
         backgroundColor: const Color(0xFF0D0D13),
       ),
       body: Padding(
@@ -925,7 +967,7 @@ class UploadScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.cloud_upload, size: 50, color: Color(0xFFFF2A5F)),
                   SizedBox(height: 8),
-                  Text('Select Video File (Max 5 Minutes)'),
+                  Text('Select Video File'),
                 ],
               ),
             ),
@@ -1010,7 +1052,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              '5-Minute High Quality Video Creator',
+              'High Quality Video Creator',
               style: TextStyle(color: Colors.white54, fontSize: 13),
             ),
             const SizedBox(height: 20),
