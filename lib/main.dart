@@ -39,6 +39,7 @@ class VideoModel {
   bool isLiked;
   bool isSaved;
   bool isFollowing;
+  String currentQuality;
 
   VideoModel({
     required this.id,
@@ -54,6 +55,7 @@ class VideoModel {
     this.isLiked = false,
     this.isSaved = false,
     this.isFollowing = false,
+    this.currentQuality = '1080p',
   });
 }
 
@@ -154,9 +156,9 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
       caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
       songTitle: 'Trending Beats 2026',
       likes: 8400,
-      commentsCount: 120,
+      commentsCount: 121,
       savedCount: 890,
-      shares: 310,
+      shares: 316,
     ),
   ];
 
@@ -175,7 +177,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
           ),
           SafeArea(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -262,6 +264,8 @@ class VideoTile extends StatefulWidget {
 class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMixin {
   bool _isPlaying = true;
   double _playbackPosition = 0.3;
+  bool _showDoubleTapHeart = false;
+  double _playbackSpeed = 1.0;
   late AnimationController _discController;
 
   @override
@@ -277,6 +281,135 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   void dispose() {
     _discController.dispose();
     super.dispose();
+  }
+
+  // Share BottomSheet Options
+  void _showShareOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161622),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: 280,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Share video to',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildShareAppTile(Icons.send, 'Telegram', const Color(0xFF0088CC)),
+                    _buildShareAppTile(Icons.chat_bubble, 'WhatsApp', const Color(0xFF25D366)),
+                    _buildShareAppTile(Icons.facebook, 'Facebook', const Color(0xFF1877F2)),
+                    _buildShareAppTile(Icons.camera_alt, 'Instagram', const Color(0xE1306C)),
+                    _buildShareAppTile(Icons.link, 'Copy Link', const Color(0xFF4A4A6A)),
+                  ],
+                ),
+              ),
+              const Divider(color: Colors.white12, height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Video Download Started!')),
+                      );
+                    },
+                    icon: const Icon(Icons.download, color: Colors.white),
+                    label: const Text('Save Video', style: TextStyle(color: Colors.white)),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.report, color: Colors.redAccent),
+                    label: const Text('Report', style: TextStyle(color: Colors.redAccent)),
+                  ),
+                ],
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildShareAppTile(IconData icon, String name, Color color) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          widget.video.shares++;
+        });
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Shared to $name!')),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 18),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: color,
+              child: Icon(icon, color: Colors.white, size: 26),
+            ),
+            const SizedBox(height: 8),
+            Text(name, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Quality Selector Dialog
+  void _showQualitySelector() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF161622),
+          title: const Text('Select Video Quality'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ['1080p (HD)', '720p', '480p'].map((q) {
+              return RadioListTile<String>(
+                title: Text(q, style: const TextStyle(color: Colors.white)),
+                value: q,
+                groupValue: widget.video.currentQuality,
+                activeColor: const Color(0xFFFF2A5F),
+                onChanged: (val) {
+                  setState(() {
+                    widget.video.currentQuality = val!;
+                  });
+                  Navigator.pop(context);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
   }
 
   void _showCommentsBottomSheet(BuildContext context) {
@@ -366,7 +499,24 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return Stack(
       children: [
+        // Main Gesture Detector for Tap & Double Tap
         GestureDetector(
+          onDoubleTap: () {
+            setState(() {
+              _showDoubleTapHeart = true;
+              if (!widget.video.isLiked) {
+                widget.video.isLiked = true;
+                widget.video.likes++;
+              }
+            });
+            Future.delayed(const Duration(milliseconds: 800), () {
+              if (mounted) {
+                setState(() {
+                  _showDoubleTapHeart = false;
+                });
+              }
+            });
+          },
           onTap: () {
             setState(() {
               _isPlaying = !_isPlaying;
@@ -394,6 +544,73 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                     style: const TextStyle(color: Colors.white54, fontSize: 16),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ),
+
+        // Double Tap Animated Heart Overlay
+        if (_showDoubleTapHeart)
+          const Center(
+            child: Icon(
+              Icons.favorite,
+              size: 110,
+              color: Color(0xFFFF2A5F),
+            ),
+          ),
+
+        // Quality Switcher Tag (Top Right - Exclusive Feature)
+        Positioned(
+          top: 50,
+          right: 16,
+          child: GestureDetector(
+            onTap: _showQualitySelector,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: const Color(0xFF00E5FF), width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.hd_outlined, color: Color(0xFF00E5FF), size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    widget.video.currentQuality,
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Playback Speed Controller Button
+        Positioned(
+          top: 90,
+          right: 16,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                if (_playbackSpeed == 1.0) {
+                  _playbackSpeed = 1.5;
+                } else if (_playbackSpeed == 1.5) {
+                  _playbackSpeed = 2.0;
+                } else {
+                  _playbackSpeed = 1.0;
+                }
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Text(
+                '${_playbackSpeed}x',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ),
           ),
@@ -589,17 +806,13 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
-              // Share Button (Modern TikTok Curved Arrow)
+              // Share Button (Triggers Social Apps Bottom Sheet)
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    widget.video.shares++;
-                  });
-                },
+                onTap: () => _showShareOptions(context),
                 child: Column(
                   children: [
                     Transform.scale(
-                      scaleX: -1, // Flip arrow horizontally
+                      scaleX: -1,
                       child: const Icon(Icons.reply_sharp, size: 38, color: Colors.white),
                     ),
                     const SizedBox(height: 2),
