@@ -16,21 +16,16 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.24.x'
 
-      - name: Re-create Android project clean
-        run: |
-          rm -rf android
-          flutter create --platforms=android --org com.kuanyngne --project-name kuanyngne .
+      - name: Create Android files
+        run: flutter create --platforms=android --org com.kuanyngne --project-name kuanyngne .
 
-      - name: Accept Android Licenses
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-
-      - name: Fetch Pub Packages
+      - name: Get Dependencies
         run: flutter pub get
 
       - name: Build Debug APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --no-tree-shake-icons
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
