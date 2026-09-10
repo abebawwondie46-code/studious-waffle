@@ -18,13 +18,16 @@ jobs:
         with:
           flutter-version: '3.24.x'
 
-      - name: Create Android files
-        run: flutter create --platforms=android --org com.kuanyngne --project-name kuanyngne .
+      - name: Force recreate android directory with correct structure
+        run: |
+          rm -rf android
+          flutter create --platforms=android --org com.kuanyngne --project-name kuanyngne .
+          yes | flutter doctor --android-licenses || true
 
-      - name: Get Dependencies
+      - name: Get dependencies
         run: flutter pub get
 
-      - name: Build Debug APK
+      - name: Build Debug APK with verbose output
         run: flutter build apk --debug --no-tree-shake-icons
 
       - name: Upload APK Artifact
