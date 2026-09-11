@@ -162,7 +162,6 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
   int _selectedFeedTab = 2;
 
-  // Fetch Videos directly from Supabase Database Stream
   final Stream<List<Map<String, dynamic>>> _videosStream =
       supabase.from('videos').stream(primaryKey: ['id']);
 
@@ -180,7 +179,6 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                 );
               }
               if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                // Fallback Sample Videos if Supabase Table is empty
                 final fallbackVideos = [
                   VideoModel(
                     id: 'v1',
@@ -350,7 +348,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  // Update Likes in Supabase
   Future<void> _toggleLikeInSupabase() async {
     setState(() {
       widget.video.isLiked = !widget.video.isLiked;
