@@ -1,19 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: 'YOUR_SUPABASE_URL',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY',
-  );
-
+void main() {
   runApp(const KuanyngneApp());
 }
-
-final supabase = Supabase.instance.client;
 
 class KuanyngneApp extends StatelessWidget {
   const KuanyngneApp({super.key});
@@ -68,21 +58,6 @@ class VideoModel {
     this.isFollowing = false,
     this.currentQuality = '1080p',
   });
-
-  factory VideoModel.fromMap(Map<String, dynamic> map) {
-    return VideoModel(
-      id: map['id']?.toString() ?? '',
-      username: map['username'] ?? '@user',
-      userAvatar: map['user_avatar'] ?? 'https://via.placeholder.com/150',
-      videoUrl: map['video_url'] ?? '',
-      caption: map['caption'] ?? '',
-      songTitle: map['song_title'] ?? 'Original Sound',
-      likes: map['likes'] ?? 0,
-      commentsCount: map['comments_count'] ?? 0,
-      savedCount: map['saved_count'] ?? 0,
-      shares: map['shares'] ?? 0,
-    );
-  }
 }
 
 class MainNavigationScreen extends StatefulWidget {
@@ -159,63 +134,71 @@ class VideoFeedScreen extends StatefulWidget {
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
-  int _selectedFeedTab = 2;
-  int _currentPage = 0;
+  int _selectedFeedTab = 2; // 0: Live, 1: Friends, 2: For You, 3: Following
+  bool _isLoading = false;
 
-  final Stream<List<Map<String, dynamic>>> _videosStream =
-      supabase.from('videos').stream(primaryKey: ['id']);
+  // ከኢንተርኔት የሚጫኑ የቀጥታ ቪዲዮዎች (Online Live Video URLs)
+  List<VideoModel> _videos = [
+    VideoModel(
+      id: 'v1',
+      username: '@kuanyngne_official',
+      userAvatar: 'https://via.placeholder.com/150',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
+      songTitle: 'Original Audio - kuanyngne Sound',
+      likes: 12500,
+      commentsCount: 342,
+      savedCount: 2409,
+      shares: 751,
+    ),
+    VideoModel(
+      id: 'v2',
+      username: '@tech_creator',
+      userAvatar: 'https://via.placeholder.com/150',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
+      songTitle: 'Trending Beats 2026',
+      likes: 8400,
+      commentsCount: 121,
+      savedCount: 890,
+      shares: 316,
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchVideosFromInternet();
+  }
+
+  // ከኢንተርኔት Backend API ቪዲዮዎችን የመጫኛ Function
+  Future<void> _fetchVideosFromInternet() async {
+    setState(() => _isLoading = true);
+    try {
+      // እዚህ ቦታ ላይ ከ Supabase, Firebase ወይም REST API ጋር ማገናኘት ይቻላል
+      await Future.delayed(const Duration(seconds: 1)); 
+    } catch (e) {
+      debugPrint('Error fetching videos: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _videosStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFFF2A5F)),
-                );
-              }
-
-              final videos = (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty)
-                  ? [
-                      VideoModel(
-                        id: 'v1',
-                        username: '@kuanyngne_official',
-                        userAvatar: 'https://via.placeholder.com/150',
-                        videoUrl:
-                            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-                        caption:
-                            'Welcome to kuanyngne! Professional Video Sharing Feed 🔥 #kuanyngne',
-                        songTitle: 'Original Audio - kuanyngne Sound',
-                        likes: 12500,
-                        commentsCount: 342,
-                        savedCount: 2409,
-                        shares: 751,
-                      )
-                    ]
-                  : snapshot.data!.map((data) => VideoModel.fromMap(data)).toList();
-
-              return PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.vertical,
-                itemCount: videos.length,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  return VideoTile(
-                    video: videos[index],
-                    isVisible: index == _currentPage,
-                  );
-                },
-              );
-            },
-          ),
+          _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF2A5F)))
+              : PageView.builder(
+                  controller: _pageController,
+                  scrollDirection: Axis.vertical,
+                  itemCount: _videos.length,
+                  itemBuilder: (context, index) {
+                    return VideoTile(video: _videos[index]);
+                  },
+                ),
           SafeArea(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -279,7 +262,9 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.search, color: Colors.white, size: 28),
-                    onPressed: () {},
+                    onPressed: () {
+                      showSearch(context: context, delegate: VideoSearchDelegate());
+                    },
                   ),
                 ],
               ),
@@ -293,9 +278,8 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 
 class VideoTile extends StatefulWidget {
   final VideoModel video;
-  final bool isVisible;
 
-  const VideoTile({super.key, required this.video, required this.isVisible});
+  const VideoTile({super.key, required this.video});
 
   @override
   State<VideoTile> createState() => _VideoTileState();
@@ -318,21 +302,18 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
       duration: const Duration(seconds: 5),
     )..repeat();
 
+    // የኢንተርኔት ቪዲዮ መያያዣ (Network Video Player Initialization)
     _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.video.videoUrl))
       ..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _isInitialized = true;
-          });
-          if (widget.isVisible) {
-            _videoController.play();
-            _videoController.setLooping(true);
-          }
-        }
+        setState(() {
+          _isInitialized = true;
+        });
+        _videoController.play();
+        _videoController.setLooping(true);
       });
 
     _videoController.addListener(() {
-      if (_videoController.value.isInitialized && mounted) {
+      if (_videoController.value.isInitialized) {
         setState(() {
           _playbackPosition = _videoController.value.position.inMilliseconds /
               _videoController.value.duration.inMilliseconds;
@@ -342,42 +323,10 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   }
 
   @override
-  void didUpdateWidget(VideoTile oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isVisible != oldWidget.isVisible && _isInitialized) {
-      if (widget.isVisible) {
-        _videoController.play();
-        _discController.repeat();
-      } else {
-        _videoController.pause();
-        _discController.stop();
-      }
-    }
-  }
-
-  @override
   void dispose() {
     _videoController.dispose();
     _discController.dispose();
     super.dispose();
-  }
-
-  Future<void> _toggleLikeInSupabase() async {
-    setState(() {
-      widget.video.isLiked = !widget.video.isLiked;
-      if (widget.video.isLiked) {
-        widget.video.likes++;
-      } else {
-        widget.video.likes--;
-      }
-    });
-
-    try {
-      await supabase
-          .from('videos')
-          .update({'likes': widget.video.likes})
-          .eq('id', widget.video.id);
-    } catch (_) {}
   }
 
   void _showShareOptions(BuildContext context) {
@@ -417,7 +366,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                     _buildShareAppTile(Icons.send, 'Telegram', const Color(0xFF0088CC)),
                     _buildShareAppTile(Icons.chat_bubble, 'WhatsApp', const Color(0xFF25D366)),
                     _buildShareAppTile(Icons.facebook, 'Facebook', const Color(0xFF1877F2)),
-                    _buildShareAppTile(Icons.camera_alt, 'Instagram', const Color(0xE1306C00)),
+                    _buildShareAppTile(Icons.camera_alt, 'Instagram', const Color(0xE1306C)),
                     _buildShareAppTile(Icons.link, 'Copy Link', const Color(0xFF4A4A6A)),
                   ],
                 ),
@@ -452,7 +401,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
 
   Widget _buildShareAppTile(IconData icon, String name, Color color) {
     return GestureDetector(
-      onTap: () async {
+      onTap: () {
         setState(() {
           widget.video.shares++;
         });
@@ -460,12 +409,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Shared to $name!')),
         );
-        try {
-          await supabase
-              .from('videos')
-              .update({'shares': widget.video.shares})
-              .eq('id', widget.video.id);
-        } catch (_) {}
       },
       child: Container(
         margin: const EdgeInsets.only(right: 18),
@@ -514,6 +457,9 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   }
 
   void _showCommentsBottomSheet(BuildContext context) {
+    final TextEditingController commentController = TextEditingController();
+    List<String> comments = ['Awesome content! 🔥', 'Keep it up brother!', 'Amazing video 👏'];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -522,75 +468,87 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: SizedBox(
-            height: 450,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 10),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    '${widget.video.commentsCount} Comments',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: 5,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFFFF2A5F),
-                          child: Icon(Icons.person, color: Colors.white),
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SizedBox(
+                height: 450,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 10),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        title: Text('User_${index + 1}'),
-                        subtitle: const Text('Awesome content! 🔥'),
-                        trailing: const Icon(Icons.favorite_border, size: 16),
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Add a comment...',
-                      filled: true,
-                      fillColor: Colors.black26,
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.send, color: Color(0xFFFF2A5F)),
-                        onPressed: () {
-                          setState(() {
-                            widget.video.commentsCount++;
-                          });
-                          Navigator.pop(context);
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        '${widget.video.commentsCount} Comments',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: comments.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            leading: const CircleAvatar(
+                              backgroundColor: Color(0xFFFF2A5F),
+                              child: Icon(Icons.person, color: Colors.white),
+                            ),
+                            title: Text('User_${index + 1}'),
+                            subtitle: Text(comments[index]),
+                            trailing: const Icon(Icons.favorite_border, size: 16),
+                          );
                         },
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide.none,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: TextField(
+                        controller: commentController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Add a comment...',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.send, color: Color(0xFFFF2A5F)),
+                            onPressed: () {
+                              if (commentController.text.trim().isNotEmpty) {
+                                setModalState(() {
+                                  comments.add(commentController.text.trim());
+                                });
+                                setState(() {
+                                  widget.video.commentsCount++;
+                                });
+                                commentController.clear();
+                              }
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -600,11 +558,15 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return Stack(
       children: [
+        // Internet Live Video Screen Display
         GestureDetector(
           onDoubleTap: () {
-            _toggleLikeInSupabase();
             setState(() {
               _showDoubleTapHeart = true;
+              if (!widget.video.isLiked) {
+                widget.video.isLiked = true;
+                widget.video.likes++;
+              }
             });
             Future.delayed(const Duration(milliseconds: 800), () {
               if (mounted) {
@@ -639,6 +601,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
+        // Pause Icon Overlay
         if (!_isPlaying)
           const Center(
             child: Icon(
@@ -648,6 +611,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ),
           ),
 
+        // Double Tap Animated Heart
         if (_showDoubleTapHeart)
           const Center(
             child: Icon(
@@ -657,6 +621,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ),
           ),
 
+        // Quality Switcher Tag (Top Right)
         Positioned(
           top: 50,
           right: 16,
@@ -675,8 +640,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                   const SizedBox(width: 4),
                   Text(
                     widget.video.currentQuality,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -684,6 +648,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
+        // Playback Speed Controller Button
         Positioned(
           top: 90,
           right: 16,
@@ -714,6 +679,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
+        // Progress Bar (Slider synced with Network Video)
         Positioned(
           bottom: 12,
           left: 0,
@@ -740,6 +706,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
+        // Bottom Left Video Details
         Positioned(
           left: 16,
           bottom: 35,
@@ -780,11 +747,13 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
+        // Right Action Sidebar
         Positioned(
           right: 12,
           bottom: 30,
           child: Column(
             children: [
+              // User Avatar with (+) Follow
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -829,8 +798,18 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 20),
 
+              // Like Button
               GestureDetector(
-                onTap: _toggleLikeInSupabase,
+                onTap: () {
+                  setState(() {
+                    widget.video.isLiked = !widget.video.isLiked;
+                    if (widget.video.isLiked) {
+                      widget.video.likes++;
+                    } else {
+                      widget.video.likes--;
+                    }
+                  });
+                },
                 child: Column(
                   children: [
                     Icon(
@@ -848,6 +827,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
+              // Comment Button
               GestureDetector(
                 onTap: () => _showCommentsBottomSheet(context),
                 child: Column(
@@ -863,6 +843,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
+              // Save / Bookmark Button
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -891,6 +872,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
+              // Share Button
               GestureDetector(
                 onTap: () => _showShareOptions(context),
                 child: Column(
@@ -909,6 +891,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 18),
 
+              // Rotating Vinyl Music Disc
               RotationTransition(
                 turns: _discController,
                 child: Container(
@@ -946,78 +929,28 @@ class ExploreScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF0D0D13),
       ),
       body: const Center(
-        child: Text('Trending Videos & Creators'),
+        child: Text('Trending 5-Minute Videos & Creators'),
       ),
     );
   }
 }
 
-class UploadScreen extends StatefulWidget {
+class UploadScreen extends StatelessWidget {
   const UploadScreen({super.key});
-
-  @override
-  State<UploadScreen> createState() => _UploadScreenState();
-}
-
-class _UploadScreenState extends State<UploadScreen> {
-  final TextEditingController _captionController = TextEditingController();
-  final TextEditingController _videoUrlController = TextEditingController();
-  bool _isUploading = false;
-
-  Future<void> _uploadVideo() async {
-    if (_videoUrlController.text.isEmpty || _captionController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
-      );
-      return;
-    }
-
-    setState(() => _isUploading = true);
-
-    try {
-      await supabase.from('videos').insert({
-        'username': '@kuanyngne_creator',
-        'user_avatar': 'https://via.placeholder.com/150',
-        'video_url': _videoUrlController.text.trim(),
-        'caption': _captionController.text.trim(),
-        'song_title': 'Original Sound',
-        'likes': 0,
-        'comments_count': 0,
-        'saved_count': 0,
-        'shares': 0,
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Video Published Successfully!')),
-        );
-        _captionController.clear();
-        _videoUrlController.clear();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Upload Video'),
+        title: const Text('Upload Video (Up to 5 Min)'),
         backgroundColor: const Color(0xFF0D0D13),
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Container(
-              height: 160,
+              height: 200,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: const Color(0xFF161622),
@@ -1029,28 +962,15 @@ class _UploadScreenState extends State<UploadScreen> {
                 children: [
                   Icon(Icons.cloud_upload, size: 50, color: Color(0xFFFF2A5F)),
                   SizedBox(height: 8),
-                  Text('Upload Stream Target', style: TextStyle(color: Colors.white70)),
+                  Text('Select Video File (Max 5 Minutes)'),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _videoUrlController,
-              decoration: InputDecoration(
-                labelText: 'Direct Video URL',
-                filled: true,
-                fillColor: const Color(0xFF161622),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _captionController,
+            const TextField(
               decoration: InputDecoration(
                 labelText: 'Caption & Hashtags',
-                filled: true,
-                fillColor: const Color(0xFF161622),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
@@ -1059,10 +979,8 @@ class _UploadScreenState extends State<UploadScreen> {
                 backgroundColor: const Color(0xFFFF2A5F),
                 minimumSize: const Size(double.infinity, 50),
               ),
-              onPressed: _isUploading ? null : _uploadVideo,
-              child: _isUploading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Post Video', style: TextStyle(fontSize: 16, color: Colors.white)),
+              onPressed: () {},
+              child: const Text('Publish Video', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),
@@ -1081,26 +999,202 @@ class ActivityScreen extends StatelessWidget {
         title: const Text('Notifications'),
         backgroundColor: const Color(0xFF0D0D13),
       ),
-      body: const Center(
-        child: Text('No new activity'),
+      body: ListView.builder(
+        itemCount: 4,
+        itemBuilder: (context, index) {
+          return ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFFF2A5F),
+              child: Icon(Icons.notifications, color: Colors.white),
+            ),
+            title: Text('Notification Title #${index + 1}'),
+            subtitle: const Text('Someone liked your video.'),
+          );
+        },
       ),
     );
   }
 }
 
-class ProfileScreen extends StatelessWidget {
+// የተሟላው የፕሮፋይል ማስተካከያ እና ፕሮፋይል ማሳያ Screen
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String username = '@kuanyngne_official';
+  String bio = 'Creating 5-minute HD video experiences 🚀';
+
+  void _editProfileDialog() {
+    TextEditingController nameController = TextEditingController(text: username);
+    TextEditingController bioController = TextEditingController(text: bio);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF161622),
+          title: const Text('Edit Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Username'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: bioController,
+                decoration: const InputDecoration(labelText: 'Bio'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2A5F)),
+              onPressed: () {
+                setState(() {
+                  username = nameController.text;
+                  bio = bioController.text;
+                });
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('User Profile'),
+        title: Text(username),
         backgroundColor: const Color(0xFF0D0D13),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {},
+          )
+        ],
       ),
-      body: const Center(
-        child: Text('Profile details & posted videos'),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            const CircleAvatar(
+              radius: 45,
+              backgroundColor: Color(0xFFFF2A5F),
+              child: Icon(Icons.person, size: 50, color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              username,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Text(
+                bio,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildStatColumn('12.5K', 'Following'),
+                _buildStatColumn('102K', 'Followers'),
+                _buildStatColumn('1.2M', 'Likes'),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF161622),
+                side: const BorderSide(color: Colors.white24),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+              onPressed: _editProfileDialog,
+              child: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
+            ),
+            const SizedBox(height: 20),
+            const Divider(color: Colors.white12),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 6,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
+              ),
+              itemBuilder: (context, index) {
+                return Container(
+                  color: const Color(0xFF161622),
+                  child: const Center(
+                    child: Icon(Icons.play_arrow, color: Colors.white38),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildStatColumn(String count, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          Text(count, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.white54)),
+        ],
+      ),
+    );
+  }
+}
+
+class VideoSearchDelegate extends SearchDelegate {
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () => query = '',
+      )
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return Center(child: Text('Search Results for "$query"'));
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return const Center(child: Text('Search videos or creators'));
   }
 }
