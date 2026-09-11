@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 void main() {
@@ -134,10 +136,9 @@ class VideoFeedScreen extends StatefulWidget {
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
-  int _selectedFeedTab = 2; // 0: Live, 1: Friends, 2: For You, 3: Following
+  int _selectedFeedTab = 2;
   bool _isLoading = false;
 
-  // ከኢንተርኔት የሚጫኑ የቀጥታ ቪዲዮዎች (Online Live Video URLs)
   List<VideoModel> _videos = [
     VideoModel(
       id: 'v1',
@@ -171,12 +172,10 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
     _fetchVideosFromInternet();
   }
 
-  // ከኢንተርኔት Backend API ቪዲዮዎችን የመጫኛ Function
   Future<void> _fetchVideosFromInternet() async {
     setState(() => _isLoading = true);
     try {
-      // እዚህ ቦታ ላይ ከ Supabase, Firebase ወይም REST API ጋር ማገናኘት ይቻላል
-      await Future.delayed(const Duration(seconds: 1)); 
+      await Future.delayed(const Duration(seconds: 1));
     } catch (e) {
       debugPrint('Error fetching videos: $e');
     } finally {
@@ -302,7 +301,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
       duration: const Duration(seconds: 5),
     )..repeat();
 
-    // የኢንተርኔት ቪዲዮ መያያዣ (Network Video Player Initialization)
     _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.video.videoUrl))
       ..initialize().then((_) {
         setState(() {
@@ -558,7 +556,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Internet Live Video Screen Display
         GestureDetector(
           onDoubleTap: () {
             setState(() {
@@ -601,7 +598,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Pause Icon Overlay
         if (!_isPlaying)
           const Center(
             child: Icon(
@@ -611,7 +607,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ),
           ),
 
-        // Double Tap Animated Heart
         if (_showDoubleTapHeart)
           const Center(
             child: Icon(
@@ -621,7 +616,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ),
           ),
 
-        // Quality Switcher Tag (Top Right)
         Positioned(
           top: 50,
           right: 16,
@@ -648,7 +642,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Playback Speed Controller Button
         Positioned(
           top: 90,
           right: 16,
@@ -679,7 +672,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Progress Bar (Slider synced with Network Video)
         Positioned(
           bottom: 12,
           left: 0,
@@ -706,7 +698,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Bottom Left Video Details
         Positioned(
           left: 16,
           bottom: 35,
@@ -747,13 +738,11 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           ),
         ),
 
-        // Right Action Sidebar
         Positioned(
           right: 12,
           bottom: 30,
           child: Column(
             children: [
-              // User Avatar with (+) Follow
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -798,7 +787,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 20),
 
-              // Like Button
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -827,7 +815,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
-              // Comment Button
               GestureDetector(
                 onTap: () => _showCommentsBottomSheet(context),
                 child: Column(
@@ -843,7 +830,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
-              // Save / Bookmark Button
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -872,7 +858,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 16),
 
-              // Share Button
               GestureDetector(
                 onTap: () => _showShareOptions(context),
                 child: Column(
@@ -891,7 +876,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
               ),
               const SizedBox(height: 18),
 
-              // Rotating Vinyl Music Disc
               RotationTransition(
                 turns: _discController,
                 child: Container(
@@ -935,8 +919,74 @@ class ExploreScreen extends StatelessWidget {
   }
 }
 
-class UploadScreen extends StatelessWidget {
+// ቪዲዮ መምረጫ፣ ፕሪቪው ማሳያ እና መስቀያ Screen (UploadScreen)
+class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
+
+  @override
+  State<UploadScreen> createState() => _UploadScreenState();
+}
+
+class _UploadScreenState extends State<UploadScreen> {
+  File? _selectedVideoFile;
+  VideoPlayerController? _previewController;
+  final ImagePicker _picker = ImagePicker();
+  final TextEditingController _captionController = TextEditingController();
+  bool _isUploading = false;
+
+  Future<void> _pickVideo() async {
+    final XFile? pickedFile = await _picker.pickVideo(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      _previewController?.dispose();
+      final file = File(pickedFile.path);
+      
+      _previewController = VideoPlayerController.file(file)
+        ..initialize().then((_) {
+          setState(() {
+            _selectedVideoFile = file;
+          });
+          _previewController?.play();
+          _previewController?.setLooping(true);
+        });
+    }
+  }
+
+  void _uploadVideo() {
+    if (_selectedVideoFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎ መጀመሪያ ቪዲዮ ይምረጡ!')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ቪዲዮው በተሳካ ሁኔታ ተለቋል!')),
+        );
+        setState(() {
+          _selectedVideoFile = null;
+          _previewController?.dispose();
+          _previewController = null;
+          _captionController.clear();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _previewController?.dispose();
+    _captionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -945,32 +995,51 @@ class UploadScreen extends StatelessWidget {
         title: const Text('Upload Video (Up to 5 Min)'),
         backgroundColor: const Color(0xFF0D0D13),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFF161622),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.cloud_upload, size: 50, color: Color(0xFFFF2A5F)),
-                  SizedBox(height: 8),
-                  Text('Select Video File (Max 5 Minutes)'),
-                ],
+            GestureDetector(
+              onTap: _pickVideo,
+              child: Container(
+                height: 250,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161622),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: _selectedVideoFile != null &&
+                        _previewController != null &&
+                        _previewController!.value.isInitialized
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: AspectRatio(
+                          aspectRatio: _previewController!.value.aspectRatio,
+                          child: VideoPlayer(_previewController!),
+                        ),
+                      )
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.cloud_upload, size: 50, color: Color(0xFFFF2A5F)),
+                          SizedBox(height: 8),
+                          Text('Select Video File (Max 5 Minutes)'),
+                        ],
+                      ),
               ),
             ),
             const SizedBox(height: 16),
-            const TextField(
-              decoration: InputDecoration(
+            TextField(
+              controller: _captionController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
                 labelText: 'Caption & Hashtags',
+                labelStyle: TextStyle(color: Colors.white54),
                 border: OutlineInputBorder(),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFFFF2A5F)),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -979,8 +1048,10 @@ class UploadScreen extends StatelessWidget {
                 backgroundColor: const Color(0xFFFF2A5F),
                 minimumSize: const Size(double.infinity, 50),
               ),
-              onPressed: () {},
-              child: const Text('Publish Video', style: TextStyle(fontSize: 16)),
+              onPressed: _isUploading ? null : _uploadVideo,
+              child: _isUploading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Publish Video', style: TextStyle(fontSize: 16, color: Colors.white)),
             ),
           ],
         ),
@@ -1016,7 +1087,7 @@ class ActivityScreen extends StatelessWidget {
   }
 }
 
-// የተሟላው የፕሮፋይል ማስተካከያ እና ፕሮፋይል ማሳያ Screen
+// የፕሮፋይል ፎቶ መቀየሪያ እና ማስተካከያ (ProfileScreen)
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -1027,6 +1098,17 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String username = '@kuanyngne_official';
   String bio = 'Creating 5-minute HD video experiences 🚀';
+  File? _profileImage;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickProfileImage() async {
+    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
 
   void _editProfileDialog() {
     TextEditingController nameController = TextEditingController(text: username);
@@ -1041,13 +1123,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickProfileImage();
+                },
+                child: CircleAvatar(
+                  radius: 35,
+                  backgroundColor: const Color(0xFFFF2A5F),
+                  backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
+                  child: _profileImage == null
+                      ? const Icon(Icons.camera_alt, size: 30, color: Colors.white)
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: nameController,
+                style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(labelText: 'Username'),
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: bioController,
+                style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(labelText: 'Bio'),
               ),
             ],
@@ -1091,10 +1190,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            const CircleAvatar(
-              radius: 45,
-              backgroundColor: Color(0xFFFF2A5F),
-              child: Icon(Icons.person, size: 50, color: Colors.white),
+            GestureDetector(
+              onTap: _pickProfileImage,
+              child: CircleAvatar(
+                radius: 45,
+                backgroundColor: const Color(0xFFFF2A5F),
+                backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
+                child: _profileImage == null
+                    ? const Icon(Icons.person, size: 50, color: Colors.white)
+                    : null,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
