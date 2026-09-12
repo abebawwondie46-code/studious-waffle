@@ -946,19 +946,23 @@ class _UploadScreenState extends State<UploadScreen> {
   final TextEditingController _captionController = TextEditingController();
   bool _isUploading = false;
 
-  Future<void> _pickVideo() async {
-    final XFile? pickedFile = await _picker.pickVideo(source: ImageSource.gallery);
+  Future<void> _pickVideo(ImageSource source) async {
+    final XFile? pickedFile = await _picker.pickVideo(source: source);
     if (pickedFile != null) {
+      if (_previewController != null) {
+        await _previewController!.dispose();
+      }
+
       final file = File(pickedFile.path);
-      _previewController?.dispose();
-      _previewController = VideoPlayerController.file(file)
-        ..initialize().then((_) {
-          setState(() {
-            _selectedVideoFile = file;
-          });
-          _previewController?.play();
-          _previewController?.setLooping(true);
-        });
+      final controller = VideoPlayerController.file(file);
+
+      await controller.initialize();
+      setState(() {
+        _selectedVideoFile = file;
+        _previewController = controller;
+      });
+      _previewController!.play();
+      _previewController!.setLooping(true);
     }
   }
 
@@ -970,32 +974,33 @@ class _UploadScreenState extends State<UploadScreen> {
     });
 
     Future.delayed(const Duration(seconds: 2), () {
-      final newVideo = VideoModel(
+      final newVid = VideoModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        username: '@my_channel',
+        username: '@my_account',
         userAvatar: 'https://via.placeholder.com/150',
         videoUrl: _selectedVideoFile!.path,
         isLocalFile: true,
-        caption: _captionController.text.isEmpty ? 'New uploaded video!' : _captionController.text,
-        songTitle: 'Original Audio - User Sound',
+        caption: _captionController.text.isEmpty
+            ? 'New Video Uploaded! 🚀'
+            : _captionController.text,
+        songTitle: 'Original Audio - my_account',
         likes: 0,
         commentsCount: 0,
         shares: 0,
       );
 
-      widget.onVideoUploaded(newVideo);
+      widget.onVideoUploaded(newVid);
 
       setState(() {
         _isUploading = false;
         _selectedVideoFile = null;
         _captionController.clear();
       });
-
       _previewController?.dispose();
       _previewController = null;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video Uploaded Successfully!')),
+        const SnackBar(content: Text('Video uploaded successfully! 🎉')),
       );
     });
   }
@@ -1013,75 +1018,159 @@ class _UploadScreenState extends State<UploadScreen> {
       appBar: AppBar(
         title: const Text('Create Video'),
         backgroundColor: const Color(0xFF0D0D13),
+        actions: [
+          if (_selectedVideoFile != null)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Color(0xFF00E5FF)),
+              tooltip: 'Change Video',
+              onPressed: () => _showPickerModal(),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: _pickVideo,
-              child: Container(
-                height: 300,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161622),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: _selectedVideoFile != null && _previewController != null && _previewController!.value.isInitialized
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: AspectRatio(
-                          aspectRatio: _previewController!.value.aspectRatio,
-                          child: VideoPlayer(_previewController!),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              if (_selectedVideoFile == null)
+                GestureDetector(
+                  onTap: _showPickerModal,
+                  child: Container(
+                    height: 350,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161622),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white24, width: 1.5),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.video_call_rounded, size: 70, color: Color(0xFFFF2A5F)),
+                        SizedBox(height: 12),
+                        Text(
+                          'Tap to Record or Select Video',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
-                      )
-                    : const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.video_call, size: 60, color: Color(0xFFFF2A5F)),
-                          SizedBox(height: 10),
-                          Text('Tap to select a video from gallery', style: TextStyle(color: Colors.white70)),
-                        ],
+                        SizedBox(height: 6),
+                        Text(
+                          'Camera recording & Gallery supported',
+                          style: TextStyle(fontSize: 12, color: Colors.white54),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    Container(
+                      height: 350,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _captionController,
-              maxLines: 3,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Write a caption...',
-                hintStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: const Color(0xFF161622),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: _previewController != null && _previewController!.value.isInitialized
+                            ? AspectRatio(
+                                aspectRatio: _previewController!.value.aspectRatio,
+                                child: VideoPlayer(_previewController!),
+                              )
+                            : const Center(child: CircularProgressIndicator()),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _showPickerModal,
+                          icon: const Icon(Icons.cameraswitch, color: Colors.white),
+                          label: const Text('Change / Record New'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF161622),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF2A5F),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _captionController,
+                maxLines: 3,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Write a caption...',
+                  hintStyle: const TextStyle(color: Colors.white54),
+                  filled: true,
+                  fillColor: const Color(0xFF161622),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
                 ),
-                onPressed: _isUploading || _selectedVideoFile == null ? null : _uploadVideo,
-                child: _isUploading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Post Video', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: (_selectedVideoFile == null || _isUploading) ? null : _uploadVideo,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF2A5F),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isUploading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Post Video',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  void _showPickerModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161622),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFFFF2A5F)),
+                title: const Text('Record Video with Camera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickVideo(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFF00E5FF)),
+                title: const Text('Choose Video from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickVideo(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -1123,31 +1212,37 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('@my_channel'),
+        title: const Text('@my_account'),
         backgroundColor: const Color(0xFF0D0D13),
         actions: [
-          IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {},
+          )
         ],
       ),
       body: Column(
         children: [
           const SizedBox(height: 20),
           const CircleAvatar(
-            radius: 40,
+            radius: 45,
             backgroundColor: Color(0xFFFF2A5F),
             child: Icon(Icons.person, size: 50, color: Colors.white),
           ),
           const SizedBox(height: 10),
-          const Text('@my_channel', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            '@my_account',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 15),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildStatColumn('Following', '120'),
+              _buildStatColumn('Following', '124'),
               const SizedBox(width: 30),
-              _buildStatColumn('Followers', '4.5K'),
+              _buildStatColumn('Followers', '3.5K'),
               const SizedBox(width: 30),
-              _buildStatColumn('Likes', '25.8K'),
+              _buildStatColumn('Likes', '25.4K'),
             ],
           ),
           const SizedBox(height: 20),
@@ -1156,38 +1251,63 @@ class ProfileScreen extends StatelessWidget {
             child: userVideos.isEmpty
                 ? const Center(child: Text('No videos posted yet', style: TextStyle(color: Colors.white54)))
                 : GridView.builder(
+                    padding: const EdgeInsets.all(4),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
-                      crossAxisSpacing: 2,
-                      mainAxisSpacing: 2,
-                      childAspectRatio: 0.7,
+                      crossAxisSpacing: 4,
+                      mainAxisSpacing: 4,
+                      childAspectRatio: 0.8,
                     ),
                     itemCount: userVideos.length,
                     itemBuilder: (context, index) {
-                      final video = userVideos[index];
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Container(
-                            color: const Color(0xFF161622),
-                            child: const Icon(Icons.play_circle_outline, color: Colors.white54, size: 40),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: GestureDetector(
-                              onTap: () => onDeleteVideo(video.id),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
+                      final vid = userVideos[index];
+                      return GestureDetector(
+                        onLongPress: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              backgroundColor: const Color(0xFF161622),
+                              title: const Text('Delete Video?'),
+                              content: const Text('Are you sure you want to delete this video?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
                                 ),
-                                child: const Icon(Icons.delete, size: 18, color: Colors.redAccent),
-                              ),
+                                TextButton(
+                                  onPressed: () {
+                                    onDeleteVideo(vid.id);
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                ),
+                              ],
                             ),
+                          );
+                        },
+                        child: Container(
+                          color: const Color(0xFF161622),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              const Icon(Icons.play_circle_fill, color: Colors.white38, size: 30),
+                              Positioned(
+                                bottom: 4,
+                                left: 4,
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.favorite, size: 12, color: Colors.white),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${vid.likes}',
+                                      style: const TextStyle(fontSize: 10, color: Colors.white),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       );
                     },
                   ),
@@ -1200,9 +1320,15 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildStatColumn(String label, String count) {
     return Column(
       children: [
-        Text(count, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.white54)),
+        Text(
+          count,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.white54),
+        ),
       ],
     );
   }
@@ -1214,8 +1340,10 @@ class VideoSearchDelegate extends SearchDelegate {
     return [
       IconButton(
         icon: const Icon(Icons.clear),
-        onPressed: () => query = '',
-      ),
+        onPressed: () {
+          query = '';
+        },
+      )
     ];
   }
 
@@ -1223,21 +1351,23 @@ class VideoSearchDelegate extends SearchDelegate {
   Widget? buildLeading(BuildContext context) {
     return IconButton(
       icon: const Icon(Icons.arrow_back),
-      onPressed: () => close(context, null),
+      onPressed: () {
+        close(context, null);
+      },
     );
   }
 
   @override
   Widget buildResults(BuildContext context) {
     return Center(
-      child: Text('Search results for "$query"'),
+      child: Text('Search Results for "$query"'),
     );
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
     return const Center(
-      child: Text('Search videos or creators'),
+      child: Text('Search 5-minute videos, creators, or hashtags'),
     );
   }
 }
