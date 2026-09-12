@@ -14,7 +14,6 @@ Future<void> _pickImage(ImageSource source) async {
     });
   }
 }
-
 // የካሜራ በተኑ ሲነካ የሚታይ BottomSheet
 void _showImagePickerBottomSheet(BuildContext context) {
   showModalBottomSheet(
