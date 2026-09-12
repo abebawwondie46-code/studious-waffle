@@ -1,4 +1,4 @@
-import 'dart0:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
@@ -106,7 +106,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void _addNewVideo(VideoModel newVideo) {
     setState(() {
       _globalVideos.insert(0, newVideo);
-      _currentIndex = 0; // Upload ከተደረገ በኋላ በቀጥታ ወደ Home Feed ይመልሳል
+      _currentIndex = 0;
     });
   }
 
@@ -296,7 +296,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
       duration: const Duration(seconds: 5),
     )..repeat();
 
-    // ስልክ ላይ ካለ ፋይል ወይም ኢንተርኔት ላይ ላለ ቪዲዮ ማስተካከያ
     if (widget.video.isLocalFile) {
       _videoController = VideoPlayerController.file(File(widget.video.videoUrl));
     } else {
@@ -532,7 +531,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                                   widget.video.comments.add(text);
                                   widget.video.commentsCount = widget.video.comments.length;
                                 });
-                                setState(() {}); // Main state update
+                                setState(() {});
                                 commentController.clear();
                               }
                             },
