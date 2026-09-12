@@ -43,6 +43,7 @@ class VideoModel {
   bool isLiked;
   bool isSaved;
   bool isFollowing;
+  String currentQuality;
   List<String> comments;
 
   VideoModel({
@@ -60,6 +61,7 @@ class VideoModel {
     this.isLiked = false,
     this.isSaved = false,
     this.isFollowing = false,
+    this.currentQuality = '1080p',
     List<String>? comments,
   }) : comments = comments ?? ['Awesome content! 🔥', 'Keep it up brother!', 'Amazing video 👏'];
 }
@@ -79,8 +81,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       id: 'v1',
       username: '@kuanyngne_official',
       userAvatar: 'https://via.placeholder.com/150',
-      // በፍጥነትና አስተማማኝ በሆነ መልኩ የሚጫን የቪዲዮ ሊንክ
-      videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-1173-large.mp4',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
       songTitle: 'Original Audio - kuanyngne Sound',
       likes: 12500,
@@ -169,33 +170,7 @@ class VideoFeedScreen extends StatefulWidget {
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
-  int _selectedFeedTab = 3;
-
-  Widget _buildTopTab(String title, int tabIndex) {
-    final bool isSelected = _selectedFeedTab == tabIndex;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedFeedTab = tabIndex),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white54,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            height: 2,
-            width: 24,
-            color: isSelected ? Colors.white : Colors.transparent,
-          ),
-        ],
-      ),
-    );
-  }
+  int _selectedFeedTab = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -229,11 +204,53 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                   ),
                   Row(
                     children: [
-                      _buildTopTab('Friends', 1),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedFeedTab = 1),
+                        child: Text(
+                          'Friends',
+                          style: TextStyle(
+                            color: _selectedFeedTab == 1 ? Colors.white : Colors.white54,
+                            fontWeight: _selectedFeedTab == 1 ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
                       const SizedBox(width: 14),
-                      _buildTopTab('For You', 2),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedFeedTab = 2),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'For You',
+                              style: TextStyle(
+                                color: _selectedFeedTab == 2 ? Colors.white : Colors.white54,
+                                fontWeight: _selectedFeedTab == 2 ? FontWeight.bold : FontWeight.normal,
+                                fontSize: 16,
+                              ),
+                            ),
+                            if (_selectedFeedTab == 2)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                height: 2,
+                                width: 24,
+                                color: Colors.white,
+                              ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(width: 14),
-                      _buildTopTab('Following', 3),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedFeedTab = 3),
+                        child: Text(
+                          'Following',
+                          style: TextStyle(
+                            color: _selectedFeedTab == 3 ? Colors.white : Colors.white54,
+                            fontWeight: _selectedFeedTab == 3 ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   IconButton(
@@ -351,7 +368,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
     );
   }
 
-  // ኮሜንቱን ተጭነው ሲይዙ (Long Press) Delete የሚያደርግበት ክፍል
   void _showCommentsModal(BuildContext context) {
     final TextEditingController commentController = TextEditingController();
 
@@ -370,59 +386,29 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
               child: Container(
-                height: 450,
+                height: 400,
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     Text('${widget.video.comments.length} Comments',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     Expanded(
-                      child: widget.video.comments.isEmpty
-                          ? const Center(child: Text('No comments yet.', style: TextStyle(color: Colors.white54)))
-                          : ListView.builder(
-                              itemCount: widget.video.comments.length,
-                              itemBuilder: (context, index) {
-                                return ListTile(
-                                  onLongPress: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        backgroundColor: const Color(0xFF161622),
-                                        title: const Text('Delete Comment', style: TextStyle(color: Colors.redAccent)),
-                                        content: const Text('Are you sure you want to delete this comment?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(ctx),
-                                            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
-                                          ),
-                                          ElevatedButton(
-                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                                            onPressed: () {
-                                              setModalState(() {
-                                                widget.video.comments.removeAt(index);
-                                                widget.video.commentsCount = widget.video.comments.length;
-                                              });
-                                              setState(() {});
-                                              Navigator.pop(ctx);
-                                            },
-                                            child: const Text('Delete'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  leading: const CircleAvatar(
-                                    backgroundColor: Colors.grey,
-                                    child: Icon(Icons.person, color: Colors.white),
-                                  ),
-                                  title: Text('User_${index + 1}',
-                                      style: const TextStyle(fontSize: 13, color: Colors.white70)),
-                                  subtitle: Text(widget.video.comments[index],
-                                      style: const TextStyle(color: Colors.white)),
-                                );
-                              },
+                      child: ListView.builder(
+                        itemCount: widget.video.comments.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            leading: const CircleAvatar(
+                              backgroundColor: Colors.grey,
+                              child: Icon(Icons.person, color: Colors.white),
                             ),
+                            title: Text('User_${index + 1}',
+                                style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                            subtitle: Text(widget.video.comments[index],
+                                style: const TextStyle(color: Colors.white)),
+                          );
+                        },
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -435,10 +421,8 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                           Expanded(
                             child: TextField(
                               controller: commentController,
-                              style: const TextStyle(color: Colors.white),
                               decoration: const InputDecoration(
                                 hintText: 'Add comment...',
-                                hintStyle: TextStyle(color: Colors.white54),
                                 border: InputBorder.none,
                               ),
                             ),
@@ -639,157 +623,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   }
 }
 
-// UPLOAD SCREEN (በላከኸው ዲዛይን መሠረት የተሰራ)
-class UploadScreen extends StatefulWidget {
-  final Function(VideoModel) onVideoUploaded;
-  const UploadScreen({super.key, required this.onVideoUploaded});
-
-  @override
-  State<UploadScreen> createState() => _UploadScreenState();
-}
-
-class _UploadScreenState extends State<UploadScreen> {
-  final ImagePicker _picker = ImagePicker();
-  final TextEditingController _captionController = TextEditingController();
-  XFile? _selectedVideo;
-
-  Future<void> _pickVideo() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-    if (video != null) {
-      setState(() {
-        _selectedVideo = video;
-      });
-    }
-  }
-
-  void _upload() {
-    if (_selectedVideo != null) {
-      final newVid = VideoModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        username: '@kuanyngne_official',
-        userAvatar: 'https://via.placeholder.com/150',
-        videoUrl: _selectedVideo!.path,
-        isLocalFile: true,
-        caption: _captionController.text.isEmpty ? 'Uploaded Video' : _captionController.text,
-        songTitle: 'Original Audio - Uploaded',
-        likes: 0,
-        commentsCount: 0,
-        shares: 0,
-      );
-      widget.onVideoUploaded(newVid);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video Uploaded Successfully!')),
-      );
-      setState(() {
-        _selectedVideo = null;
-        _captionController.clear();
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a video file first.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D13),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0D0D13),
-        elevation: 0,
-        title: const Text(
-          'Upload Video (Up to 5 Min)',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            // Upload Box Area
-            GestureDetector(
-              onTap: _pickVideo,
-              child: Container(
-                height: 220,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161622),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF2A5F),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.cloud_upload, color: Colors.white, size: 36),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _selectedVideo == null
-                          ? 'Select Video File (Max 5 Minutes)'
-                          : 'Selected: ${_selectedVideo!.name}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Caption Box Area
-            TextField(
-              controller: _captionController,
-              style: const TextStyle(color: Colors.white),
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Caption & Hashtags',
-                labelStyle: const TextStyle(color: Color(0xFFFF2A5F)),
-                filled: true,
-                fillColor: const Color(0xFF161622),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFFF2A5F)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFFF2A5F), width: 2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Publish Video Button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF2A5F),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                ),
-                onPressed: _upload,
-                child: const Text(
-                  'Publish Video',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// PROFILE SCREEN
+// PROFILE SCREEN WITH CAMERA INTERACTION
 class ProfileScreen extends StatefulWidget {
   final List<VideoModel> userVideos;
   final Function(String) onDeleteVideo;
@@ -1161,7 +995,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// OTHER EXTRA SCREENS
+// OTHER SCREENS
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
 
@@ -1174,6 +1008,86 @@ class ExploreScreen extends StatelessWidget {
       ),
       body: const Center(
         child: Text('Explore & Trending Content Screen', style: TextStyle(color: Colors.white54)),
+      ),
+    );
+  }
+}
+
+class UploadScreen extends StatefulWidget {
+  final Function(VideoModel) onVideoUploaded;
+  const UploadScreen({super.key, required this.onVideoUploaded});
+
+  @override
+  State<UploadScreen> createState() => _UploadScreenState();
+}
+
+class _UploadScreenState extends State<UploadScreen> {
+  final ImagePicker _picker = ImagePicker();
+  final TextEditingController _captionController = TextEditingController();
+  XFile? _selectedVideo;
+
+  Future<void> _pickVideo() async {
+    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video != null) {
+      setState(() {
+        _selectedVideo = video;
+      });
+    }
+  }
+
+  void _upload() {
+    if (_selectedVideo != null && _captionController.text.isNotEmpty) {
+      final newVid = VideoModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        username: '@my_channel',
+        userAvatar: 'https://via.placeholder.com/150',
+        videoUrl: _selectedVideo!.path,
+        isLocalFile: true,
+        caption: _captionController.text,
+        songTitle: 'Original Sound',
+        likes: 0,
+        commentsCount: 0,
+        shares: 0,
+      );
+      widget.onVideoUploaded(newVid);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video Published Successfully!')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Create Video'),
+        backgroundColor: const Color(0xFF0D0D13),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            ElevatedButton.icon(
+              onPressed: _pickVideo,
+              icon: const Icon(Icons.video_library),
+              label: Text(_selectedVideo == null ? 'Select Video' : 'Change Video'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _captionController,
+              decoration: const InputDecoration(
+                hintText: 'Write a caption...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _upload,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2A5F)),
+              child: const Text('Post Video'),
+            ),
+          ],
+        ),
       ),
     );
   }
