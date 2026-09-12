@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
-
 void main() {
   runApp(const KuanyngneApp());
 }
@@ -14,25 +12,18 @@ class KuanyngneApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (_, currentMode, __) {
-        return MaterialApp(
-          title: 'kuanyngne',
-          debugShowCheckedModeBanner: false,
-          themeMode: currentMode,
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: const Color(0xFF0D0D13),
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFFF2A5F),
-              secondary: Color(0xFF00E5FF),
-              surface: Color(0xFF161622),
-            ),
-          ),
-          home: const MainNavigationScreen(),
-        );
-      },
+    return MaterialApp(
+      title: 'kuanyngne',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF0D0D13),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFFF2A5F),
+          secondary: Color(0xFF00E5FF),
+          surface: Color(0xFF161622),
+        ),
+      ),
+      home: const MainNavigationScreen(),
     );
   }
 }
@@ -98,18 +89,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       savedCount: 2409,
       shares: 751,
     ),
-    VideoModel(
-      id: 'v2',
-      username: '@tech_creator',
-      userAvatar: 'https://via.placeholder.com/150',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
-      songTitle: 'Trending Beats 2026',
-      likes: 8400,
-      commentsCount: 3,
-      savedCount: 890,
-      shares: 316,
-    ),
   ];
 
   void _addNewVideo(VideoModel newVideo) {
@@ -129,9 +108,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final List<Widget> screens = [
       VideoFeedScreen(videos: _globalVideos),
-      const Center(child: Text('Explore Screen', style: TextStyle(color: Colors.white))),
+      const ExploreScreen(),
       UploadScreen(onVideoUploaded: _addNewVideo),
-      const Center(child: Text('Activity Screen', style: TextStyle(color: Colors.white))),
+      const ActivityScreen(),
       ProfileScreen(userVideos: _globalVideos, onDeleteVideo: _deleteVideo),
     ];
 
@@ -180,6 +159,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
+// VIDEO FEED SCREEN
 class VideoFeedScreen extends StatefulWidget {
   final List<VideoModel> videos;
   const VideoFeedScreen({super.key, required this.videos});
@@ -275,7 +255,9 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.search, color: Colors.white, size: 28),
-                    onPressed: () {},
+                    onPressed: () {
+                      showSearch(context: context, delegate: VideoSearchDelegate());
+                    },
                   ),
                 ],
               ),
@@ -287,9 +269,9 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   }
 }
 
+// VIDEO TILE WIDGET
 class VideoTile extends StatefulWidget {
   final VideoModel video;
-
   const VideoTile({super.key, required this.video});
 
   @override
@@ -300,9 +282,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   late VideoPlayerController _videoController;
   bool _isInitialized = false;
   bool _isPlaying = true;
-  double _playbackPosition = 0.0;
   bool _showDoubleTapHeart = false;
-  double _playbackSpeed = 1.0;
   late AnimationController _discController;
 
   @override
@@ -324,17 +304,8 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
         setState(() {
           _isInitialized = true;
         });
-        _videoController.play();
         _videoController.setLooping(true);
-      }
-    });
-
-    _videoController.addListener(() {
-      if (_videoController.value.isInitialized && mounted) {
-        setState(() {
-          _playbackPosition = _videoController.value.position.inMilliseconds /
-              _videoController.value.duration.inMilliseconds;
-        });
+        _videoController.play();
       }
     });
   }
@@ -355,60 +326,24 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
       ),
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.all(16),
-          height: 280,
+          padding: const EdgeInsets.all(20),
+          height: 180,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Share video to',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 20),
+              const Text('Share to', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 16),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildShareAppTile(Icons.send, 'Telegram', const Color(0xFF0088CC)),
-                    _buildShareAppTile(Icons.chat_bubble, 'WhatsApp', const Color(0xFF25D366)),
-                    _buildShareAppTile(Icons.facebook, 'Facebook', const Color(0xFF1877F2)),
-                    _buildShareAppTile(Icons.camera_alt, 'Instagram', const Color(0xFFE1306C)),
-                    _buildShareAppTile(Icons.link, 'Copy Link', const Color(0xFF4A4A6A)),
+                    _buildShareItem(Icons.send, 'Direct', Colors.blue),
+                    _buildShareItem(Icons.link, 'Copy Link', Colors.grey),
+                    _buildShareItem(Icons.download, 'Save Video', Colors.green),
+                    _buildShareItem(Icons.qr_code, 'QR Code', Colors.purple),
                   ],
                 ),
               ),
-              const Divider(color: Colors.white12, height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Video Download Started!')),
-                      );
-                    },
-                    icon: const Icon(Icons.download, color: Colors.white),
-                    label: const Text('Save Video', style: TextStyle(color: Colors.white)),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.report, color: Colors.redAccent),
-                    label: const Text('Report', style: TextStyle(color: Colors.redAccent)),
-                  ),
-                ],
-              )
             ],
           ),
         );
@@ -416,64 +351,24 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildShareAppTile(IconData icon, String name, Color color) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          widget.video.shares++;
-        });
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Shared to $name!')),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: 18),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: color,
-              child: Icon(icon, color: Colors.white, size: 26),
-            ),
-            const SizedBox(height: 8),
-            Text(name, style: const TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
+  Widget _buildShareItem(IconData icon, String name, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(right: 18),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: color,
+            child: Icon(icon, color: Colors.white, size: 26),
+          ),
+          const SizedBox(height: 8),
+          Text(name, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+        ],
       ),
     );
   }
 
-  void _showQualitySelector() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF161622),
-          title: const Text('Select Video Quality'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: ['1080p (HD)', '720p', '480p'].map((q) {
-              return RadioListTile<String>(
-                title: Text(q, style: const TextStyle(color: Colors.white)),
-                value: q,
-                groupValue: widget.video.currentQuality,
-                activeColor: const Color(0xFFFF2A5F),
-                onChanged: (val) {
-                  setState(() {
-                    widget.video.currentQuality = val!;
-                  });
-                  Navigator.pop(context);
-                },
-              );
-            }).toList(),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showCommentsBottomSheet(BuildContext context) {
+  void _showCommentsModal(BuildContext context) {
     final TextEditingController commentController = TextEditingController();
 
     showModalBottomSheet(
@@ -485,77 +380,54 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
       ),
       builder: (context) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
+          builder: (context, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: SizedBox(
-                height: 450,
+              child: Container(
+                height: 400,
+                padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 10),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        '${widget.video.comments.length} Comments',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ),
+                    Text('${widget.video.comments.length} Comments',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
                     Expanded(
-                      child: widget.video.comments.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No comments yet',
-                                style: TextStyle(color: Colors.white54),
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: widget.video.comments.length,
-                              itemBuilder: (context, index) {
-                                return ListTile(
-                                  leading: const CircleAvatar(
-                                    backgroundColor: Color(0xFFFF2A5F),
-                                    child: Icon(Icons.person, color: Colors.white),
-                                  ),
-                                  title: Text('User_${index + 1}'),
-                                  subtitle: Text(widget.video.comments[index]),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                                    onPressed: () {
-                                      setModalState(() {
-                                        widget.video.comments.removeAt(index);
-                                        widget.video.commentsCount = widget.video.comments.length;
-                                      });
-                                      setState(() {});
-                                    },
-                                  ),
-                                );
-                              },
+                      child: ListView.builder(
+                        itemCount: widget.video.comments.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            leading: const CircleAvatar(
+                              backgroundColor: Colors.grey,
+                              child: Icon(Icons.person, color: Colors.white),
                             ),
+                            title: Text('User_${index + 1}',
+                                style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                            subtitle: Text(widget.video.comments[index],
+                                style: const TextStyle(color: Colors.white)),
+                          );
+                        },
+                      ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: TextField(
-                        controller: commentController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Add a comment...',
-                          hintStyle: const TextStyle(color: Colors.white54),
-                          filled: true,
-                          fillColor: Colors.black26,
-                          suffixIcon: IconButton(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: commentController,
+                              decoration: const InputDecoration(
+                                hintText: 'Add comment...',
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          IconButton(
                             icon: const Icon(Icons.send, color: Color(0xFFFF2A5F)),
                             onPressed: () {
                               final text = commentController.text.trim();
@@ -569,11 +441,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                               }
                             },
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
@@ -631,139 +499,36 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ),
           ),
         ),
-
-        if (!_isPlaying)
-          const Center(
-            child: Icon(
-              Icons.play_circle_fill,
-              size: 80,
-              color: Colors.white54,
-            ),
-          ),
-
         if (_showDoubleTapHeart)
           const Center(
-            child: Icon(
-              Icons.favorite,
-              size: 110,
-              color: Color(0xFFFF2A5F),
-            ),
+            child: Icon(Icons.favorite, size: 100, color: Color(0xFFFF2A5F)),
           ),
-
         Positioned(
-          top: 50,
-          right: 16,
-          child: GestureDetector(
-            onTap: _showQualitySelector,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: const Color(0xFF00E5FF), width: 1),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.hd_outlined, color: Color(0xFF00E5FF), size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    widget.video.currentQuality,
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        Positioned(
-          top: 90,
-          right: 16,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                if (_playbackSpeed == 1.0) {
-                  _playbackSpeed = 1.5;
-                } else if (_playbackSpeed == 1.5) {
-                  _playbackSpeed = 2.0;
-                } else {
-                  _playbackSpeed = 1.0;
-                }
-                _videoController.setPlaybackSpeed(_playbackSpeed);
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Text(
-                '${_playbackSpeed}x',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-          ),
-        ),
-
-        Positioned(
-          bottom: 12,
-          left: 0,
-          right: 0,
-          child: SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 2,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-              activeTrackColor: Colors.white,
-              inactiveTrackColor: Colors.white24,
-              thumbColor: Colors.white,
-            ),
-            child: Slider(
-              value: _playbackPosition.clamp(0.0, 1.0),
-              onChanged: (val) {
-                setState(() {
-                  _playbackPosition = val;
-                  final duration = _videoController.value.duration;
-                  final newPosition = duration * val;
-                  _videoController.seekTo(newPosition);
-                });
-              },
-            ),
-          ),
-        ),
-
-        Positioned(
+          bottom: 20,
           left: 16,
-          bottom: 35,
-          right: 90,
+          right: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 widget.video.username,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 widget.video.caption,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                style: const TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.music_note, size: 16, color: Colors.white70),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.music_note, size: 16, color: Colors.white),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       widget.video.songTitle,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ),
                 ],
@@ -771,56 +536,11 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
             ],
           ),
         ),
-
         Positioned(
+          bottom: 20,
           right: 12,
-          bottom: 30,
           child: Column(
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(1.5),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                    child: const CircleAvatar(
-                      radius: 23,
-                      backgroundColor: Color(0xFF161622),
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -8,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            widget.video.isFollowing = !widget.video.isFollowing;
-                          });
-                        },
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF2A5F),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            widget.video.isFollowing ? Icons.check : Icons.add,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -835,7 +555,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                 child: Column(
                   children: [
                     Icon(
-                      widget.video.isLiked ? Icons.favorite : Icons.favorite_rounded,
+                      Icons.favorite,
                       size: 38,
                       color: widget.video.isLiked ? const Color(0xFFFF2A5F) : Colors.white,
                     ),
@@ -848,55 +568,28 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                 ),
               ),
               const SizedBox(height: 16),
-
               GestureDetector(
-                onTap: () => _showCommentsBottomSheet(context),
+                onTap: () => _showCommentsModal(context),
                 child: Column(
                   children: [
-                    const Icon(Icons.comment_rounded, size: 36, color: Colors.white),
+                    const Icon(Icons.chat_bubble_rounded, size: 36, color: Colors.white),
                     const SizedBox(height: 2),
                     Text(
-                      '${widget.video.comments.length}',
+                      '${widget.video.commentsCount}',
                       style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    widget.video.isSaved = !widget.video.isSaved;
-                    if (widget.video.isSaved) {
-                      widget.video.savedCount++;
-                    } else {
-                      widget.video.savedCount--;
-                    }
-                  });
-                },
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.bookmark_rounded,
-                      size: 36,
-                      color: widget.video.isSaved ? const Color(0xFFFFD700) : Colors.white,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${widget.video.savedCount}',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
               GestureDetector(
                 onTap: () => _showShareOptions(context),
                 child: Column(
                   children: [
-                    const Icon(Icons.share_rounded, size: 34, color: Colors.white),
+                    Transform.scale(
+                      scaleX: -1,
+                      child: const Icon(Icons.reply_sharp, size: 38, color: Colors.white),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       '${widget.video.shares}',
@@ -905,18 +598,21 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-
+              const SizedBox(height: 18),
               RotationTransition(
                 turns: _discController,
                 child: Container(
-                  width: 45,
-                  height: 45,
-                  decoration: const BoxDecoration(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
                     shape: BoxShape.circle,
-                    color: Color(0xFF161622),
+                    border: Border.all(color: Colors.white24, width: 2),
                   ),
-                  child: const Icon(Icons.music_note, color: Colors.white, size: 22),
+                  child: const CircleAvatar(
+                    radius: 14,
+                    backgroundColor: Colors.grey,
+                    child: Icon(Icons.music_note, size: 14, color: Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -927,65 +623,523 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
   }
 }
 
-class UploadScreen extends StatelessWidget {
-  final Function(VideoModel) onVideoUploaded;
-  const UploadScreen({super.key, required this.onVideoUploaded});
+// PROFILE SCREEN WITH CAMERA INTERACTION
+class ProfileScreen extends StatefulWidget {
+  final List<VideoModel> userVideos;
+  final Function(String) onDeleteVideo;
+
+  const ProfileScreen({super.key, required this.userVideos, required this.onDeleteVideo});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String? _profileImagePath;
+  String _username = '@kuanyngne_official';
+  String _bio = 'Creating 5-minute HD video experience';
+
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickProfileImage(StateSetter setModalState) async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _profileImagePath = image.path;
+      });
+      setModalState(() {
+        _profileImagePath = image.path;
+      });
+    }
+  }
+
+  void _showEditProfileModal(BuildContext context) {
+    final TextEditingController usernameController = TextEditingController(text: _username);
+    final TextEditingController bioController = TextEditingController(text: _bio);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF161622),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Edit Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 45,
+                          backgroundColor: Colors.grey.shade800,
+                          backgroundImage: _profileImagePath != null
+                              ? FileImage(File(_profileImagePath!))
+                              : const NetworkImage('https://via.placeholder.com/150') as ImageProvider,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: () => _pickProfileImage(setModalState),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFF2A5F),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: usernameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        labelStyle: TextStyle(color: Colors.white70),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2A5F))),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    TextField(
+                      controller: bioController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Bio',
+                        labelStyle: TextStyle(color: Colors.white70),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2A5F))),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2A5F)),
+                  onPressed: () {
+                    setState(() {
+                      _username = usernameController.text;
+                      _bio = bioController.text;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Video')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            final newVideo = VideoModel(
-              id: DateTime.now().toString(),
-              username: '@my_profile',
-              userAvatar: '',
-              videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-              caption: 'New Video Uploaded!',
-              songTitle: 'Original Audio',
-              likes: 0,
-              commentsCount: 0,
-              shares: 0,
-            );
-            onVideoUploaded(newVideo);
-          },
-          child: const Text('Pick and Upload Video'),
+      backgroundColor: const Color(0xFF0D0D13),
+      appBar: AppBar(
+        title: Text(_username, style: const TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFF0D0D13),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () => _showEditProfileModal(context),
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: const Color(0xFFFF2A5F),
+              backgroundImage: _profileImagePath != null
+                  ? FileImage(File(_profileImagePath!))
+                  : null,
+              child: _profileImagePath == null
+                  ? const Icon(Icons.person, size: 40, color: Colors.white)
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(_username, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Text(_bio, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          ),
+          const SizedBox(height: 15),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF2A5F),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => _showEditProfileModal(context),
+            child: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
+          ),
+          const SizedBox(height: 20),
+          const Divider(color: Colors.white12),
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
+              ),
+              itemCount: widget.userVideos.length,
+              itemBuilder: (context, index) {
+                return Container(
+                  color: Colors.white10,
+                  child: Center(
+                    child: IconButton(
+                      icon: const Icon(Icons.play_arrow, color: Colors.white),
+                      onPressed: () {
+                        widget.onDeleteVideo(widget.userVideos[index].id);
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// SETTINGS AND PRIVACY SCREEN
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isDarkMode = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D0D13),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0D0D13),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Settings and Privacy',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          _buildSectionHeader('ACCOUNT'),
+          _buildListTile(
+            icon: Icons.person_outline,
+            title: 'Account Information',
+            onTap: () {
+              _showInfoDialog(context, 'Account Information', 'Username: @kuanyngne_official\nEmail: user@example.com');
+            },
+          ),
+          _buildListTile(
+            icon: Icons.lock_outline,
+            title: 'Privacy',
+            onTap: () {
+              _showInfoDialog(context, 'Privacy Settings', 'Private Account: Off\nDirect Messages: Everyone');
+            },
+          ),
+          _buildListTile(
+            icon: Icons.shield_outlined,
+            title: 'Security',
+            onTap: () {
+              _showInfoDialog(context, 'Security', '2-Factor Authentication: Disabled\nPassword: *********');
+            },
+          ),
+          const Divider(color: Colors.white12, height: 32),
+          _buildSectionHeader('PREFERENCES & CACHE'),
+          _buildListTile(
+            icon: Icons.cleaning_services_outlined,
+            title: 'Free up space / Clear Cache',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cache cleared successfully! (124 MB freed)'),
+                  backgroundColor: Color(0xFFFF2A5F),
+                ),
+              );
+            },
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.brightness_4_outlined, color: Colors.white),
+            title: const Text('Dark Mode', style: TextStyle(color: Colors.white, fontSize: 16)),
+            value: _isDarkMode,
+            activeColor: const Color(0xFFFF2A5F),
+            onChanged: (bool value) {
+              setState(() {
+                _isDarkMode = value;
+              });
+            },
+          ),
+          const Divider(color: Colors.white12, height: 32),
+          _buildSectionHeader('DANGER ZONE', color: Colors.redAccent),
+          _buildListTile(
+            icon: Icons.delete_forever,
+            title: 'Delete Account',
+            titleColor: Colors.redAccent,
+            iconColor: Colors.redAccent,
+            onTap: () {
+              _showDeleteConfirmation(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, {Color color = Colors.grey}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Text(
+        title,
+        style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+      ),
+    );
+  }
+
+  Widget _buildListTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color titleColor = Colors.white,
+    Color iconColor = Colors.white,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: iconColor),
+      title: Text(title, style: TextStyle(color: titleColor, fontSize: 16)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      onTap: onTap,
+    );
+  }
+
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161622),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Text(content, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: Color(0xFFFF2A5F))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161622),
+        title: const Text('Delete Account', style: TextStyle(color: Colors.redAccent)),
+        content: const Text(
+          'Are you sure you want to delete your account? This action cannot be undone.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Account deletion process initiated.')),
+              );
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// OTHER SCREENS
+class ExploreScreen extends StatelessWidget {
+  const ExploreScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Explore / Friends'),
+        backgroundColor: const Color(0xFF0D0D13),
+      ),
+      body: const Center(
+        child: Text('Explore & Trending Content Screen', style: TextStyle(color: Colors.white54)),
+      ),
+    );
+  }
+}
+
+class UploadScreen extends StatefulWidget {
+  final Function(VideoModel) onVideoUploaded;
+  const UploadScreen({super.key, required this.onVideoUploaded});
+
+  @override
+  State<UploadScreen> createState() => _UploadScreenState();
+}
+
+class _UploadScreenState extends State<UploadScreen> {
+  final ImagePicker _picker = ImagePicker();
+  final TextEditingController _captionController = TextEditingController();
+  XFile? _selectedVideo;
+
+  Future<void> _pickVideo() async {
+    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video != null) {
+      setState(() {
+        _selectedVideo = video;
+      });
+    }
+  }
+
+  void _upload() {
+    if (_selectedVideo != null && _captionController.text.isNotEmpty) {
+      final newVid = VideoModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        username: '@my_channel',
+        userAvatar: 'https://via.placeholder.com/150',
+        videoUrl: _selectedVideo!.path,
+        isLocalFile: true,
+        caption: _captionController.text,
+        songTitle: 'Original Sound',
+        likes: 0,
+        commentsCount: 0,
+        shares: 0,
+      );
+      widget.onVideoUploaded(newVid);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video Published Successfully!')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Create Video'),
+        backgroundColor: const Color(0xFF0D0D13),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            ElevatedButton.icon(
+              onPressed: _pickVideo,
+              icon: const Icon(Icons.video_library),
+              label: Text(_selectedVideo == null ? 'Select Video' : 'Change Video'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _captionController,
+              decoration: const InputDecoration(
+                hintText: 'Write a caption...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _upload,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2A5F)),
+              child: const Text('Post Video'),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class ProfileScreen extends StatelessWidget {
-  final List<VideoModel> userVideos;
-  final Function(String) onDeleteVideo;
-
-  const ProfileScreen({
-    super.key,
-    required this.userVideos,
-    required this.onDeleteVideo,
-  });
+class ActivityScreen extends StatelessWidget {
+  const ActivityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        backgroundColor: const Color(0xFF0D0D13),
+      ),
       body: ListView.builder(
-        itemCount: userVideos.length,
+        itemCount: 10,
         itemBuilder: (context, index) {
-          final video = userVideos[index];
           return ListTile(
-            title: Text(video.caption),
-            subtitle: Text(video.username),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete, color: Colors.redAccent),
-              onPressed: () => onDeleteVideo(video.id),
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFFF2A5F),
+              child: Icon(Icons.notifications, color: Colors.white),
             ),
+            title: Text('Notification Title #${index + 1}'),
+            subtitle: const Text('Someone liked your video.'),
           );
         },
       ),
     );
+  }
+}
+
+class VideoSearchDelegate extends SearchDelegate {
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => close(context, null));
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return Center(child: Text('Search Results for "$query"'));
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return Container();
   }
 }
