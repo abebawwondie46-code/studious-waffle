@@ -1,4 +1,4 @@
-import 'dart0:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
@@ -82,7 +82,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       username: '@kuanyngne_official',
       userAvatar: 'https://via.placeholder.com/150',
       videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
+      caption: 'Welcome to kuanyngne! Professional HD Video Sharing Feed 🔥 #kuanyngne #viral',
       songTitle: 'Original Audio - kuanyngne Sound',
       likes: 12500,
       commentsCount: 3,
@@ -94,7 +94,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       username: '@tech_creator',
       userAvatar: 'https://via.placeholder.com/150',
       videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
+      caption: 'Testing video playback quality on Flutter! 🚀 #tech #flutter',
       songTitle: 'Trending Beats 2026',
       likes: 8400,
       commentsCount: 3,
@@ -119,7 +119,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      VideoFeedScreen(videos: _globalVideos),
+      VideoFeedScreen(videos: _globalVideos, onVideoRecorded: _addNewVideo),
       const ExploreScreen(),
       UploadScreen(onVideoUploaded: _addNewVideo),
       const ActivityScreen(),
@@ -173,7 +173,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
 class VideoFeedScreen extends StatefulWidget {
   final List<VideoModel> videos;
-  const VideoFeedScreen({super.key, required this.videos});
+  final Function(VideoModel) onVideoRecorded;
+
+  const VideoFeedScreen({
+    super.key,
+    required this.videos,
+    required this.onVideoRecorded,
+  });
 
   @override
   State<VideoFeedScreen> createState() => _VideoFeedScreenState();
@@ -182,6 +188,31 @@ class VideoFeedScreen extends StatefulWidget {
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
   int _selectedFeedTab = 2;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _recordVideoFromCamera() async {
+    final XFile? recordedVideo = await _picker.pickVideo(source: ImageSource.camera);
+    if (recordedVideo != null) {
+      final newVideo = VideoModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        username: '@my_profile',
+        userAvatar: 'https://via.placeholder.com/150',
+        videoUrl: recordedVideo.path,
+        isLocalFile: true,
+        caption: 'Recorded with camera! 🎥 #kuanyngne',
+        songTitle: 'Original Audio - Camera Recording',
+        likes: 0,
+        commentsCount: 0,
+        shares: 0,
+      );
+      widget.onVideoRecorded(newVideo);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recorded video added successfully!')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -210,8 +241,8 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.live_tv_rounded, color: Colors.white, size: 26),
-                    onPressed: () {},
+                    icon: const Icon(Icons.videocam_outlined, color: Colors.white, size: 28),
+                    onPressed: _recordVideoFromCamera,
                   ),
                   Row(
                     children: [
@@ -376,7 +407,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                     _buildShareAppTile(Icons.send, 'Telegram', const Color(0xFF0088CC)),
                     _buildShareAppTile(Icons.chat_bubble, 'WhatsApp', const Color(0xFF25D366)),
                     _buildShareAppTile(Icons.facebook, 'Facebook', const Color(0xFF1877F2)),
-                    _buildShareAppTile(Icons.camera_alt, 'Instagram', const Color(0xE1306C)),
+                    _buildShareAppTile(Icons.camera_alt, 'Instagram', const Color(0xFFE1306C)),
                     _buildShareAppTile(Icons.link, 'Copy Link', const Color(0xFF4A4A6A)),
                   ],
                 ),
@@ -510,14 +541,42 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                       child: ListView.builder(
                         itemCount: widget.video.comments.length,
                         itemBuilder: (context, index) {
+                          final commentText = widget.video.comments[index];
                           return ListTile(
                             leading: const CircleAvatar(
                               backgroundColor: Color(0xFFFF2A5F),
                               child: Icon(Icons.person, color: Colors.white),
                             ),
                             title: Text('User_${index + 1}'),
-                            subtitle: Text(widget.video.comments[index]),
+                            subtitle: Text(commentText),
                             trailing: const Icon(Icons.favorite_border, size: 16),
+                            onLongPress: () {
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  backgroundColor: const Color(0xFF161622),
+                                  title: const Text('Delete Comment'),
+                                  content: const Text('Are you sure you want to delete this comment?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        setModalState(() {
+                                          widget.video.comments.removeAt(index);
+                                          widget.video.commentsCount = widget.video.comments.length;
+                                        });
+                                        setState(() {});
+                                        Navigator.pop(ctx);
+                                      },
+                                      child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           );
                         },
                       ),
@@ -924,7 +983,7 @@ class ExploreScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF0D0D13),
       ),
       body: const Center(
-        child: Text('Trending 5-Minute Videos & Creators'),
+        child: Text('Trending Videos & Creators'),
       ),
     );
   }
@@ -1174,9 +1233,36 @@ class ProfileScreen extends StatelessWidget {
                             top: 4,
                             right: 4,
                             child: GestureDetector(
-                              onTap: () => onDeleteVideo(video.id),
-                              child: const ContainerDecoration(
-                                child: Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    backgroundColor: const Color(0xFF161622),
+                                    title: const Text('Delete Video'),
+                                    content: const Text('Do you want to delete this video?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          onDeleteVideo(video.id);
+                                          Navigator.pop(ctx);
+                                        },
+                                        child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.delete, color: Colors.redAccent, size: 18),
                               ),
                             ),
                           ),
@@ -1207,23 +1293,6 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 2),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.white54)),
       ],
-    );
-  }
-}
-
-class ContainerDecoration extends StatelessWidget {
-  final Widget child;
-  const ContainerDecoration({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: const BoxDecoration(
-        color: Colors.black54,
-        shape: BoxShape.circle,
-      ),
-      child: child,
     );
   }
 }
