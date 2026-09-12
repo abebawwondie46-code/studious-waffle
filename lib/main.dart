@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart0:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
@@ -33,6 +33,7 @@ class VideoModel {
   final String username;
   final String userAvatar;
   final String videoUrl;
+  final bool isLocalFile;
   final String caption;
   final String songTitle;
   int likes;
@@ -43,12 +44,14 @@ class VideoModel {
   bool isSaved;
   bool isFollowing;
   String currentQuality;
+  List<String> comments;
 
   VideoModel({
     required this.id,
     required this.username,
     required this.userAvatar,
     required this.videoUrl,
+    this.isLocalFile = false,
     required this.caption,
     required this.songTitle,
     required this.likes,
@@ -59,7 +62,8 @@ class VideoModel {
     this.isSaved = false,
     this.isFollowing = false,
     this.currentQuality = '1080p',
-  });
+    List<String>? comments,
+  }) : comments = comments ?? ['Awesome content! 🔥', 'Keep it up brother!', 'Amazing video 👏'];
 }
 
 class MainNavigationScreen extends StatefulWidget {
@@ -72,20 +76,54 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const VideoFeedScreen(),
-    const ExploreScreen(),
-    const UploadScreen(),
-    const ActivityScreen(),
-    const ProfileScreen(),
+  final List<VideoModel> _globalVideos = [
+    VideoModel(
+      id: 'v1',
+      username: '@kuanyngne_official',
+      userAvatar: 'https://via.placeholder.com/150',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
+      songTitle: 'Original Audio - kuanyngne Sound',
+      likes: 12500,
+      commentsCount: 3,
+      savedCount: 2409,
+      shares: 751,
+    ),
+    VideoModel(
+      id: 'v2',
+      username: '@tech_creator',
+      userAvatar: 'https://via.placeholder.com/150',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
+      songTitle: 'Trending Beats 2026',
+      likes: 8400,
+      commentsCount: 3,
+      savedCount: 890,
+      shares: 316,
+    ),
   ];
+
+  void _addNewVideo(VideoModel newVideo) {
+    setState(() {
+      _globalVideos.insert(0, newVideo);
+      _currentIndex = 0; // Upload ከተደረገ በኋላ በቀጥታ ወደ Home Feed ይመልሳል
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> screens = [
+      VideoFeedScreen(videos: _globalVideos),
+      const ExploreScreen(),
+      UploadScreen(onVideoUploaded: _addNewVideo),
+      const ActivityScreen(),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -128,7 +166,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 }
 
 class VideoFeedScreen extends StatefulWidget {
-  const VideoFeedScreen({super.key});
+  final List<VideoModel> videos;
+  const VideoFeedScreen({super.key, required this.videos});
 
   @override
   State<VideoFeedScreen> createState() => _VideoFeedScreenState();
@@ -137,67 +176,23 @@ class VideoFeedScreen extends StatefulWidget {
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final PageController _pageController = PageController();
   int _selectedFeedTab = 2;
-  bool _isLoading = false;
-
-  List<VideoModel> _videos = [
-    VideoModel(
-      id: 'v1',
-      username: '@kuanyngne_official',
-      userAvatar: 'https://via.placeholder.com/150',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
-      songTitle: 'Original Audio - kuanyngne Sound',
-      likes: 12500,
-      commentsCount: 342,
-      savedCount: 2409,
-      shares: 751,
-    ),
-    VideoModel(
-      id: 'v2',
-      username: '@tech_creator',
-      userAvatar: 'https://via.placeholder.com/150',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
-      songTitle: 'Trending Beats 2026',
-      likes: 8400,
-      commentsCount: 121,
-      savedCount: 890,
-      shares: 316,
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchVideosFromInternet();
-  }
-
-  Future<void> _fetchVideosFromInternet() async {
-    setState(() => _isLoading = true);
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-    } catch (e) {
-      debugPrint('Error fetching videos: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          _isLoading
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF2A5F)))
-              : PageView.builder(
-                  controller: _pageController,
-                  scrollDirection: Axis.vertical,
-                  itemCount: _videos.length,
-                  itemBuilder: (context, index) {
-                    return VideoTile(video: _videos[index]);
-                  },
-                ),
+          PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            itemCount: widget.videos.length,
+            itemBuilder: (context, index) {
+              return VideoTile(
+                key: ValueKey(widget.videos[index].id),
+                video: widget.videos[index],
+              );
+            },
+          ),
           SafeArea(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -301,17 +296,25 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
       duration: const Duration(seconds: 5),
     )..repeat();
 
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.video.videoUrl))
-      ..initialize().then((_) {
+    // ስልክ ላይ ካለ ፋይል ወይም ኢንተርኔት ላይ ላለ ቪዲዮ ማስተካከያ
+    if (widget.video.isLocalFile) {
+      _videoController = VideoPlayerController.file(File(widget.video.videoUrl));
+    } else {
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.video.videoUrl));
+    }
+
+    _videoController.initialize().then((_) {
+      if (mounted) {
         setState(() {
           _isInitialized = true;
         });
         _videoController.play();
         _videoController.setLooping(true);
-      });
+      }
+    });
 
     _videoController.addListener(() {
-      if (_videoController.value.isInitialized) {
+      if (_videoController.value.isInitialized && mounted) {
         setState(() {
           _playbackPosition = _videoController.value.position.inMilliseconds /
               _videoController.value.duration.inMilliseconds;
@@ -456,7 +459,6 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
 
   void _showCommentsBottomSheet(BuildContext context) {
     final TextEditingController commentController = TextEditingController();
-    List<String> comments = ['Awesome content! 🔥', 'Keep it up brother!', 'Amazing video 👏'];
 
     showModalBottomSheet(
       context: context,
@@ -491,13 +493,13 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
-                        '${widget.video.commentsCount} Comments',
+                        '${widget.video.comments.length} Comments',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
                     Expanded(
                       child: ListView.builder(
-                        itemCount: comments.length,
+                        itemCount: widget.video.comments.length,
                         itemBuilder: (context, index) {
                           return ListTile(
                             leading: const CircleAvatar(
@@ -505,7 +507,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                               child: Icon(Icons.person, color: Colors.white),
                             ),
                             title: Text('User_${index + 1}'),
-                            subtitle: Text(comments[index]),
+                            subtitle: Text(widget.video.comments[index]),
                             trailing: const Icon(Icons.favorite_border, size: 16),
                           );
                         },
@@ -524,13 +526,13 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.send, color: Color(0xFFFF2A5F)),
                             onPressed: () {
-                              if (commentController.text.trim().isNotEmpty) {
+                              final text = commentController.text.trim();
+                              if (text.isNotEmpty) {
                                 setModalState(() {
-                                  comments.add(commentController.text.trim());
+                                  widget.video.comments.add(text);
+                                  widget.video.commentsCount = widget.video.comments.length;
                                 });
-                                setState(() {
-                                  widget.video.commentsCount++;
-                                });
+                                setState(() {}); // Main state update
                                 commentController.clear();
                               }
                             },
@@ -822,7 +824,7 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                     const Icon(Icons.comment_rounded, size: 36, color: Colors.white),
                     const SizedBox(height: 2),
                     Text(
-                      '${widget.video.commentsCount}',
+                      '${widget.video.comments.length}',
                       style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ],
@@ -919,9 +921,10 @@ class ExploreScreen extends StatelessWidget {
   }
 }
 
-// ቪዲዮ መምረጫ፣ ፕሪቪው ማሳያ እና መስቀያ Screen (UploadScreen)
 class UploadScreen extends StatefulWidget {
-  const UploadScreen({super.key});
+  final Function(VideoModel) onVideoUploaded;
+
+  const UploadScreen({super.key, required this.onVideoUploaded});
 
   @override
   State<UploadScreen> createState() => _UploadScreenState();
@@ -939,7 +942,7 @@ class _UploadScreenState extends State<UploadScreen> {
     if (pickedFile != null) {
       _previewController?.dispose();
       final file = File(pickedFile.path);
-      
+
       _previewController = VideoPlayerController.file(file)
         ..initialize().then((_) {
           setState(() {
@@ -963,20 +966,36 @@ class _UploadScreenState extends State<UploadScreen> {
       _isUploading = true;
     });
 
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 1), () {
+      final newVideo = VideoModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        username: '@kuanyngne_user',
+        userAvatar: 'https://via.placeholder.com/150',
+        videoUrl: _selectedVideoFile!.path,
+        isLocalFile: true,
+        caption: _captionController.text.trim().isEmpty
+            ? 'My new video on kuanyngne! 🚀'
+            : _captionController.text.trim(),
+        songTitle: 'Original Audio - User Sound',
+        likes: 0,
+        commentsCount: 0,
+        shares: 0,
+      );
+
+      widget.onVideoUploaded(newVideo);
+
       if (mounted) {
         setState(() {
           _isUploading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ቪዲዮው በተሳካ ሁኔታ ተለቋል!')),
-        );
-        setState(() {
           _selectedVideoFile = null;
           _previewController?.dispose();
           _previewController = null;
           _captionController.clear();
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ቪዲዮው በተሳካ ሁኔታ ዋናው ገፅ ላይ ተለቋል!')),
+        );
       }
     });
   }
@@ -1087,7 +1106,6 @@ class ActivityScreen extends StatelessWidget {
   }
 }
 
-// የፕሮፋይል ፎቶ መቀየሪያ እና ማስተካከያ (ProfileScreen)
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
