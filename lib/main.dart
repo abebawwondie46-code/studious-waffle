@@ -100,7 +100,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               ),
             ),
 
-            // 2. MIDDLE SECTION (SIDEBAR & MOBILE FRAME)
+            // 2. MIDDLE SECTION (SIDEBAR & SCROLLABLE CANVAS)
             Expanded(
               child: Row(
                 children: [
@@ -144,7 +144,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                     ),
                   ),
 
-                  // CENTER CANVAS (MOBILE WITH EXTERNAL TOP/BOTTOM NAV & INTERNAL SOCIAL ICONS)
+                  // CENTER CANVAS (VERTICAL SCROLLABLE FEED)
                   Expanded(
                     child: Container(
                       color: const Color(0xFF0F1015),
@@ -169,7 +169,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                               borderRadius: BorderRadius.circular(20),
                               child: Column(
                                 children: [
-                                  // EXTERNAL TOP NAV BAR (OUTSIDE VIDEO)
+                                  // EXTERNAL TOP NAV BAR
                                   Container(
                                     height: 36,
                                     color: Colors.black,
@@ -206,17 +206,17 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                                     ),
                                   ),
 
-                                  // VIDEO CANVAS WITH INTERNAL SIDE ICONS
-                                  const Expanded(child: TikTokStyleVideoCanvas()),
+                                  // SCROLLABLE VIDEO FEED (PAGEVIEW)
+                                  const Expanded(child: TikTokScrollableFeed()),
 
-                                  // EXTERNAL BOTTOM NAV BAR (OUTSIDE VIDEO)
+                                  // EXTERNAL BOTTOM NAV BAR
                                   Container(
                                     height: 42,
                                     color: Colors.black,
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                                       children: [
-                                        _buildBottomNavItem(Icons.home, 'Home', color: Colors.redAccent),
+                                        _buildBottomNavItem(Icons.home, 'Home', color: Colors.white),
                                         _buildBottomNavItem(Icons.people_outline, 'Friends'),
                                         Container(
                                           width: 32,
@@ -295,23 +295,70 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
   }
 }
 
-// ==================== TIKTOK VIDEO CANVAS WITH SIDE ICONS ====================
-class TikTokStyleVideoCanvas extends StatefulWidget {
-  const TikTokStyleVideoCanvas({super.key});
+// ==================== VERTICAL SCROLLABLE TIKTOK FEED ====================
+class TikTokScrollableFeed extends StatefulWidget {
+  const TikTokScrollableFeed({super.key});
 
   @override
-  State<TikTokStyleVideoCanvas> createState() => _TikTokStyleVideoCanvasState();
+  State<TikTokScrollableFeed> createState() => _TikTokScrollableFeedState();
 }
 
-class _TikTokStyleVideoCanvasState extends State<TikTokStyleVideoCanvas> {
+class _TikTokScrollableFeedState extends State<TikTokScrollableFeed> {
+  final PageController _pageController = PageController();
+
+  final List<Map<String, String>> _videoData = [
+    {
+      'url': 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
+      'username': '@kuanyngne_official',
+      'caption': 'Welcome to VibeShare! Professional 5-Minute HD Video Sharing Feed 🔥 #kuany',
+      'likes': '12.5K',
+      'comments': '3',
+      'bookmarks': '2409',
+      'shares': '751',
+    },
+    {
+      'url': 'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
+      'username': '@vibeshare_tech',
+      'caption': 'Checking out our amazing vertical scrollable video feature! 🚀 #Flutter #VibeShare',
+      'likes': '24.1K',
+      'comments': '152',
+      'bookmarks': '3100',
+      'shares': '1200',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return PageView.builder(
+      scrollDirection: Axis.vertical,
+      controller: _pageController,
+      itemCount: _videoData.length,
+      itemBuilder: (context, index) {
+        return SingleVideoItem(videoInfo: _videoData[index]);
+      },
+    );
+  }
+}
+
+class SingleVideoItem extends StatefulWidget {
+  final Map<String, String> videoInfo;
+
+  const SingleVideoItem({super.key, required this.videoInfo});
+
+  @override
+  State<SingleVideoItem> createState() => _SingleVideoItemState();
+}
+
+class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProviderStateMixin {
   late VideoPlayerController _controller;
+  late AnimationController _discAnimController;
   bool _isLiked = false;
 
   @override
   void initState() {
     super.initState();
     _controller = VideoPlayerController.networkUrl(
-      Uri.parse('https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4'),
+      Uri.parse(widget.videoInfo['url']!),
     )..initialize().then((_) {
         if (mounted) {
           setState(() {});
@@ -319,11 +366,17 @@ class _TikTokStyleVideoCanvasState extends State<TikTokStyleVideoCanvas> {
           _controller.play();
         }
       });
+
+    _discAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _discAnimController.dispose();
     super.dispose();
   }
 
@@ -332,7 +385,13 @@ class _TikTokStyleVideoCanvasState extends State<TikTokStyleVideoCanvas> {
     return GestureDetector(
       onTap: () {
         setState(() {
-          _controller.value.isPlaying ? _controller.pause() : _controller.play();
+          if (_controller.value.isPlaying) {
+            _controller.pause();
+            _discAnimController.stop();
+          } else {
+            _controller.play();
+            _discAnimController.repeat();
+          }
         });
       },
       child: Stack(
@@ -354,17 +413,34 @@ class _TikTokStyleVideoCanvasState extends State<TikTokStyleVideoCanvas> {
                   child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
                 ),
 
-          // PLAY OVERLAY ICON IF PAUSED
+          // BOTTOM GRADIENT SHADOW FOR BETTER TEXT VISIBILITY
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 120,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.transparent, Colors.black87],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+          ),
+
+          // PAUSE ICON OVERLAY
           if (_controller.value.isInitialized && !_controller.value.isPlaying)
             Container(
-              decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+              decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
               child: const Icon(Icons.play_arrow, color: Colors.white70, size: 45),
             ),
 
-          // 2. RIGHT SIDE SOCIAL ACTION ICONS (INSIDE CANVAS)
+          // 2. RIGHT SIDE SOCIAL ACTION ICONS
           Positioned(
             right: 8,
-            bottom: 20,
+            bottom: 15,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -394,39 +470,42 @@ class _TikTokStyleVideoCanvasState extends State<TikTokStyleVideoCanvas> {
                   onTap: () => setState(() => _isLiked = !_isLiked),
                   child: Icon(Icons.favorite, color: _isLiked ? const Color(0xFFFF2C55) : Colors.white, size: 26),
                 ),
-                const Text('12500', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                Text(widget.videoInfo['likes']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
 
                 // Comment Button
                 const Icon(Icons.comment, color: Colors.white, size: 24),
-                const Text('3', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                Text(widget.videoInfo['comments']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
 
                 // Bookmark Button
                 const Icon(Icons.bookmark, color: Colors.white, size: 24),
-                const Text('2409', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                Text(widget.videoInfo['bookmarks']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
 
                 // Share Button
                 const Icon(Icons.reply, color: Colors.white, size: 24),
-                const Text('751', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                Text(widget.videoInfo['shares']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
 
-                // Rotating Audio Disc Icon
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white30, width: 1.5),
+                // ROTATING MUSIC DISC
+                RotationTransition(
+                  turns: _discAnimController,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white30, width: 1.5),
+                    ),
+                    child: const Icon(Icons.music_note, color: Colors.white, size: 10),
                   ),
-                  child: const Icon(Icons.music_note, color: Colors.white, size: 10),
                 ),
               ],
             ),
           ),
 
-          // 3. BOTTOM LEFT TEXT & CAPTION (INSIDE CANVAS)
+          // 3. BOTTOM LEFT TEXT & CAPTION
           Positioned(
             left: 10,
             bottom: 12,
@@ -435,23 +514,23 @@ class _TikTokStyleVideoCanvasState extends State<TikTokStyleVideoCanvas> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('@kuanyngne_official', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                Text(widget.videoInfo['username']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                 const SizedBox(height: 3),
-                const Text(
-                  'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuany...',
-                  style: TextStyle(color: Colors.white, fontSize: 9),
+                Text(
+                  widget.videoInfo['caption']!,
+                  style: const TextStyle(color: Colors.white, fontSize: 9),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Row(
-                  children: const [
-                    Icon(Icons.music_note, color: Colors.white, size: 10),
-                    SizedBox(width: 4),
+                  children: [
+                    const Icon(Icons.music_note, color: Colors.white, size: 10),
+                    const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        'Original Audio - kuanyngne Sound',
-                        style: TextStyle(color: Colors.white, fontSize: 8),
+                        'Original Audio - ${widget.videoInfo['username']}',
+                        style: const TextStyle(color: Colors.white, fontSize: 8),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
