@@ -14,7 +14,7 @@ class VibeShareAppBuilder extends StatelessWidget {
       title: 'VibeShare Studio',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF16181D),
+        scaffoldBackgroundColor: const Color(0xFF14161B),
         primaryColor: const Color(0xFF1F222A),
       ),
       home: const MainStudioEditor(),
@@ -50,7 +50,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
       body: SafeArea(
         child: Column(
           children: [
-            // 1. TOP TOOLBAR
+            // 1. TOP SKETCHWARE TOOLBAR
             Container(
               color: const Color(0xFF1F222A),
               child: Column(
@@ -100,49 +100,49 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               ),
             ),
 
-            // 2. MIDDLE SECTION (SIDEBAR & CANVAS)
+            // 2. MIDDLE SECTION (SIDEBAR & EXPANDED CANVAS)
             Expanded(
               child: Row(
                 children: [
                   // LEFT SIDEBAR
                   Container(
-                    width: 140,
-                    color: const Color(0xFF191B20),
+                    width: 135,
+                    color: const Color(0xFF181A20),
                     child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                       children: [
                         // (+) Upload Video Button
                         Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
                             color: const Color(0xFF252830),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: const Color(0xFF333842)),
                           ),
                           child: Column(
                             children: const [
-                              Icon(Icons.add, color: Colors.white, size: 22),
-                              SizedBox(height: 2),
-                              Text('Upload Video', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                              Icon(Icons.add, color: Colors.white, size: 24),
+                              SizedBox(height: 4),
+                              Text('Upload Video', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ),
 
-                        // SETTINGS
+                        // SETTINGS SECTION
                         _buildSectionHeader('Settings'),
                         _buildWidgetItem(Icons.account_circle, 'Profile Picture'),
                         _buildWidgetItem(Icons.manage_accounts, 'Account Setup'),
                         _buildWidgetItem(Icons.security, 'Privacy Safety'),
 
-                        // MEDIA & VIDEO
+                        // MEDIA & VIDEO SECTION
                         _buildSectionHeader('Media & Video'),
                         _buildWidgetItem(Icons.video_library, 'VideoFeed'),
                         _buildWidgetItem(Icons.audiotrack, 'AudioTrack'),
                         _buildWidgetItem(Icons.subtitles, 'SubtitleUI'),
                         _buildWidgetItem(Icons.auto_fix_high, 'VideoEffects'),
 
-                        // SOCIAL FEATURES
+                        // SOCIAL FEATURES SECTION
                         _buildSectionHeader('Social Features'),
                         _buildWidgetItem(Icons.favorite, 'LikeButton'),
                         _buildWidgetItem(Icons.comment, 'CommentBox'),
@@ -151,42 +151,50 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                     ),
                   ),
 
-                  // CENTER CANVAS (TIKTOK STYLE CANVAS)
+                  // CENTER CANVAS (PRO-EXPANDED MOBILE DISPLAY)
                   Expanded(
                     child: Container(
-                      color: const Color(0xFF121418),
-                      padding: const EdgeInsets.all(6),
+                      color: const Color(0xFF0F1015),
+                      padding: const EdgeInsets.all(8),
                       child: Center(
                         child: AspectRatio(
-                          aspectRatio: 9 / 16,
+                          aspectRatio: 9 / 18, // ሰፋ ያለ የዘመናዊ ስልክ ስክሪን መጠን
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.black,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF333842), width: 2),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFF3B404E), width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                )
+                              ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(14),
                               child: Column(
                                 children: [
-                                  // SKETCHWARE CANVAS STATUS BAR
+                                  // SKETCHWARE CANVAS TOP BAR
                                   Container(
-                                    height: 20,
+                                    height: 22,
                                     color: const Color(0xFF5C6BC0),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
                                     child: Row(
                                       children: const [
-                                        Text('main.xml', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                                        Text('main.xml', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                                         Spacer(),
-                                        Icon(Icons.signal_cellular_4_bar, color: Colors.white, size: 9),
+                                        Icon(Icons.signal_cellular_4_bar, color: Colors.white, size: 10),
                                         SizedBox(width: 4),
-                                        Icon(Icons.wifi, color: Colors.white, size: 9),
+                                        Icon(Icons.wifi, color: Colors.white, size: 10),
                                         SizedBox(width: 4),
-                                        Text('1:37', style: TextStyle(color: Colors.white, fontSize: 9)),
+                                        Text('1:37', style: TextStyle(color: Colors.white, fontSize: 10)),
                                       ],
                                     ),
                                   ),
-                                  const Expanded(child: TikTokCanvasPreview()),
+                                  // SCROLLABLE TIKTOK FEED PREVIEW
+                                  const Expanded(child: ScrollableTikTokFeed()),
                                 ],
                               ),
                             ),
@@ -207,7 +215,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFF16181D),
                       borderRadius: BorderRadius.circular(20),
@@ -224,7 +232,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                   ),
                   const Spacer(),
                   
-                  // RUN BUTTON (RESTORED AS REQUESTED)
+                  // RUN BUTTON
                   Row(
                     children: [
                       ElevatedButton.icon(
@@ -235,11 +243,11 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Building and running project...')),
+                            const SnackBar(content: Text('Building and running app...')),
                           );
                         },
                         icon: const Icon(Icons.play_arrow, size: 18),
@@ -271,7 +279,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      padding: const EdgeInsets.only(top: 10, bottom: 4),
       child: Text(
         title,
         style: TextStyle(color: Colors.grey.shade400, fontSize: 11, fontWeight: FontWeight.bold),
@@ -282,7 +290,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
   Widget _buildWidgetItem(IconData icon, String label) {
     return Container(
       margin: const EdgeInsets.only(bottom: 5),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       decoration: BoxDecoration(
         color: const Color(0xFF252830),
         borderRadius: BorderRadius.circular(6),
@@ -291,7 +299,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
       child: Row(
         children: [
           Icon(icon, size: 14, color: const Color(0xFFBAC7FF)),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               label,
@@ -305,15 +313,54 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
   }
 }
 
-// ==================== TIKTOK STYLE CANVAS PREVIEW ====================
-class TikTokCanvasPreview extends StatefulWidget {
-  const TikTokCanvasPreview({super.key});
+// ==================== TIKTOK SCROLLABLE FEED ENGINE ====================
+class ScrollableTikTokFeed extends StatelessWidget {
+  const ScrollableTikTokFeed({super.key});
+
+  final List<Map<String, String>> sampleData = const [
+    {
+      'username': 'jemii_Jems',
+      'handle': '@NIKATEHILINA 💡',
+      'caption': 'የአዲሱ አፕሊኬሽን ገፅታ እና ዲዛይን! 🚀',
+      'likes': '48.4K',
+      'comments': '435',
+      'bookmarks': '4,491',
+      'shares': '906',
+      'music': 'original sound - jemii_fn - vibe_share',
+    },
+    {
+      'username': 'vibe_share_official',
+      'handle': '@VIBESHARE',
+      'caption': 'Flutter + Sketchware Pro UI Build 🔥',
+      'likes': '120.5K',
+      'comments': '1,200',
+      'bookmarks': '12.3K',
+      'shares': '3,410',
+      'music': 'Trending Sound - VibeShare Beats',
+    },
+  ];
 
   @override
-  State<TikTokCanvasPreview> createState() => _TikTokCanvasPreviewState();
+  Widget build(BuildContext context) {
+    return PageView.builder(
+      scrollDirection: Axis.vertical, // ወደ ላይ እና ወደ ታች ስክሮል እንዲደረግ
+      itemCount: sampleData.length,
+      itemBuilder: (context, index) {
+        return TikTokSinglePost(data: sampleData[index]);
+      },
+    );
+  }
 }
 
-class _TikTokCanvasPreviewState extends State<TikTokCanvasPreview> {
+class TikTokSinglePost extends StatefulWidget {
+  final Map<String, String> data;
+  const TikTokSinglePost({super.key, required this.data});
+
+  @override
+  State<TikTokSinglePost> createState() => _TikTokSinglePostState();
+}
+
+class _TikTokSinglePostState extends State<TikTokSinglePost> {
   late VideoPlayerController _controller;
   bool _isLiked = false;
 
@@ -357,109 +404,110 @@ class _TikTokCanvasPreviewState extends State<TikTokCanvasPreview> {
                 child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
               ),
 
-        // 2. TOP TIKTOK NAVIGATION (LIVE, TEM, Community, Following, For You, Search)
+        // 2. TOP NAVIGATION BAR (LIVE, TEM, Community, Following, For You, Search)
         Positioned(
-          top: 6,
-          left: 4,
-          right: 4,
+          top: 8,
+          left: 8,
+          right: 8,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.live_tv, color: Colors.white, size: 14),
+              const Icon(Icons.live_tv, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: const [
-                      SizedBox(width: 4),
-                      Text('TEM', style: TextStyle(color: Colors.white60, fontSize: 8)),
-                      SizedBox(width: 6),
-                      Text('Community', style: TextStyle(color: Colors.white60, fontSize: 8)),
-                      SizedBox(width: 6),
-                      Text('Following', style: TextStyle(color: Colors.white60, fontSize: 8)),
-                      SizedBox(width: 6),
-                      Text('For You', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 8)),
+                      Text('TEM', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
+                      SizedBox(width: 10),
+                      Text('Community', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
+                      SizedBox(width: 10),
+                      Text('Following', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
+                      SizedBox(width: 10),
+                      Text('For You', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
               ),
-              const Icon(Icons.search, color: Colors.white, size: 14),
+              const Icon(Icons.search, color: Colors.white, size: 18),
             ],
           ),
         ),
 
-        // 3. RIGHT SIDEBAR BUTTONS (PROFILE, LIKE, COMMENT, BOOKMARK, SHARE, AUDIO)
+        // 3. RIGHT SIDEBAR BUTTONS
         Positioned(
-          right: 6,
-          bottom: 45,
+          right: 8,
+          bottom: 50,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Profile Avatar with Plus
+              // Profile Avatar
               Stack(
                 alignment: Alignment.bottomCenter,
                 children: [
                   const CircleAvatar(
-                    radius: 12,
-                    backgroundColor: Colors.white24,
-                    child: Icon(Icons.person, size: 14, color: Colors.white),
+                    radius: 16,
+                    backgroundColor: Colors.white30,
+                    child: Icon(Icons.person, size: 18, color: Colors.white),
                   ),
                   Container(
                     margin: const EdgeInsets.only(bottom: 0),
-                    padding: const EdgeInsets.all(1),
+                    padding: const EdgeInsets.all(1.5),
                     decoration: const BoxDecoration(color: Colors.pink, shape: BoxShape.circle),
-                    child: const Icon(Icons.add, size: 8, color: Colors.white),
+                    child: const Icon(Icons.add, size: 10, color: Colors.white),
                   )
                 ],
               ),
-              const SizedBox(height: 8),
-              
+              const SizedBox(height: 12),
+
               // Like Button
               GestureDetector(
                 onTap: () => setState(() => _isLiked = !_isLiked),
-                child: Icon(Icons.favorite, color: _isLiked ? Colors.red : Colors.white, size: 18),
+                child: Icon(Icons.favorite, color: _isLiked ? Colors.red : Colors.white, size: 24),
               ),
-              const Text('48.4K', style: TextStyle(color: Colors.white, fontSize: 7)),
-              const SizedBox(height: 6),
+              Text(widget.data['likes']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
 
               // Comment Button
-              const Icon(Icons.comment, color: Colors.white, size: 18),
-              const Text('435', style: TextStyle(color: Colors.white, fontSize: 7)),
-              const SizedBox(height: 6),
+              const Icon(Icons.comment, color: Colors.white, size: 24),
+              Text(widget.data['comments']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
 
               // Bookmark Button
-              const Icon(Icons.bookmark, color: Colors.white, size: 18),
-              const Text('4,491', style: TextStyle(color: Colors.white, fontSize: 7)),
-              const SizedBox(height: 6),
+              const Icon(Icons.bookmark, color: Colors.white, size: 24),
+              Text(widget.data['bookmarks']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
 
               // Share Button
-              const Icon(Icons.reply, color: Colors.white, size: 18),
-              const Text('906', style: TextStyle(color: Colors.white, fontSize: 7)),
+              const Icon(Icons.reply, color: Colors.white, size: 24),
+              Text(widget.data['shares']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
 
-        // 4. BOTTOM USER DETAILS
+        // 4. BOTTOM USER DETAILS & CAPTION
         Positioned(
-          left: 8,
-          bottom: 40,
-          right: 45,
+          left: 10,
+          bottom: 48,
+          right: 55,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              Text('jemii_Jems', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
-              SizedBox(height: 2),
-              Text('@NIKATEHILINA 💡', style: TextStyle(color: Colors.white70, fontSize: 8)),
-              SizedBox(height: 2),
+            children: [
+              Text(widget.data['username']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              const SizedBox(height: 2),
+              Text(widget.data['handle']!, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+              const SizedBox(height: 2),
+              Text(widget.data['caption']!, style: const TextStyle(color: Colors.white, fontSize: 10)),
+              const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.music_note, color: Colors.white, size: 8),
-                  SizedBox(width: 2),
+                  const Icon(Icons.music_note, color: Colors.white, size: 10),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      'original sound - jemii_fn - ...',
-                      style: TextStyle(color: Colors.white, fontSize: 7),
+                      widget.data['music']!,
+                      style: const TextStyle(color: Colors.white, fontSize: 9),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -475,22 +523,22 @@ class _TikTokCanvasPreviewState extends State<TikTokCanvasPreview> {
           left: 0,
           right: 0,
           child: Container(
-            height: 32,
+            height: 38,
             color: Colors.black,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(Icons.home, 'Home', isActive: true),
                 _buildNavItem(Icons.people_outline, 'Friends'),
-                // Center (+) Create Button
+                // Center Create (+) Button
                 Container(
-                  width: 24,
-                  height: 16,
+                  width: 32,
+                  height: 20,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.add, color: Colors.black, size: 12),
+                  child: const Icon(Icons.add, color: Colors.black, size: 16),
                 ),
                 _buildNavItem(Icons.chat_bubble_outline, 'Inbox'),
                 _buildNavItem(Icons.person_outline, 'Profile'),
@@ -506,10 +554,10 @@ class _TikTokCanvasPreviewState extends State<TikTokCanvasPreview> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: isActive ? Colors.white : Colors.grey, size: 12),
+        Icon(icon, color: isActive ? Colors.white : Colors.grey, size: 14),
         Text(
           label,
-          style: TextStyle(color: isActive ? Colors.white : Colors.grey, fontSize: 6),
+          style: TextStyle(color: isActive ? Colors.white : Colors.grey, fontSize: 8),
         ),
       ],
     );
