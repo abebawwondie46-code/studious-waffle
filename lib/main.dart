@@ -79,10 +79,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<VideoModel> _globalVideos = [
     VideoModel(
       id: 'v1',
-      username: '@kuanyngne_official',
-      userAvatar: 'https://via.placeholder.com/150',
+      username: 'kuanyngne_official',
+      userAvatar: 'K',
       videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      caption: 'Welcome to kuanyngne! Professional 5-Minute HD Video Sharing Feed 🔥 #kuanyngne #viral',
+      caption: 'Welcome to kuanyngne! Professional HD Video Sharing Feed 🔥 #kuanyngne #viral',
       songTitle: 'Original Audio - kuanyngne Sound',
       likes: 12500,
       commentsCount: 3,
@@ -91,10 +91,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ),
     VideoModel(
       id: 'v2',
-      username: '@tech_creator',
-      userAvatar: 'https://via.placeholder.com/150',
+      username: 'tech_creator',
+      userAvatar: 'T',
       videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      caption: 'Testing 5-minute video playback quality on Flutter! 🚀 #tech #flutter',
+      caption: 'Testing video playback quality on Flutter! 🚀 #tech #flutter',
       songTitle: 'Trending Beats 2026',
       likes: 8400,
       commentsCount: 3,
@@ -507,20 +507,60 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                       ),
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: widget.video.comments.length,
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            leading: const CircleAvatar(
-                              backgroundColor: Color(0xFFFF2A5F),
-                              child: Icon(Icons.person, color: Colors.white),
+                      child: widget.video.comments.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No comments yet. Be the first!',
+                                style: TextStyle(color: Colors.white54),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: widget.video.comments.length,
+                              itemBuilder: (context, index) {
+                                final commentText = widget.video.comments[index];
+                                return Dismissible(
+                                  key: UniqueKey(),
+                                  direction: DismissDirection.endToStart,
+                                  background: Container(
+                                    color: Colors.redAccent,
+                                    alignment: Alignment.centerRight,
+                                    padding: const EdgeInsets.only(right: 20),
+                                    child: const Icon(Icons.delete, color: Colors.white),
+                                  ),
+                                  onDismissed: (direction) {
+                                    setModalState(() {
+                                      widget.video.comments.removeAt(index);
+                                      widget.video.commentsCount = widget.video.comments.length;
+                                    });
+                                    setState(() {});
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Comment deleted')),
+                                    );
+                                  },
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: const Color(0xFFFF2A5F),
+                                      child: Text(
+                                        'U${index + 1}',
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    title: Text('User_${index + 1}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                    subtitle: Text(commentText, style: const TextStyle(color: Colors.white70)),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.white38),
+                                      onPressed: () {
+                                        setModalState(() {
+                                          widget.video.comments.removeAt(index);
+                                          widget.video.commentsCount = widget.video.comments.length;
+                                        });
+                                        setState(() {});
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                            title: Text('User_${index + 1}'),
-                            subtitle: Text(widget.video.comments[index]),
-                            trailing: const Icon(Icons.favorite_border, size: 16),
-                          );
-                        },
-                      ),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(12.0),
@@ -565,6 +605,8 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final avatarLetter = widget.video.username.isNotEmpty ? widget.video.username.replaceFirst('@', '')[0].toUpperCase() : 'U';
+
     return Stack(
       children: [
         GestureDetector(
@@ -688,9 +730,9 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
           left: 0,
           right: 0,
           child: SliderTheme(
-            data: SliderThemeData(
+            data: const SliderThemeData(
               trackHeight: 2,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 4),
               activeTrackColor: Colors.white,
               inactiveTrackColor: Colors.white24,
               thumbColor: Colors.white,
@@ -758,15 +800,18 @@ class _VideoTileState extends State<VideoTile> with SingleTickerProviderStateMix
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(1.5),
+                    padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 1.5),
                     ),
-                    child: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 23,
-                      backgroundColor: Color(0xFF161622),
-                      child: Icon(Icons.person, color: Colors.white),
+                      backgroundColor: const Color(0xFFFF2A5F),
+                      child: Text(
+                        avatarLetter,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -972,8 +1017,8 @@ class _UploadScreenState extends State<UploadScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       final newVideo = VideoModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        username: '@my_profile',
-        userAvatar: '',
+        username: 'my_profile',
+        userAvatar: 'M',
         videoUrl: _selectedVideoFile!.path,
         isLocalFile: true,
         caption: _captionController.text.isNotEmpty
@@ -1095,12 +1140,15 @@ class ActivityScreen extends StatelessWidget {
         itemCount: 5,
         itemBuilder: (context, index) {
           return ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Color(0xFFFF2A5F),
-              child: Icon(Icons.notifications, color: Colors.white),
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xFFFF2A5F),
+              child: Text(
+                'U${index + 1}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
-            title: Text('Notification title ${index + 1}'),
-            subtitle: const Text('Liked your video • 2h ago'),
+            title: Text('User_${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            subtitle: const Text('Liked your video • 2h ago', style: TextStyle(color: Colors.white70)),
           );
         },
       ),
@@ -1122,7 +1170,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('@my_profile'),
+        title: const Text('my_profile'),
         backgroundColor: const Color(0xFF0D0D13),
       ),
       body: Column(
@@ -1131,10 +1179,13 @@ class ProfileScreen extends StatelessWidget {
           const CircleAvatar(
             radius: 40,
             backgroundColor: Color(0xFFFF2A5F),
-            child: Icon(Icons.person, size: 40, color: Colors.white),
+            child: Text(
+              'M',
+              style: TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(height: 10),
-          const Text('@my_profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('my_profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           Expanded(
             child: GridView.builder(
