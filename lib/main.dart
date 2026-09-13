@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package me/flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 void main() {
@@ -100,7 +100,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               ),
             ),
 
-            // 2. MIDDLE SECTION (SIDEBAR & SCROLLABLE CANVAS)
+            // 2. MIDDLE SECTION (SIDEBAR & EXTERNAL NAV LAYOUT)
             Expanded(
               child: Row(
                 children: [
@@ -144,98 +144,110 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                     ),
                   ),
 
-                  // CENTER CANVAS (VERTICAL SCROLLABLE FEED)
+                  // CENTER CANVAS (OUTSIDE TOP & BOTTOM TABS)
                   Expanded(
                     child: Container(
                       color: const Color(0xFF0F1015),
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       child: Center(
-                        child: AspectRatio(
-                          aspectRatio: 9 / 18,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(22),
-                              border: Border.all(color: const Color(0xFF3B404E), width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.7),
-                                  blurRadius: 15,
-                                  spreadRadius: 3,
-                                )
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: Column(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // 1. TOP FEED TABS (OUTSIDE SCREEN - IN THE SPACE ABOVE)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              margin: const EdgeInsets.only(bottom: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF181A20),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white12),
+                              ),
+                              child: Row(
                                 children: [
-                                  // EXTERNAL TOP NAV BAR
-                                  Container(
-                                    height: 36,
-                                    color: Colors.black,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.live_tv, color: Colors.white, size: 16),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: SingleChildScrollView(
-                                            scrollDirection: Axis.horizontal,
-                                            child: Row(
-                                              children: const [
-                                                Text('Friends', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                SizedBox(width: 8),
-                                                Text('For You', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                SizedBox(width: 8),
-                                                Text('Following', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: Colors.white54),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Text('HD 1080p', style: TextStyle(color: Colors.white, fontSize: 8)),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        const Icon(Icons.search, color: Colors.white, size: 16),
-                                      ],
+                                  const Icon(Icons.live_tv, color: Colors.white, size: 16),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: const [
+                                          Text('Friends', style: TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500)),
+                                          SizedBox(width: 10),
+                                          Text('For You', style: TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500)),
+                                          SizedBox(width: 10),
+                                          Text('Following', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
                                     ),
                                   ),
-
-                                  // SCROLLABLE VIDEO FEED (PAGEVIEW)
-                                  const Expanded(child: TikTokScrollableFeed()),
-
-                                  // EXTERNAL BOTTOM NAV BAR
                                   Container(
-                                    height: 42,
-                                    color: Colors.black,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                      children: [
-                                        _buildBottomNavItem(Icons.home, 'Home', color: Colors.white),
-                                        _buildBottomNavItem(Icons.people_outline, 'Friends'),
-                                        Container(
-                                          width: 32,
-                                          height: 22,
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFFF2C55),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: const Icon(Icons.add, color: Colors.white, size: 18),
-                                        ),
-                                        _buildBottomNavItem(Icons.chat_bubble_outline, 'Inbox'),
-                                        _buildBottomNavItem(Icons.person_outline, 'Profile'),
-                                      ],
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.white54),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
+                                    child: const Text('HD 1080p', style: TextStyle(color: Colors.white, fontSize: 8)),
                                   ),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.search, color: Colors.white, size: 16),
                                 ],
                               ),
                             ),
-                          ),
+
+                            // 2. MAIN MOBILE VIDEO SCREEN FRAME
+                            Expanded(
+                              child: AspectRatio(
+                                aspectRatio: 9 / 16,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: const Color(0xFF3B404E), width: 2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.7),
+                                        blurRadius: 15,
+                                        spreadRadius: 3,
+                                      )
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: const TikTokScrollableFeed(),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // 3. BOTTOM NAVIGATION BAR (OUTSIDE SCREEN - IN THE SPACE BELOW)
+                            Container(
+                              height: 48,
+                              margin: const EdgeInsets.only(top: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF181A20),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: Colors.white12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildBottomNavItem(Icons.home, 'Home', color: Colors.white),
+                                  _buildBottomNavItem(Icons.people_outline, 'Friends'),
+                                  Container(
+                                    width: 36,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF2C55),
+                                      borderRadius: BorderRadius.circular(7),
+                                    ),
+                                    child: const Icon(Icons.add, color: Colors.white, size: 18),
+                                  ),
+                                  _buildBottomNavItem(Icons.chat_bubble_outline, 'Inbox'),
+                                  _buildBottomNavItem(Icons.person_outline, 'Profile'),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -288,8 +300,9 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: color, size: 16),
-        Text(label, style: TextStyle(color: color, fontSize: 8)),
+        Icon(icon, color: color, size: 18),
+        const SizedBox(height: 2),
+        Text(label, style: TextStyle(color: color, fontSize: 9)),
       ],
     );
   }
@@ -413,7 +426,7 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
                   child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
                 ),
 
-          // BOTTOM GRADIENT SHADOW FOR BETTER TEXT VISIBILITY
+          // BOTTOM GRADIENT SHADOW
           Positioned(
             bottom: 0,
             left: 0,
@@ -437,7 +450,7 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
               child: const Icon(Icons.play_arrow, color: Colors.white70, size: 45),
             ),
 
-          // 2. RIGHT SIDE SOCIAL ACTION ICONS
+          // 2. RIGHT SIDE SOCIAL ACTION ICONS (INSIDE SCREEN)
           Positioned(
             right: 8,
             bottom: 15,
@@ -505,7 +518,7 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
             ),
           ),
 
-          // 3. BOTTOM LEFT TEXT & CAPTION
+          // 3. BOTTOM LEFT TEXT & CAPTION (INSIDE SCREEN)
           Positioned(
             left: 10,
             bottom: 12,
