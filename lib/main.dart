@@ -11,7 +11,7 @@ class VibeShareAppBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VibeShare Studio',
+      title: 'VibeShare Studio Pro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF14161B),
@@ -100,11 +100,11 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               ),
             ),
 
-            // 2. MIDDLE SECTION (OUTSIDE COMPONENT SIDEBAR & CLEAN CANVAS)
+            // 2. MIDDLE SECTION (SIDEBAR & PRO CANVAS)
             Expanded(
               child: Row(
                 children: [
-                  // LEFT SIDEBAR (ALL EXTRACTED COMPONENTS ARE PLACED HERE)
+                  // LEFT SIDEBAR COMPONENTS
                   Container(
                     width: 145,
                     color: const Color(0xFF181A20),
@@ -122,27 +122,24 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                           ),
                           child: Column(
                             children: const [
-                              Icon(Icons.add, color: Colors.white, size: 22),
+                              Icon(Icons.add_circle_outline, color: Color(0xFFBAC7FF), size: 22),
                               SizedBox(height: 4),
                               Text('Upload Video', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ),
 
-                        // EXTRACTED SOCIAL UI COMPONENTS
                         _buildSectionHeader('Social Features'),
                         _buildWidgetItem(Icons.favorite_border, 'LikeButton Block'),
                         _buildWidgetItem(Icons.chat_bubble_outline, 'CommentBox Block'),
                         _buildWidgetItem(Icons.bookmark_border, 'Bookmark Block'),
                         _buildWidgetItem(Icons.reply, 'ShareOption Block'),
 
-                        // EXTRACTED NAVIGATION COMPONENTS
                         _buildSectionHeader('Navigation Elements'),
                         _buildWidgetItem(Icons.tab, 'Top Feed Tabs'),
                         _buildWidgetItem(Icons.view_day_outlined, 'Bottom Nav Bar'),
                         _buildWidgetItem(Icons.account_circle_outlined, 'Profile Overlay'),
 
-                        // SETTINGS SECTION
                         _buildSectionHeader('Settings'),
                         _buildWidgetItem(Icons.account_circle, 'Profile Picture'),
                         _buildWidgetItem(Icons.manage_accounts, 'Account Setup'),
@@ -151,7 +148,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                     ),
                   ),
 
-                  // CENTER CANVAS (CLEAN HD VIDEO PLAYER ONLY)
+                  // CENTER CANVAS (PRO CLEAN VIDEO PLAYER DISPLAY)
                   Expanded(
                     child: Container(
                       color: const Color(0xFF0F1015),
@@ -162,39 +159,49 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.black,
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(22),
                               border: Border.all(color: const Color(0xFF3B404E), width: 2.5),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.6),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
+                                  color: Colors.black.withOpacity(0.7),
+                                  blurRadius: 15,
+                                  spreadRadius: 3,
                                 )
                               ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(15),
+                              borderRadius: BorderRadius.circular(19),
                               child: Column(
                                 children: [
-                                  // SKETCHWARE CANVAS TOP BAR
+                                  // MOBILE FRAME TOP BAR (DYNAMIC ISLAND + STATUS BAR)
                                   Container(
-                                    height: 22,
-                                    color: const Color(0xFF5C6BC0),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    height: 26,
+                                    color: Colors.black,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
                                     child: Row(
-                                      children: const [
-                                        Text('main.xml', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                        Spacer(),
-                                        Icon(Icons.signal_cellular_4_bar, color: Colors.white, size: 10),
-                                        SizedBox(width: 4),
-                                        Icon(Icons.wifi, color: Colors.white, size: 10),
-                                        SizedBox(width: 4),
-                                        Text('1:37', style: TextStyle(color: Colors.white, fontSize: 10)),
+                                      children: [
+                                        const Text('1:37', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                        const Spacer(),
+                                        // Dynamic Notch / Camera Hole
+                                        Container(
+                                          width: 45,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF1E1E1E),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        const Icon(Icons.signal_cellular_4_bar, color: Colors.white, size: 10),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.wifi, color: Colors.white, size: 10),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.battery_full, color: Colors.white, size: 10),
                                       ],
                                     ),
                                   ),
-                                  // CLEAN HD VIDEO PLAYER
-                                  const Expanded(child: CleanVideoCanvasPlayer()),
+                                  // ULTRA CLEAN HD VIDEO PLAYER
+                                  const Expanded(child: CleanProVideoPlayer()),
                                 ],
                               ),
                             ),
@@ -247,7 +254,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Building clean video player app...')),
+                            const SnackBar(content: Text('Building VibeShare Pro App...')),
                           );
                         },
                         icon: const Icon(Icons.play_arrow, size: 18),
@@ -313,17 +320,19 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
   }
 }
 
-// ==================== CLEAN HD VIDEO PLAYER CANVAS ====================
-class CleanVideoCanvasPlayer extends StatefulWidget {
-  const CleanVideoCanvasPlayer({super.key});
+// ==================== ULTRA PRO VIDEO PLAYER CANVAS ====================
+class CleanProVideoPlayer extends StatefulWidget {
+  const CleanProVideoPlayer({super.key});
 
   @override
-  State<CleanVideoCanvasPlayer> createState() => _CleanVideoCanvasPlayerState();
+  State<CleanProVideoPlayer> createState() => _CleanProVideoPlayerState();
 }
 
-class _CleanVideoCanvasPlayerState extends State<CleanVideoCanvasPlayer> {
+class _CleanProVideoPlayerState extends State<CleanProVideoPlayer> {
   late VideoPlayerController _controller;
   bool _showControls = true;
+  bool _isMuted = false;
+  bool _showHeartAnimation = false;
 
   @override
   void initState() {
@@ -345,14 +354,28 @@ class _CleanVideoCanvasPlayerState extends State<CleanVideoCanvasPlayer> {
     super.dispose();
   }
 
+  void _triggerDoubleTapLike() {
+    setState(() {
+      _showHeartAnimation = true;
+    });
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (mounted) {
+        setState(() {
+          _showHeartAnimation = false;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => setState(() => _showControls = !_showControls),
+      onDoubleTap: _triggerDoubleTapLike,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 1. PURE CLEAN VIDEO
+          // 1. CLEAN VIDEO DISPLAY
           _controller.value.isInitialized
               ? SizedBox.expand(
                   child: FittedBox(
@@ -368,19 +391,48 @@ class _CleanVideoCanvasPlayerState extends State<CleanVideoCanvasPlayer> {
                   child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
                 ),
 
-          // 2. PRO CONTROLS OVERLAY (FADES ON TAP)
+          // 2. DOUBLE TAP LIKE ANIMATION
+          if (_showHeartAnimation)
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.5, end: 1.2),
+              duration: const Duration(milliseconds: 300),
+              builder: (context, scale, child) {
+                return Transform.scale(
+                  scale: scale,
+                  child: const Icon(Icons.favorite, color: Colors.redAccent, size: 80),
+                );
+              },
+            ),
+
+          // 3. PRO CONTROLS OVERLAY
           if (_showControls && _controller.value.isInitialized)
-            Container(
-              color: Colors.black26,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              color: Colors.black38,
               child: Stack(
                 children: [
-                  // Play / Pause Center Button
+                  // Top Quick Action (Mute Button)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: IconButton(
+                      icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _isMuted = !_isMuted;
+                          _controller.setVolume(_isMuted ? 0 : 1);
+                        });
+                      },
+                    ),
+                  ),
+
+                  // Center Play/Pause Button
                   Center(
                     child: IconButton(
-                      iconSize: 42,
+                      iconSize: 48,
                       icon: Icon(
                         _controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withOpacity(0.9),
                       ),
                       onPressed: () {
                         setState(() {
@@ -390,9 +442,9 @@ class _CleanVideoCanvasPlayerState extends State<CleanVideoCanvasPlayer> {
                     ),
                   ),
 
-                  // Bottom Professional Video Progress Bar & Time
+                  // Bottom Gradient Progress Bar & Timer
                   Positioned(
-                    bottom: 8,
+                    bottom: 10,
                     left: 10,
                     right: 10,
                     child: Column(
@@ -411,14 +463,14 @@ class _CleanVideoCanvasPlayerState extends State<CleanVideoCanvasPlayer> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         VideoProgressIndicator(
                           _controller,
                           allowScrubbing: true,
                           colors: const VideoProgressColors(
                             playedColor: Color(0xFFBAC7FF),
-                            bufferedColor: Colors.white24,
-                            backgroundColor: Colors.white10,
+                            bufferedColor: Colors.white30,
+                            backgroundColor: Colors.white12,
                           ),
                         ),
                       ],
