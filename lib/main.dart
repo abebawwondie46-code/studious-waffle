@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const KuanyngneAppBuilder());
@@ -204,7 +203,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
   }
 }
 
-// ==================== VERTICAL SCROLLABLE TIKTOK FEED ====================
+// ==================== VERTICAL SCROLLABLE FEED ====================
 class TikTokScrollableFeed extends StatefulWidget {
   const TikTokScrollableFeed({super.key});
 
@@ -217,18 +216,16 @@ class _TikTokScrollableFeedState extends State<TikTokScrollableFeed> {
 
   final List<Map<String, String>> _videoData = [
     {
-      'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       'username': '@kuanyngne',
-      'caption': 'kuanyngne Official Supabase Video Stream! 🚀 Live HD Streaming Test #kuanyngne',
+      'caption': 'kuanyngne Official Network Stream! 🚀 Streaming Test #kuanyngne',
       'likes': '24.1K',
       'comments': '152',
       'bookmarks': '3100',
       'shares': '1200',
     },
     {
-      'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
       'username': '@kuanyngne',
-      'caption': '5-Minute High Quality Streaming via kuanyngne Network Connection 🔥',
+      'caption': 'High Quality Live Stream via kuanyngne Connection 🔥',
       'likes': '58.9K',
       'comments': '890',
       'bookmarks': '4500',
@@ -259,7 +256,6 @@ class SingleVideoItem extends StatefulWidget {
 }
 
 class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProviderStateMixin {
-  late VideoPlayerController _controller;
   late AnimationController _discAnimController;
   bool _isLiked = false;
   bool _isBookmarked = false;
@@ -267,16 +263,6 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(
-      Uri.parse(widget.videoInfo['url']!),
-    )..initialize().then((_) {
-        if (mounted) {
-          setState(() {});
-          _controller.setLooping(true);
-          _controller.play();
-        }
-      });
-
     _discAnimController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
@@ -285,7 +271,6 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
 
   @override
   void dispose() {
-    _controller.dispose();
     _discAnimController.dispose();
     super.dispose();
   }
@@ -325,7 +310,7 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
                     ListTile(
                       leading: CircleAvatar(backgroundColor: Colors.purpleAccent, child: Text('B', style: TextStyle(color: Colors.white))),
                       title: Text('@user_two', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
-                      subtitle: Text('kuanyngne ቪዲዮው በጥራት ይሰራል 👍', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      subtitle: Text('kuanyngne ሲስተም በጥራት ይሰራል 👍', style: TextStyle(color: Colors.white, fontSize: 13)),
                     ),
                   ],
                 ),
@@ -366,38 +351,15 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        if (_controller.value.isInitialized) {
-          setState(() {
-            if (_controller.value.isPlaying) {
-              _controller.pause();
-              _discAnimController.stop();
-            } else {
-              _controller.play();
-              _discAnimController.repeat();
-            }
-          });
-        }
-      },
+    return Container(
+      color: const Color(0xFF121318),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 1. VIDEO PLAYER
-          _controller.value.isInitialized
-              ? SizedBox.expand(
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: _controller.value.size.width,
-                      height: _controller.value.size.height,
-                      child: VideoPlayer(_controller),
-                    ),
-                  ),
-                )
-              : const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
-                ),
+          // BACKGROUND PLACEHOLDER DISPLAY
+          const Center(
+            child: Icon(Icons.play_circle_fill, size: 70, color: Colors.white24),
+          ),
 
           // BOTTOM GRADIENT SHADOW
           Positioned(
@@ -416,14 +378,7 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
             ),
           ),
 
-          // PAUSE OVERLAY
-          if (_controller.value.isInitialized && !_controller.value.isPlaying)
-            Container(
-              decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
-              child: const Icon(Icons.play_arrow, color: Colors.white70, size: 50),
-            ),
-
-          // 2. RIGHT SIDE SOCIAL ACTION ICONS
+          // RIGHT SIDE SOCIAL ACTION ICONS
           Positioned(
             right: 12,
             bottom: 20,
@@ -498,7 +453,7 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
             ),
           ),
 
-          // 3. BOTTOM LEFT TEXT & CAPTION
+          // BOTTOM LEFT TEXT & CAPTION
           Positioned(
             left: 14,
             bottom: 16,
