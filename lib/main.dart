@@ -100,7 +100,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               ),
             ),
 
-            // 2. MIDDLE SECTION (SIDEBAR & EXTERNAL NAV LAYOUT)
+            // 2. MIDDLE SECTION (SIDEBAR & CENTER CANVAS)
             Expanded(
               child: Row(
                 children: [
@@ -219,7 +219,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                               ),
                             ),
 
-                            // BOTTOM NAVIGATION BAR (OUTSIDE SCREEN)
+                            // BOTTOM NAVIGATION BAR (WITHOUT PLUS BUTTON)
                             Container(
                               height: 48,
                               margin: const EdgeInsets.only(top: 6),
@@ -233,15 +233,6 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                                 children: [
                                   _buildBottomNavItem(Icons.home, 'Home', color: Colors.white),
                                   _buildBottomNavItem(Icons.people_outline, 'Friends'),
-                                  Container(
-                                    width: 36,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFF2C55),
-                                      borderRadius: BorderRadius.circular(7),
-                                    ),
-                                    child: const Icon(Icons.add, color: Colors.white, size: 18),
-                                  ),
                                   _buildBottomNavItem(Icons.chat_bubble_outline, 'Inbox'),
                                   _buildBottomNavItem(Icons.person_outline, 'Profile'),
                                 ],
@@ -319,24 +310,25 @@ class TikTokScrollableFeed extends StatefulWidget {
 class _TikTokScrollableFeedState extends State<TikTokScrollableFeed> {
   final PageController _pageController = PageController();
 
+  // ONLINE DIRECT WORKING VIDEO URLS
   final List<Map<String, String>> _videoData = [
     {
-      'url': 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
-      'username': '@kuanyngne_official',
-      'caption': 'Welcome to VibeShare! Professional 5-Minute HD Video Sharing Feed 🔥 #kuany',
-      'likes': '12.5K',
-      'comments': '3',
-      'bookmarks': '2409',
-      'shares': '751',
-    },
-    {
-      'url': 'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
-      'username': '@vibeshare_tech',
-      'caption': 'Checking out our amazing vertical scrollable video feature! 🚀 #Flutter #VibeShare',
+      'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      'username': '@vibeshare_official',
+      'caption': 'Streaming HD 5-Minute long video content over internet! 🚀 #VibeShare #HDVideo',
       'likes': '24.1K',
       'comments': '152',
       'bookmarks': '3100',
       'shares': '1200',
+    },
+    {
+      'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      'username': '@tech_guru',
+      'caption': 'Smooth internet video playback powered by Flutter & VibeShare Studio 🔥',
+      'likes': '18.9K',
+      'comments': '89',
+      'bookmarks': '1420',
+      'shares': '630',
     },
   ];
 
