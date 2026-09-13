@@ -100,18 +100,18 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               ),
             ),
 
-            // 2. MIDDLE SECTION (SIDEBAR & EXPANDED CANVAS)
+            // 2. MIDDLE SECTION (OUTSIDE COMPONENT SIDEBAR & CLEAN CANVAS)
             Expanded(
               child: Row(
                 children: [
-                  // LEFT SIDEBAR
+                  // LEFT SIDEBAR (ALL EXTRACTED COMPONENTS ARE PLACED HERE)
                   Container(
-                    width: 135,
+                    width: 145,
                     color: const Color(0xFF181A20),
                     child: ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                       children: [
-                        // (+) Upload Video Button
+                        // (+) Upload Video Component
                         Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -122,58 +122,58 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                           ),
                           child: Column(
                             children: const [
-                              Icon(Icons.add, color: Colors.white, size: 24),
+                              Icon(Icons.add, color: Colors.white, size: 22),
                               SizedBox(height: 4),
                               Text('Upload Video', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ),
 
+                        // EXTRACTED SOCIAL UI COMPONENTS
+                        _buildSectionHeader('Social Features'),
+                        _buildWidgetItem(Icons.favorite_border, 'LikeButton Block'),
+                        _buildWidgetItem(Icons.chat_bubble_outline, 'CommentBox Block'),
+                        _buildWidgetItem(Icons.bookmark_border, 'Bookmark Block'),
+                        _buildWidgetItem(Icons.reply, 'ShareOption Block'),
+
+                        // EXTRACTED NAVIGATION COMPONENTS
+                        _buildSectionHeader('Navigation Elements'),
+                        _buildWidgetItem(Icons.tab, 'Top Feed Tabs'),
+                        _buildWidgetItem(Icons.view_day_outlined, 'Bottom Nav Bar'),
+                        _buildWidgetItem(Icons.account_circle_outlined, 'Profile Overlay'),
+
                         // SETTINGS SECTION
                         _buildSectionHeader('Settings'),
                         _buildWidgetItem(Icons.account_circle, 'Profile Picture'),
                         _buildWidgetItem(Icons.manage_accounts, 'Account Setup'),
                         _buildWidgetItem(Icons.security, 'Privacy Safety'),
-
-                        // MEDIA & VIDEO SECTION
-                        _buildSectionHeader('Media & Video'),
-                        _buildWidgetItem(Icons.video_library, 'VideoFeed'),
-                        _buildWidgetItem(Icons.audiotrack, 'AudioTrack'),
-                        _buildWidgetItem(Icons.subtitles, 'SubtitleUI'),
-                        _buildWidgetItem(Icons.auto_fix_high, 'VideoEffects'),
-
-                        // SOCIAL FEATURES SECTION
-                        _buildSectionHeader('Social Features'),
-                        _buildWidgetItem(Icons.favorite, 'LikeButton'),
-                        _buildWidgetItem(Icons.comment, 'CommentBox'),
-                        _buildWidgetItem(Icons.share, 'ShareOption'),
                       ],
                     ),
                   ),
 
-                  // CENTER CANVAS (PRO-EXPANDED MOBILE DISPLAY)
+                  // CENTER CANVAS (CLEAN HD VIDEO PLAYER ONLY)
                   Expanded(
                     child: Container(
                       color: const Color(0xFF0F1015),
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       child: Center(
                         child: AspectRatio(
-                          aspectRatio: 9 / 18, // ሰፋ ያለ የዘመናዊ ስልክ ስክሪን መጠን
+                          aspectRatio: 9 / 18,
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.black,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFF3B404E), width: 2),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFF3B404E), width: 2.5),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.5),
-                                  blurRadius: 10,
+                                  color: Colors.black.withOpacity(0.6),
+                                  blurRadius: 12,
                                   spreadRadius: 2,
                                 )
                               ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(15),
                               child: Column(
                                 children: [
                                   // SKETCHWARE CANVAS TOP BAR
@@ -193,8 +193,8 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                                       ],
                                     ),
                                   ),
-                                  // SCROLLABLE TIKTOK FEED PREVIEW
-                                  const Expanded(child: ScrollableTikTokFeed()),
+                                  // CLEAN HD VIDEO PLAYER
+                                  const Expanded(child: CleanVideoCanvasPlayer()),
                                 ],
                               ),
                             ),
@@ -247,7 +247,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Building and running app...')),
+                            const SnackBar(content: Text('Building clean video player app...')),
                           );
                         },
                         icon: const Icon(Icons.play_arrow, size: 18),
@@ -282,7 +282,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
       padding: const EdgeInsets.only(top: 10, bottom: 4),
       child: Text(
         title,
-        style: TextStyle(color: Colors.grey.shade400, fontSize: 11, fontWeight: FontWeight.bold),
+        style: TextStyle(color: Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -313,56 +313,17 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
   }
 }
 
-// ==================== TIKTOK SCROLLABLE FEED ENGINE ====================
-class ScrollableTikTokFeed extends StatelessWidget {
-  const ScrollableTikTokFeed({super.key});
-
-  final List<Map<String, String>> sampleData = const [
-    {
-      'username': 'jemii_Jems',
-      'handle': '@NIKATEHILINA 💡',
-      'caption': 'የአዲሱ አፕሊኬሽን ገፅታ እና ዲዛይን! 🚀',
-      'likes': '48.4K',
-      'comments': '435',
-      'bookmarks': '4,491',
-      'shares': '906',
-      'music': 'original sound - jemii_fn - vibe_share',
-    },
-    {
-      'username': 'vibe_share_official',
-      'handle': '@VIBESHARE',
-      'caption': 'Flutter + Sketchware Pro UI Build 🔥',
-      'likes': '120.5K',
-      'comments': '1,200',
-      'bookmarks': '12.3K',
-      'shares': '3,410',
-      'music': 'Trending Sound - VibeShare Beats',
-    },
-  ];
+// ==================== CLEAN HD VIDEO PLAYER CANVAS ====================
+class CleanVideoCanvasPlayer extends StatefulWidget {
+  const CleanVideoCanvasPlayer({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return PageView.builder(
-      scrollDirection: Axis.vertical, // ወደ ላይ እና ወደ ታች ስክሮል እንዲደረግ
-      itemCount: sampleData.length,
-      itemBuilder: (context, index) {
-        return TikTokSinglePost(data: sampleData[index]);
-      },
-    );
-  }
+  State<CleanVideoCanvasPlayer> createState() => _CleanVideoCanvasPlayerState();
 }
 
-class TikTokSinglePost extends StatefulWidget {
-  final Map<String, String> data;
-  const TikTokSinglePost({super.key, required this.data});
-
-  @override
-  State<TikTokSinglePost> createState() => _TikTokSinglePostState();
-}
-
-class _TikTokSinglePostState extends State<TikTokSinglePost> {
+class _CleanVideoCanvasPlayerState extends State<CleanVideoCanvasPlayer> {
   late VideoPlayerController _controller;
-  bool _isLiked = false;
+  bool _showControls = true;
 
   @override
   void initState() {
@@ -386,180 +347,95 @@ class _TikTokSinglePostState extends State<TikTokSinglePost> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // 1. VIDEO PLAYER
-        _controller.value.isInitialized
-            ? SizedBox.expand(
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: _controller.value.size.width,
-                    height: _controller.value.size.height,
-                    child: VideoPlayer(_controller),
+    return GestureDetector(
+      onTap: () => setState(() => _showControls = !_showControls),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 1. PURE CLEAN VIDEO
+          _controller.value.isInitialized
+              ? SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _controller.value.size.width,
+                      height: _controller.value.size.height,
+                      child: VideoPlayer(_controller),
+                    ),
                   ),
+                )
+              : const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
                 ),
-              )
-            : const Center(
-                child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
-              ),
 
-        // 2. TOP NAVIGATION BAR (LIVE, TEM, Community, Following, For You, Search)
-        Positioned(
-          top: 8,
-          left: 8,
-          right: 8,
-          child: Row(
-            children: [
-              const Icon(Icons.live_tv, color: Colors.white, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: const [
-                      Text('TEM', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
-                      SizedBox(width: 10),
-                      Text('Community', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
-                      SizedBox(width: 10),
-                      Text('Following', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
-                      SizedBox(width: 10),
-                      Text('For You', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ),
-              const Icon(Icons.search, color: Colors.white, size: 18),
-            ],
-          ),
-        ),
-
-        // 3. RIGHT SIDEBAR BUTTONS
-        Positioned(
-          right: 8,
-          bottom: 50,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Profile Avatar
-              Stack(
-                alignment: Alignment.bottomCenter,
+          // 2. PRO CONTROLS OVERLAY (FADES ON TAP)
+          if (_showControls && _controller.value.isInitialized)
+            Container(
+              color: Colors.black26,
+              child: Stack(
                 children: [
-                  const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.white30,
-                    child: Icon(Icons.person, size: 18, color: Colors.white),
+                  // Play / Pause Center Button
+                  Center(
+                    child: IconButton(
+                      iconSize: 42,
+                      icon: Icon(
+                        _controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _controller.value.isPlaying ? _controller.pause() : _controller.play();
+                        });
+                      },
+                    ),
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 0),
-                    padding: const EdgeInsets.all(1.5),
-                    decoration: const BoxDecoration(color: Colors.pink, shape: BoxShape.circle),
-                    child: const Icon(Icons.add, size: 10, color: Colors.white),
-                  )
-                ],
-              ),
-              const SizedBox(height: 12),
 
-              // Like Button
-              GestureDetector(
-                onTap: () => setState(() => _isLiked = !_isLiked),
-                child: Icon(Icons.favorite, color: _isLiked ? Colors.red : Colors.white, size: 24),
-              ),
-              Text(widget.data['likes']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-
-              // Comment Button
-              const Icon(Icons.comment, color: Colors.white, size: 24),
-              Text(widget.data['comments']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-
-              // Bookmark Button
-              const Icon(Icons.bookmark, color: Colors.white, size: 24),
-              Text(widget.data['bookmarks']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-
-              // Share Button
-              const Icon(Icons.reply, color: Colors.white, size: 24),
-              Text(widget.data['shares']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-
-        // 4. BOTTOM USER DETAILS & CAPTION
-        Positioned(
-          left: 10,
-          bottom: 48,
-          right: 55,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(widget.data['username']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-              const SizedBox(height: 2),
-              Text(widget.data['handle']!, style: const TextStyle(color: Colors.white70, fontSize: 10)),
-              const SizedBox(height: 2),
-              Text(widget.data['caption']!, style: const TextStyle(color: Colors.white, fontSize: 10)),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.music_note, color: Colors.white, size: 10),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      widget.data['music']!,
-                      style: const TextStyle(color: Colors.white, fontSize: 9),
-                      overflow: TextOverflow.ellipsis,
+                  // Bottom Professional Video Progress Bar & Time
+                  Positioned(
+                    bottom: 8,
+                    left: 10,
+                    right: 10,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _formatDuration(_controller.value.position),
+                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              _formatDuration(_controller.value.duration),
+                              style: const TextStyle(color: Colors.white70, fontSize: 9),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        VideoProgressIndicator(
+                          _controller,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(
+                            playedColor: Color(0xFFBAC7FF),
+                            bufferedColor: Colors.white24,
+                            backgroundColor: Colors.white10,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-
-        // 5. TIKTOK BOTTOM NAVIGATION BAR (Home, Friends, (+), Inbox, Profile)
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            height: 38,
-            color: Colors.black,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(Icons.home, 'Home', isActive: true),
-                _buildNavItem(Icons.people_outline, 'Friends'),
-                // Center Create (+) Button
-                Container(
-                  width: 32,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(Icons.add, color: Colors.black, size: 16),
-                ),
-                _buildNavItem(Icons.chat_bubble_outline, 'Inbox'),
-                _buildNavItem(Icons.person_outline, 'Profile'),
-              ],
             ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, {bool isActive = false}) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: isActive ? Colors.white : Colors.grey, size: 14),
-        Text(
-          label,
-          style: TextStyle(color: isActive ? Colors.white : Colors.grey, fontSize: 8),
-        ),
-      ],
-    );
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
   }
 }
