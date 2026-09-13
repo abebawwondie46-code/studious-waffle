@@ -11,7 +11,7 @@ class VibeShareAppBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VibeShare Studio Pro',
+      title: 'kuanyngne Studio Pro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF14161B),
@@ -121,9 +121,9 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                           ),
                           child: Column(
                             children: const [
-                              Icon(Icons.add_circle_outline, color: Color(0xFFBAC7FF), size: 22),
+                              Icon(Icons.cloud_upload_outlined, color: Color(0xFFBAC7FF), size: 22),
                               SizedBox(height: 4),
-                              Text('Upload Video', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
+                              Text('Supabase Upload', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ),
@@ -153,7 +153,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // TOP FEED TABS (OUTSIDE SCREEN)
+                            // TOP FEED TABS
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               margin: const EdgeInsets.only(bottom: 6),
@@ -219,7 +219,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                               ),
                             ),
 
-                            // BOTTOM NAVIGATION BAR (WITHOUT PLUS BUTTON)
+                            // BOTTOM NAVIGATION BAR
                             Container(
                               height: 48,
                               margin: const EdgeInsets.only(top: 6),
@@ -310,25 +310,25 @@ class TikTokScrollableFeed extends StatefulWidget {
 class _TikTokScrollableFeedState extends State<TikTokScrollableFeed> {
   final PageController _pageController = PageController();
 
-  // ONLINE DIRECT WORKING VIDEO URLS
+  // SUPABASE / FAST CDN DIRECT VIDEO URLS FOR kuanyngne
   final List<Map<String, String>> _videoData = [
     {
-      'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      'username': '@vibeshare_official',
-      'caption': 'Streaming HD 5-Minute long video content over internet! 🚀 #VibeShare #HDVideo',
+      'url': 'https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-1173-large.mp4',
+      'username': '@kuanyngne',
+      'caption': 'Kuanyngne Official Supabase Video Stream! 🚀 Live HD Streaming Test #kuanyngne',
       'likes': '24.1K',
       'comments': '152',
       'bookmarks': '3100',
       'shares': '1200',
     },
     {
-      'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      'username': '@tech_guru',
-      'caption': 'Smooth internet video playback powered by Flutter & VibeShare Studio 🔥',
-      'likes': '18.9K',
-      'comments': '89',
-      'bookmarks': '1420',
-      'shares': '630',
+      'url': 'https://assets.mixkit.co/videos/preview/mixkit-vertical-shot-of-a-waterfall-in-a-forest-42891-large.mp4',
+      'username': '@kuanyngne',
+      'caption': '5-Minute High Quality Streaming via Supabase Network Connection 🔥',
+      'likes': '58.9K',
+      'comments': '890',
+      'bookmarks': '4500',
+      'shares': '2100',
     },
   ];
 
@@ -358,24 +358,37 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
   late VideoPlayerController _controller;
   late AnimationController _discAnimController;
   bool _isLiked = false;
+  bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(
-      Uri.parse(widget.videoInfo['url']!),
-    )..initialize().then((_) {
-        if (mounted) {
-          setState(() {});
-          _controller.setLooping(true);
-          _controller.play();
-        }
-      });
+    _initializeVideo();
 
     _discAnimController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
     )..repeat();
+  }
+
+  void _initializeVideo() {
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.videoInfo['url']!),
+    )..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _hasError = false;
+          });
+          _controller.setLooping(true);
+          _controller.play();
+        }
+      }).catchError((error) {
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+          });
+        }
+      });
   }
 
   @override
@@ -389,34 +402,48 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        setState(() {
-          if (_controller.value.isPlaying) {
-            _controller.pause();
-            _discAnimController.stop();
-          } else {
-            _controller.play();
-            _discAnimController.repeat();
-          }
-        });
+        if (_controller.value.isInitialized) {
+          setState(() {
+            if (_controller.value.isPlaying) {
+              _controller.pause();
+              _discAnimController.stop();
+            } else {
+              _controller.play();
+              _discAnimController.repeat();
+            }
+          });
+        }
       },
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 1. VIDEO PLAYER
-          _controller.value.isInitialized
-              ? SizedBox.expand(
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: _controller.value.size.width,
-                      height: _controller.value.size.height,
-                      child: VideoPlayer(_controller),
-                    ),
-                  ),
-                )
-              : const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
+          // 1. VIDEO PLAYER OR LOADING/ERROR STATUS
+          if (_hasError)
+            const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white54, size: 30),
+                  SizedBox(height: 6),
+                  Text('የኢንተርኔት ግንኙነትዎን ያረጋግጡ', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                ],
+              ),
+            )
+          else if (_controller.value.isInitialized)
+            SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _controller.value.size.width,
+                  height: _controller.value.size.height,
+                  child: VideoPlayer(_controller),
                 ),
+              ),
+            )
+          else
+            const Center(
+              child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
+            ),
 
           // BOTTOM GRADIENT SHADOW
           Positioned(
