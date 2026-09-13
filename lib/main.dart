@@ -50,7 +50,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
       body: SafeArea(
         child: Column(
           children: [
-            // 1. TOP TOOLBAR (ORIGINAL SKETCHWARE DESIGN)
+            // 1. TOP TOOLBAR
             Container(
               color: const Color(0xFF1F222A),
               child: Column(
@@ -104,14 +104,14 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
             Expanded(
               child: Row(
                 children: [
-                  // LEFT SIDEBAR (EXACT SKETCHWARE STRUCTURE)
+                  // LEFT SIDEBAR
                   Container(
                     width: 140,
                     color: const Color(0xFF191B20),
                     child: ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                       children: [
-                        // ከላይ ያለው (+) የቪዲዮ/ይዘት መጫኛ ባር
+                        // (+) Upload Video Button
                         Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -129,20 +129,20 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                           ),
                         ),
 
-                        // SETTINGS SECTION
+                        // SETTINGS
                         _buildSectionHeader('Settings'),
                         _buildWidgetItem(Icons.account_circle, 'Profile Picture'),
                         _buildWidgetItem(Icons.manage_accounts, 'Account Setup'),
                         _buildWidgetItem(Icons.security, 'Privacy Safety'),
 
-                        // MEDIA & VIDEO SECTION
+                        // MEDIA & VIDEO
                         _buildSectionHeader('Media & Video'),
                         _buildWidgetItem(Icons.video_library, 'VideoFeed'),
                         _buildWidgetItem(Icons.audiotrack, 'AudioTrack'),
                         _buildWidgetItem(Icons.subtitles, 'SubtitleUI'),
                         _buildWidgetItem(Icons.auto_fix_high, 'VideoEffects'),
 
-                        // SOCIAL FEATURES SECTION
+                        // SOCIAL FEATURES
                         _buildSectionHeader('Social Features'),
                         _buildWidgetItem(Icons.favorite, 'LikeButton'),
                         _buildWidgetItem(Icons.comment, 'CommentBox'),
@@ -151,11 +151,11 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                     ),
                   ),
 
-                  // CENTER CANVAS (MOBILE PREVIEW WITH VIDEO)
+                  // CENTER CANVAS (TIKTOK STYLE CANVAS)
                   Expanded(
                     child: Container(
                       color: const Color(0xFF121418),
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       child: Center(
                         child: AspectRatio(
                           aspectRatio: 9 / 16,
@@ -171,22 +171,22 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                                 children: [
                                   // SKETCHWARE CANVAS STATUS BAR
                                   Container(
-                                    height: 24,
+                                    height: 20,
                                     color: const Color(0xFF5C6BC0),
                                     padding: const EdgeInsets.symmetric(horizontal: 8),
                                     child: Row(
                                       children: const [
-                                        Text('main.xml', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                        Text('main.xml', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                                         Spacer(),
-                                        Icon(Icons.signal_cellular_4_bar, color: Colors.white, size: 10),
+                                        Icon(Icons.signal_cellular_4_bar, color: Colors.white, size: 9),
                                         SizedBox(width: 4),
-                                        Icon(Icons.wifi, color: Colors.white, size: 10),
+                                        Icon(Icons.wifi, color: Colors.white, size: 9),
                                         SizedBox(width: 4),
-                                        Text('1:37', style: TextStyle(color: Colors.white, fontSize: 10)),
+                                        Text('1:37', style: TextStyle(color: Colors.white, fontSize: 9)),
                                       ],
                                     ),
                                   ),
-                                  const Expanded(child: MobileVideoCanvas()),
+                                  const Expanded(child: TikTokCanvasPreview()),
                                 ],
                               ),
                             ),
@@ -199,14 +199,13 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               ),
             ),
 
-            // 3. BOTTOM BAR (RUN BUTTON REPLACED WITH DOWNLOAD IN SAME DESIGN)
+            // 3. BOTTOM BAR (RUN BUTTON)
             Container(
               height: 58,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               color: const Color(0xFF1F222A),
               child: Row(
                 children: [
-                  // MAIN.XML DROPDOWN
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
@@ -225,26 +224,26 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                   ),
                   const Spacer(),
                   
-                  // DOWNLOAD BUTTON (EXACT POSITION & SHAPE OF RUN BUTTON)
+                  // RUN BUTTON (RESTORED AS REQUESTED)
                   Row(
                     children: [
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFBAC7FF), // SKETCHWARE RUN BUTTON COLOR
+                          backgroundColor: const Color(0xFFBAC7FF),
                           foregroundColor: const Color(0xFF1F222A),
                           elevation: 0,
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Downloading Video / Project...')),
+                            const SnackBar(content: Text('Building and running project...')),
                           );
                         },
-                        icon: const Icon(Icons.download, size: 18),
-                        label: const Text('Download', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        icon: const Icon(Icons.play_arrow, size: 18),
+                        label: const Text('Run', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       ),
                       Container(
                         height: 38,
@@ -306,15 +305,15 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
   }
 }
 
-// ==================== VIDEO PLAYER ENGINE ====================
-class MobileVideoCanvas extends StatefulWidget {
-  const MobileVideoCanvas({super.key});
+// ==================== TIKTOK STYLE CANVAS PREVIEW ====================
+class TikTokCanvasPreview extends StatefulWidget {
+  const TikTokCanvasPreview({super.key});
 
   @override
-  State<MobileVideoCanvas> createState() => _MobileVideoCanvasState();
+  State<TikTokCanvasPreview> createState() => _TikTokCanvasPreviewState();
 }
 
-class _MobileVideoCanvasState extends State<MobileVideoCanvas> {
+class _TikTokCanvasPreviewState extends State<TikTokCanvasPreview> {
   late VideoPlayerController _controller;
   bool _isLiked = false;
 
@@ -342,6 +341,7 @@ class _MobileVideoCanvasState extends State<MobileVideoCanvas> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
+        // 1. VIDEO PLAYER
         _controller.value.isInitialized
             ? SizedBox.expand(
                 child: FittedBox(
@@ -356,50 +356,160 @@ class _MobileVideoCanvasState extends State<MobileVideoCanvas> {
             : const Center(
                 child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
               ),
+
+        // 2. TOP TIKTOK NAVIGATION (LIVE, TEM, Community, Following, For You, Search)
         Positioned(
-          bottom: 12,
-          left: 10,
+          top: 6,
+          left: 4,
+          right: 4,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Icon(Icons.live_tv, color: Colors.white, size: 14),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: const [
+                      SizedBox(width: 4),
+                      Text('TEM', style: TextStyle(color: Colors.white60, fontSize: 8)),
+                      SizedBox(width: 6),
+                      Text('Community', style: TextStyle(color: Colors.white60, fontSize: 8)),
+                      SizedBox(width: 6),
+                      Text('Following', style: TextStyle(color: Colors.white60, fontSize: 8)),
+                      SizedBox(width: 6),
+                      Text('For You', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 8)),
+                    ],
+                  ),
+                ),
+              ),
+              const Icon(Icons.search, color: Colors.white, size: 14),
+            ],
+          ),
+        ),
+
+        // 3. RIGHT SIDEBAR BUTTONS (PROFILE, LIKE, COMMENT, BOOKMARK, SHARE, AUDIO)
+        Positioned(
+          right: 6,
+          bottom: 45,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Profile Avatar with Plus
+              Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  const CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.white24,
+                    child: Icon(Icons.person, size: 14, color: Colors.white),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 0),
+                    padding: const EdgeInsets.all(1),
+                    decoration: const BoxDecoration(color: Colors.pink, shape: BoxShape.circle),
+                    child: const Icon(Icons.add, size: 8, color: Colors.white),
+                  )
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              // Like Button
+              GestureDetector(
+                onTap: () => setState(() => _isLiked = !_isLiked),
+                child: Icon(Icons.favorite, color: _isLiked ? Colors.red : Colors.white, size: 18),
+              ),
+              const Text('48.4K', style: TextStyle(color: Colors.white, fontSize: 7)),
+              const SizedBox(height: 6),
+
+              // Comment Button
+              const Icon(Icons.comment, color: Colors.white, size: 18),
+              const Text('435', style: TextStyle(color: Colors.white, fontSize: 7)),
+              const SizedBox(height: 6),
+
+              // Bookmark Button
+              const Icon(Icons.bookmark, color: Colors.white, size: 18),
+              const Text('4,491', style: TextStyle(color: Colors.white, fontSize: 7)),
+              const SizedBox(height: 6),
+
+              // Share Button
+              const Icon(Icons.reply, color: Colors.white, size: 18),
+              const Text('906', style: TextStyle(color: Colors.white, fontSize: 7)),
+            ],
+          ),
+        ),
+
+        // 4. BOTTOM USER DETAILS
+        Positioned(
+          left: 8,
+          bottom: 40,
           right: 45,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: const [
-              Text('@vibe_share', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              Text('jemii_Jems', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
               SizedBox(height: 2),
-              Text('አዲሱ አፕሊኬሽን ገፅታ! 🚀', style: TextStyle(color: Colors.white70, fontSize: 10)),
-            ],
-          ),
-        ),
-        Positioned(
-          bottom: 12,
-          right: 6,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GestureDetector(
-                onTap: () => setState(() => _isLiked = !_isLiked),
-                child: Icon(Icons.favorite, color: _isLiked ? Colors.red : Colors.white, size: 22),
+              Text('@NIKATEHILINA 💡', style: TextStyle(color: Colors.white70, fontSize: 8)),
+              SizedBox(height: 2),
+              Row(
+                children: [
+                  Icon(Icons.music_note, color: Colors.white, size: 8),
+                  SizedBox(width: 2),
+                  Expanded(
+                    child: Text(
+                      'original sound - jemii_fn - ...',
+                      style: TextStyle(color: Colors.white, fontSize: 7),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const Text('2.4k', style: TextStyle(color: Colors.white, fontSize: 9)),
-              const SizedBox(height: 10),
-              const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 20),
-              const Text('180', style: TextStyle(color: Colors.white, fontSize: 9)),
             ],
           ),
         ),
+
+        // 5. TIKTOK BOTTOM NAVIGATION BAR (Home, Friends, (+), Inbox, Profile)
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
-          child: VideoProgressIndicator(
-            _controller,
-            allowScrubbing: true,
-            colors: const VideoProgressColors(
-              playedColor: Color(0xFFBAC7FF),
-              bufferedColor: Colors.white30,
-              backgroundColor: Colors.black26,
+          child: Container(
+            height: 32,
+            color: Colors.black,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.home, 'Home', isActive: true),
+                _buildNavItem(Icons.people_outline, 'Friends'),
+                // Center (+) Create Button
+                Container(
+                  width: 24,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Icon(Icons.add, color: Colors.black, size: 12),
+                ),
+                _buildNavItem(Icons.chat_bubble_outline, 'Inbox'),
+                _buildNavItem(Icons.person_outline, 'Profile'),
+              ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, {bool isActive = false}) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: isActive ? Colors.white : Colors.grey, size: 12),
+        Text(
+          label,
+          style: TextStyle(color: isActive ? Colors.white : Colors.grey, fontSize: 6),
         ),
       ],
     );
