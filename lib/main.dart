@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 void main() {
-  runApp(const VibeShareAppBuilder());
+  runApp(const KuanyngneAppBuilder());
 }
 
-class VibeShareAppBuilder extends StatelessWidget {
-  const VibeShareAppBuilder({super.key});
+class KuanyngneAppBuilder extends StatelessWidget {
+  const KuanyngneAppBuilder({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +50,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
       body: SafeArea(
         child: Column(
           children: [
-            // 1. TOP SKETCHWARE TOOLBAR
+            // 1. TOP TOOLBAR
             Container(
               color: const Color(0xFF1F222A),
               child: Column(
@@ -67,7 +67,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
                             Text(
-                              'vibe_share_studio',
+                              'kuanyngne_studio',
                               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                             Text(
@@ -100,150 +100,90 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
               ),
             ),
 
-            // 2. MIDDLE SECTION (SIDEBAR & CENTER CANVAS)
+            // 2. EXPANDED WIDE MOBILE CANVAS
             Expanded(
-              child: Row(
-                children: [
-                  // LEFT SIDEBAR
-                  Container(
-                    width: 145,
-                    color: const Color(0xFF181A20),
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF252830),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF333842)),
+              child: Container(
+                color: const Color(0xFF0F1015),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Column(
+                  children: [
+                    // TOP FEED TABS
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF181A20),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.live_tv, color: Colors.white, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: const [
+                                  Text('Friends', style: TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.w500)),
+                                  SizedBox(width: 16),
+                                  Text('For You', style: TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.w500)),
+                                  SizedBox(width: 16),
+                                  Text('Following', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
                           ),
-                          child: Column(
-                            children: const [
-                              Icon(Icons.cloud_upload_outlined, color: Color(0xFFBAC7FF), size: 22),
-                              SizedBox(height: 4),
-                              Text('Supabase Upload', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
-                            ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.white54),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('HD 1080p', style: TextStyle(color: Colors.white, fontSize: 10)),
                           ),
-                        ),
-                        _buildSectionHeader('Social Features'),
-                        _buildWidgetItem(Icons.favorite_border, 'LikeButton Block'),
-                        _buildWidgetItem(Icons.chat_bubble_outline, 'CommentBox Block'),
-                        _buildWidgetItem(Icons.bookmark_border, 'Bookmark Block'),
-                        _buildWidgetItem(Icons.reply, 'ShareOption Block'),
-                        _buildSectionHeader('Navigation Elements'),
-                        _buildWidgetItem(Icons.tab, 'Top Feed Tabs'),
-                        _buildWidgetItem(Icons.view_day_outlined, 'Bottom Nav Bar'),
-                        _buildWidgetItem(Icons.account_circle_outlined, 'Profile Overlay'),
-                        _buildSectionHeader('Settings'),
-                        _buildWidgetItem(Icons.account_circle, 'Profile Picture'),
-                        _buildWidgetItem(Icons.manage_accounts, 'Account Setup'),
-                        _buildWidgetItem(Icons.security, 'Privacy Safety'),
-                      ],
+                          const SizedBox(width: 8),
+                          const Icon(Icons.search, color: Colors.white, size: 18),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // CENTER CANVAS
-                  Expanded(
-                    child: Container(
-                      color: const Color(0xFF0F1015),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // TOP FEED TABS
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              margin: const EdgeInsets.only(bottom: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF181A20),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white12),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.live_tv, color: Colors.white, size: 16),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Row(
-                                        children: const [
-                                          Text('Friends', style: TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500)),
-                                          SizedBox(width: 10),
-                                          Text('For You', style: TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500)),
-                                          SizedBox(width: 10),
-                                          Text('Following', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.white54),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text('HD 1080p', style: TextStyle(color: Colors.white, fontSize: 8)),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Icon(Icons.search, color: Colors.white, size: 16),
-                                ],
-                              ),
-                            ),
-
-                            // MAIN MOBILE VIDEO SCREEN FRAME
-                            Expanded(
-                              child: AspectRatio(
-                                aspectRatio: 9 / 16,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: const Color(0xFF3B404E), width: 2),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.7),
-                                        blurRadius: 15,
-                                        spreadRadius: 3,
-                                      )
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(18),
-                                    child: const TikTokScrollableFeed(),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            // BOTTOM NAVIGATION BAR
-                            Container(
-                              height: 48,
-                              margin: const EdgeInsets.only(top: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF181A20),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white12),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                children: [
-                                  _buildBottomNavItem(Icons.home, 'Home', color: Colors.white),
-                                  _buildBottomNavItem(Icons.people_outline, 'Friends'),
-                                  _buildBottomNavItem(Icons.chat_bubble_outline, 'Inbox'),
-                                  _buildBottomNavItem(Icons.person_outline, 'Profile'),
-                                ],
-                              ),
-                            ),
-                          ],
+                    // WIDE SCREEN MOBILE FRAME
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF3B404E), width: 2),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: const TikTokScrollableFeed(),
                         ),
                       ),
                     ),
-                  ),
-                ],
+
+                    // BOTTOM NAVIGATION BAR
+                    Container(
+                      height: 52,
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF181A20),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildBottomNavItem(Icons.home, 'Home', color: Colors.white),
+                          _buildBottomNavItem(Icons.people_outline, 'Friends'),
+                          _buildBottomNavItem(Icons.chat_bubble_outline, 'Inbox'),
+                          _buildBottomNavItem(Icons.person_outline, 'Profile'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -252,48 +192,13 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 4),
-      child: Text(
-        title,
-        style: TextStyle(color: Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildWidgetItem(IconData icon, String label) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 5),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-      decoration: BoxDecoration(
-        color: const Color(0xFF252830),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFF333842)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: const Color(0xFFBAC7FF)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomNavItem(IconData icon, String label, {Color color = Colors.grey}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: color, size: 18),
+        Icon(icon, color: color, size: 20),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(color: color, fontSize: 9)),
+        Text(label, style: TextStyle(color: color, fontSize: 10)),
       ],
     );
   }
@@ -310,21 +215,20 @@ class TikTokScrollableFeed extends StatefulWidget {
 class _TikTokScrollableFeedState extends State<TikTokScrollableFeed> {
   final PageController _pageController = PageController();
 
-  // SUPABASE / FAST CDN DIRECT VIDEO URLS FOR kuanyngne
   final List<Map<String, String>> _videoData = [
     {
-      'url': 'https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-1173-large.mp4',
+      'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       'username': '@kuanyngne',
-      'caption': 'Kuanyngne Official Supabase Video Stream! 🚀 Live HD Streaming Test #kuanyngne',
+      'caption': 'kuanyngne Official Supabase Video Stream! 🚀 Live HD Streaming Test #kuanyngne',
       'likes': '24.1K',
       'comments': '152',
       'bookmarks': '3100',
       'shares': '1200',
     },
     {
-      'url': 'https://assets.mixkit.co/videos/preview/mixkit-vertical-shot-of-a-waterfall-in-a-forest-42891-large.mp4',
+      'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
       'username': '@kuanyngne',
-      'caption': '5-Minute High Quality Streaming via Supabase Network Connection 🔥',
+      'caption': '5-Minute High Quality Streaming via kuanyngne Network Connection 🔥',
       'likes': '58.9K',
       'comments': '890',
       'bookmarks': '4500',
@@ -358,12 +262,20 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
   late VideoPlayerController _controller;
   late AnimationController _discAnimController;
   bool _isLiked = false;
-  bool _hasError = false;
+  bool _isBookmarked = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeVideo();
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.videoInfo['url']!),
+    )..initialize().then((_) {
+        if (mounted) {
+          setState(() {});
+          _controller.setLooping(true);
+          _controller.play();
+        }
+      });
 
     _discAnimController = AnimationController(
       vsync: this,
@@ -371,31 +283,85 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
     )..repeat();
   }
 
-  void _initializeVideo() {
-    _controller = VideoPlayerController.networkUrl(
-      Uri.parse(widget.videoInfo['url']!),
-    )..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _hasError = false;
-          });
-          _controller.setLooping(true);
-          _controller.play();
-        }
-      }).catchError((error) {
-        if (mounted) {
-          setState(() {
-            _hasError = true;
-          });
-        }
-      });
-  }
-
   @override
   void dispose() {
     _controller.dispose();
     _discAnimController.dispose();
     super.dispose();
+  }
+
+  void _showCommentSection() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF181A20),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: 350,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade600, borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('${widget.videoInfo['comments']} ኮሜንቶች', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView(
+                  children: const [
+                    ListTile(
+                      leading: CircleAvatar(backgroundColor: Colors.blueAccent, child: Text('A', style: TextStyle(color: Colors.white))),
+                      title: Text('@user_one', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                      subtitle: Text('በጣም አሪፍ ቪዲዮ ነው! 🔥', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    ),
+                    ListTile(
+                      leading: CircleAvatar(backgroundColor: Colors.purpleAccent, child: Text('B', style: TextStyle(color: Colors.white))),
+                      title: Text('@user_two', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                      subtitle: Text('kuanyngne ቪዲዮው በጥራት ይሰራል 👍', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'ኮሜንት ጻፍ...',
+                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                        filled: true,
+                        fillColor: const Color(0xFF252830),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.horizontal(16),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.send, color: Color(0xFFBAC7FF)),
+                    onPressed: () {},
+                  )
+                ],
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showShareOptions() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('የቪዲዮው ሊንክ ተቀድቷል (Link Copied!)'), duration: Duration(seconds: 2)),
+    );
   }
 
   @override
@@ -417,40 +383,28 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 1. VIDEO PLAYER OR LOADING/ERROR STATUS
-          if (_hasError)
-            const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.wifi_off, color: Colors.white54, size: 30),
-                  SizedBox(height: 6),
-                  Text('የኢንተርኔት ግንኙነትዎን ያረጋግጡ', style: TextStyle(color: Colors.white70, fontSize: 10)),
-                ],
-              ),
-            )
-          else if (_controller.value.isInitialized)
-            SizedBox.expand(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _controller.value.size.width,
-                  height: _controller.value.size.height,
-                  child: VideoPlayer(_controller),
+          // 1. VIDEO PLAYER
+          _controller.value.isInitialized
+              ? SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _controller.value.size.width,
+                      height: _controller.value.size.height,
+                      child: VideoPlayer(_controller),
+                    ),
+                  ),
+                )
+              : const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
                 ),
-              ),
-            )
-          else
-            const Center(
-              child: CircularProgressIndicator(color: Color(0xFFBAC7FF), strokeWidth: 2),
-            ),
 
           // BOTTOM GRADIENT SHADOW
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            height: 120,
+            height: 140,
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -462,17 +416,17 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
             ),
           ),
 
-          // PAUSE ICON OVERLAY
+          // PAUSE OVERLAY
           if (_controller.value.isInitialized && !_controller.value.isPlaying)
             Container(
               decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
-              child: const Icon(Icons.play_arrow, color: Colors.white70, size: 45),
+              child: const Icon(Icons.play_arrow, color: Colors.white70, size: 50),
             ),
 
           // 2. RIGHT SIDE SOCIAL ACTION ICONS
           Positioned(
-            right: 8,
-            bottom: 15,
+            right: 12,
+            bottom: 20,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -480,51 +434,64 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
                   alignment: Alignment.bottomCenter,
                   children: [
                     const CircleAvatar(
-                      radius: 16,
+                      radius: 18,
                       backgroundColor: Colors.white24,
-                      child: Icon(Icons.person, size: 20, color: Colors.white),
+                      child: Icon(Icons.person, size: 22, color: Colors.white),
                     ),
                     Transform.translate(
                       offset: const Offset(0, 5),
                       child: Container(
                         padding: const EdgeInsets.all(1),
                         decoration: const BoxDecoration(color: Color(0xFFFF2C55), shape: BoxShape.circle),
-                        child: const Icon(Icons.add, size: 10, color: Colors.white),
+                        child: const Icon(Icons.add, size: 12, color: Colors.white),
                       ),
                     )
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
+                // LIKE
                 GestureDetector(
                   onTap: () => setState(() => _isLiked = !_isLiked),
-                  child: Icon(Icons.favorite, color: _isLiked ? const Color(0xFFFF2C55) : Colors.white, size: 26),
+                  child: Icon(Icons.favorite, color: _isLiked ? const Color(0xFFFF2C55) : Colors.white, size: 30),
                 ),
-                Text(widget.videoInfo['likes']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
+                Text(widget.videoInfo['likes']!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 14),
 
-                const Icon(Icons.comment, color: Colors.white, size: 24),
-                Text(widget.videoInfo['comments']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
+                // COMMENT
+                GestureDetector(
+                  onTap: _showCommentSection,
+                  child: const Icon(Icons.comment, color: Colors.white, size: 28),
+                ),
+                Text(widget.videoInfo['comments']!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 14),
 
-                const Icon(Icons.bookmark, color: Colors.white, size: 24),
-                Text(widget.videoInfo['bookmarks']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
+                // BOOKMARK
+                GestureDetector(
+                  onTap: () => setState(() => _isBookmarked = !_isBookmarked),
+                  child: Icon(Icons.bookmark, color: _isBookmarked ? Colors.amber : Colors.white, size: 28),
+                ),
+                Text(widget.videoInfo['bookmarks']!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 14),
 
-                const Icon(Icons.reply, color: Colors.white, size: 24),
-                Text(widget.videoInfo['shares']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
+                // SHARE
+                GestureDetector(
+                  onTap: _showShareOptions,
+                  child: const Icon(Icons.reply, color: Colors.white, size: 28),
+                ),
+                Text(widget.videoInfo['shares']!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 14),
 
                 RotationTransition(
                   turns: _discAnimController,
                   child: Container(
-                    padding: const EdgeInsets.all(5),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: Colors.black87,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white30, width: 1.5),
                     ),
-                    child: const Icon(Icons.music_note, color: Colors.white, size: 10),
+                    child: const Icon(Icons.music_note, color: Colors.white, size: 12),
                   ),
                 ),
               ],
@@ -533,30 +500,30 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
 
           // 3. BOTTOM LEFT TEXT & CAPTION
           Positioned(
-            left: 10,
-            bottom: 12,
-            right: 60,
+            left: 14,
+            bottom: 16,
+            right: 70,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(widget.videoInfo['username']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                const SizedBox(height: 3),
+                Text(widget.videoInfo['username']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 4),
                 Text(
                   widget.videoInfo['caption']!,
-                  style: const TextStyle(color: Colors.white, fontSize: 9),
+                  style: const TextStyle(color: Colors.white, fontSize: 11),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.music_note, color: Colors.white, size: 10),
+                    const Icon(Icons.music_note, color: Colors.white, size: 12),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         'Original Audio - ${widget.videoInfo['username']}',
-                        style: const TextStyle(color: Colors.white, fontSize: 8),
+                        style: const TextStyle(color: Colors.white, fontSize: 10),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
