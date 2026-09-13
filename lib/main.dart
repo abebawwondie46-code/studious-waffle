@@ -1,4 +1,4 @@
-import 'package me/flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 void main() {
@@ -144,7 +144,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                     ),
                   ),
 
-                  // CENTER CANVAS (OUTSIDE TOP & BOTTOM TABS)
+                  // CENTER CANVAS
                   Expanded(
                     child: Container(
                       color: const Color(0xFF0F1015),
@@ -153,7 +153,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // 1. TOP FEED TABS (OUTSIDE SCREEN - IN THE SPACE ABOVE)
+                            // TOP FEED TABS (OUTSIDE SCREEN)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               margin: const EdgeInsets.only(bottom: 6),
@@ -194,7 +194,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                               ),
                             ),
 
-                            // 2. MAIN MOBILE VIDEO SCREEN FRAME
+                            // MAIN MOBILE VIDEO SCREEN FRAME
                             Expanded(
                               child: AspectRatio(
                                 aspectRatio: 9 / 16,
@@ -219,7 +219,7 @@ class _MainStudioEditorState extends State<MainStudioEditor> with SingleTickerPr
                               ),
                             ),
 
-                            // 3. BOTTOM NAVIGATION BAR (OUTSIDE SCREEN - IN THE SPACE BELOW)
+                            // BOTTOM NAVIGATION BAR (OUTSIDE SCREEN)
                             Container(
                               height: 48,
                               margin: const EdgeInsets.only(top: 6),
@@ -450,14 +450,13 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
               child: const Icon(Icons.play_arrow, color: Colors.white70, size: 45),
             ),
 
-          // 2. RIGHT SIDE SOCIAL ACTION ICONS (INSIDE SCREEN)
+          // 2. RIGHT SIDE SOCIAL ACTION ICONS
           Positioned(
             right: 8,
             bottom: 15,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Profile Avatar with (+) icon
                 Stack(
                   alignment: Alignment.bottomCenter,
                   children: [
@@ -478,7 +477,6 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
                 ),
                 const SizedBox(height: 14),
 
-                // Like Button
                 GestureDetector(
                   onTap: () => setState(() => _isLiked = !_isLiked),
                   child: Icon(Icons.favorite, color: _isLiked ? const Color(0xFFFF2C55) : Colors.white, size: 26),
@@ -486,22 +484,18 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
                 Text(widget.videoInfo['likes']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
 
-                // Comment Button
                 const Icon(Icons.comment, color: Colors.white, size: 24),
                 Text(widget.videoInfo['comments']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
 
-                // Bookmark Button
                 const Icon(Icons.bookmark, color: Colors.white, size: 24),
                 Text(widget.videoInfo['bookmarks']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
 
-                // Share Button
                 const Icon(Icons.reply, color: Colors.white, size: 24),
                 Text(widget.videoInfo['shares']!, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
 
-                // ROTATING MUSIC DISC
                 RotationTransition(
                   turns: _discAnimController,
                   child: Container(
@@ -518,7 +512,7 @@ class _SingleVideoItemState extends State<SingleVideoItem> with SingleTickerProv
             ),
           ),
 
-          // 3. BOTTOM LEFT TEXT & CAPTION (INSIDE SCREEN)
+          // 3. BOTTOM LEFT TEXT & CAPTION
           Positioned(
             left: 10,
             bottom: 12,
