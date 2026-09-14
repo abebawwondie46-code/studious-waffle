@@ -787,49 +787,31 @@ class _VideoCommentsSheetState extends State<VideoCommentsSheet> {
     final text = _commentController.text.trim();
     if (text.isEmpty || _isSending) return;
 
-    final tempId = DateTime.now().millisecondsSinceEpoch.toString();
-    final newComment = {
-      'id': tempId,
-      'video_id': widget.videoId,
-      'username': widget.username,
-      'text': text,
-      'created_at': DateTime.now().toIso8601String(),
-    };
-
     setState(() {
-      _comments.insert(0, newComment);
       _isSending = true;
     });
+
     _commentController.clear();
-    widget.onCommentCountUpdated(_comments.length);
 
     try {
-      final inserted = await _supabase
-          .from('comments')
-          .insert({
-            'video_id': widget.videoId,
-            'username': widget.username,
-            'text': text,
-          })
-          .select()
-          .single();
+      await _supabase.from('comments').insert({
+        'video_id': widget.videoId,
+        'username': widget.username,
+        'text': text,
+      });
 
-      if (mounted) {
-        setState(() {
-          final index = _comments.indexWhere((element) => element['id'] == tempId);
-          if (index != -1) {
-            _comments[index] = inserted;
-          }
-          _isSending = false;
-        });
-      }
+      await _fetchComments();
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send comment: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
         setState(() {
-          _comments.removeWhere((element) => element['id'] == tempId);
           _isSending = false;
         });
-        widget.onCommentCountUpdated(_comments.length);
       }
     }
   }
@@ -850,22 +832,16 @@ class _VideoCommentsSheetState extends State<VideoCommentsSheet> {
             onPressed: () async {
               Navigator.pop(dialogCtx);
 
-              final deletedItem = _comments[index];
-              setState(() {
-                _comments.removeAt(index);
-              });
-              widget.onCommentCountUpdated(_comments.length);
-
               try {
                 if (commentId != null) {
                   await _supabase.from('comments').delete().eq('id', commentId);
                 }
+                await _fetchComments();
               } catch (e) {
                 if (mounted) {
-                  setState(() {
-                    _comments.insert(index, deletedItem);
-                  });
-                  widget.onCommentCountUpdated(_comments.length);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete: $e')),
+                  );
                 }
               }
             },
