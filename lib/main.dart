@@ -128,7 +128,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 }
 
 // -------------------------------------------------------------
-// VIRAL VIDEO PLAYER CARD WITH VISIBLE INPUT & LONG-PRESS DELETE
+// VIRAL VIDEO PLAYER CARD
 // -------------------------------------------------------------
 class ViralVideoPlayerCard extends StatefulWidget {
   final String title;
@@ -152,12 +152,13 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   late VideoPlayerController _controller;
   bool _isInitialized = false;
   int _currentPositionInSeconds = 0;
+  int _totalDurationInSeconds = 0;
   bool _isLiked = false;
   bool _isBookmarked = false;
   bool _showHeartAnimation = false;
+  bool _isMuted = false;
 
   final List<Map<String, String>> _comments = [];
-
   late AnimationController _discAnimationController;
 
   @override
@@ -166,16 +167,18 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
     _discAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
-    )..repeat();
+    );
 
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
       ..initialize().then((_) {
         if (mounted) {
           setState(() {
             _isInitialized = true;
+            _totalDurationInSeconds = _controller.value.duration.inSeconds;
           });
           _controller.play();
           _controller.setLooping(true);
+          _discAnimationController.repeat();
         }
       });
 
@@ -202,9 +205,18 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
     setState(() {
       if (_controller.value.isPlaying) {
         _controller.pause();
+        _discAnimationController.stop();
       } else {
         _controller.play();
+        _discAnimationController.repeat();
       }
+    });
+  }
+
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+      _controller.setVolume(_isMuted ? 0.0 : 1.0);
     });
   }
 
@@ -256,8 +268,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                       ),
                       const Divider(color: Colors.white12, height: 20),
-
-                      // Comments List Area
                       Expanded(
                         child: _comments.isEmpty
                             ? const Center(
@@ -334,8 +344,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                                 },
                               ),
                       ),
-
-                      // Input Bar Floating above Keyboard
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: const BoxDecoration(
@@ -394,11 +402,15 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
 
   @override
   Widget build(BuildContext context) {
+    final int displayTotalDuration = _totalDurationInSeconds > 0
+        ? _totalDurationInSeconds
+        : (widget.duration > 0 ? widget.duration : 0);
+
     return Container(
       color: Colors.black,
       child: Stack(
         children: [
-          // 1. FULLSCREEN VIDEO CONTENT
+          // 1. FULLSCREEN VIDEO CONTENT (TOUCHABLE SCREEN)
           Positioned.fill(
             child: GestureDetector(
               onTap: _togglePlayPause,
@@ -431,20 +443,23 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
               ),
             ),
 
-          // Play/Pause Overlay Icon
+          // Play/Pause Overlay Icon (CLICKABLE BUTTON)
           if (_isInitialized && !_controller.value.isPlaying)
             Center(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.black45,
-                  shape: BoxShape.circle,
+              child: GestureDetector(
+                onTap: _togglePlayPause,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.black45,
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: const Icon(Icons.play_arrow_rounded, size: 65, color: Colors.white),
                 ),
-                padding: const EdgeInsets.all(16),
-                child: const Icon(Icons.play_arrow_rounded, size: 60, color: Colors.white),
               ),
             ),
 
-          // 2. TOP HEADER OVERLAY
+          // 2. TOP HEADER OVERLAY WITH MUTE & REAL-TIME COUNTER
           Positioned(
             top: 40,
             left: 16,
@@ -458,29 +473,49 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                     Shadow(blurRadius: 8, color: Colors.black)
                   ]),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white24, width: 0.8),
-                  ),
-                  child: Text(
-                    "${_currentPositionInSeconds}s / ${widget.duration > 0 ? widget.duration : 300}s",
-                    style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
-                  ),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: _toggleMute,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24, width: 0.8),
+                        ),
+                        child: Icon(
+                          _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white24, width: 0.8),
+                      ),
+                      child: Text(
+                        "${_currentPositionInSeconds}s / ${displayTotalDuration}s",
+                        style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
 
-          // 3. RIGHT SIDE ACTIONS BAR (VIRAL TIKTOK-STYLE)
+          // 3. RIGHT SIDE ACTIONS BAR
           Positioned(
             right: 12,
             bottom: 80,
             child: Column(
               children: [
-                // Profile Avatar with Follow Badge
                 Stack(
                   alignment: Alignment.bottomCenter,
                   children: [
@@ -509,8 +544,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   ],
                 ),
                 const SizedBox(height: 24),
-
-                // Like Action
                 _buildSideActionButton(
                   icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                   label: _isLiked ? "1.2k" : "1.1k",
@@ -518,8 +551,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   onTap: () => setState(() => _isLiked = !_isLiked),
                 ),
                 const SizedBox(height: 18),
-
-                // Comment Action
                 _buildSideActionButton(
                   icon: Icons.chat_bubble_outline_rounded,
                   label: "${_comments.length}",
@@ -527,8 +558,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   onTap: _showCommentSheet,
                 ),
                 const SizedBox(height: 18),
-
-                // Bookmark/Save Action
                 _buildSideActionButton(
                   icon: _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
                   label: "Save",
@@ -536,8 +565,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   onTap: () => setState(() => _isBookmarked = !_isBookmarked),
                 ),
                 const SizedBox(height: 18),
-
-                // Share Action
                 _buildSideActionButton(
                   icon: Icons.reply_rounded,
                   label: "Share",
@@ -546,7 +573,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                 ),
                 const SizedBox(height: 24),
 
-                // Rotating Music Disc Animation
+                // Music Disc Animation (Controlled Play/Pause)
                 RotationTransition(
                   turns: _discAnimationController,
                   child: Container(
@@ -592,8 +619,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   ],
                 ),
                 const SizedBox(height: 10),
-
-                // Video Seek Bar
                 if (_isInitialized)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
@@ -641,7 +666,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   }
 }
 
-// Helper Widget replacing StatefulWidget for BottomSheet dynamic state
 class StateBuilder extends StatefulWidget {
   final StatefulWidgetBuilder builder;
 
