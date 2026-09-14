@@ -6,11 +6,11 @@ import 'package:video_player/video_player.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Supabase Initialization (የእርስዎን URL እና AnonKey እዚህ ያስገቡ)
+
+  // Supabase Initialization
   await Supabase.initialize(
-    url: 'https://YOUR_PROJECT_ID.supabase.co',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY',
+    url: 'https://YOUR_PROJECT_ID.supabase.co', // የእርስዎን Supabase Project URL እዚህ ያስገቡ
+    anonKey: 'YOUR_SUPABASE_ANON_KEY',         // የእርስዎን Supabase Anon Key እዚህ ያስገቡ
   );
 
   runApp(const Sketchware5MinApp());
@@ -74,7 +74,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
 }
 
 // -------------------------------------------------------------
-// 1. VIDEO FEED SCREEN (Sketchware Block UI)
+// 1. VIDEO FEED SCREEN
 // -------------------------------------------------------------
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
@@ -99,6 +99,11 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800)));
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('ስህተት ተፈጥሯል፦ ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)),
+            );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
@@ -206,7 +211,7 @@ class _SketchwareBlockCardState extends State<SketchwareBlockCard> {
             ),
           ),
 
-          // Video Canvas
+          // Video Canvas Area
           Expanded(
             child: Center(
               child: _isInitialized
@@ -263,7 +268,7 @@ class _SketchwareBlockCardState extends State<SketchwareBlockCard> {
 }
 
 // -------------------------------------------------------------
-// 2. UPLOAD STUDIO SCREEN (Duration Validation <= 300s)
+// 2. UPLOAD STUDIO SCREEN
 // -------------------------------------------------------------
 class UploadStudioScreen extends StatefulWidget {
   const UploadStudioScreen({super.key});
@@ -287,7 +292,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
       final durationInSeconds = tempController.value.duration.inSeconds;
       tempController.dispose();
 
-      // የ 5 ደቂቃ (300 ሰከንድ) ገደብ ማረጋገጫ
+      // የ 5 ደቂቃ (300 ሰከንድ) ማረጋገጫ
       if (durationInSeconds > 300) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -305,7 +310,19 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
   }
 
   Future<void> _uploadVideo() async {
-    if (_videoFile == null || _titleController.text.isEmpty) return;
+    if (_videoFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎን መጀመሪያ ቪዲዮ ይምረጡ!')),
+      );
+      return;
+    }
+
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎን የቪዲዮውን ርዕስ ይጻፉ!')),
+      );
+      return;
+    }
 
     setState(() => _isUploading = true);
 
@@ -313,17 +330,24 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
       final supabase = Supabase.instance.client;
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
 
-      // 1. Upload Video to Storage
-      await supabase.storage.from('videos').upload(fileName, _videoFile!);
+      // 1. Read Bytes for Reliable Mobile Upload
+      final bytes = await _videoFile!.readAsBytes();
 
-      // 2. Get Public URL
+      // 2. Upload Video to Supabase Storage Bucket 'videos'
+      await supabase.storage.from('videos').uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'video/mp4'),
+          );
+
+      // 3. Get Public URL
       final publicUrl = supabase.storage.from('videos').getPublicUrl(fileName);
 
-      // 3. Insert Record to Database
+      // 4. Insert Record to Database Table 'videos'
       await supabase.from('videos').insert({
         'title': _titleController.text.trim(),
         'video_url': publicUrl,
-        'username': 'my_studio',
+        'username': 'kuanyngne',
         'duration': _videoDuration,
       });
 
@@ -334,16 +358,19 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
         setState(() {
           _videoFile = null;
           _titleController.clear();
+          _videoDuration = 0;
         });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ስህተት ተፈጥሯል፦ $e')),
+          SnackBar(content: Text('ስህተት ተፈጥሯል፦ $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() => _isUploading = false);
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
     }
   }
 
@@ -362,6 +389,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
               onTap: _pickVideo,
               child: Container(
                 height: 220,
+                width: double.infinity,
                 decoration: BoxDecoration(
                   color: const Color(0xFF263238),
                   borderRadius: BorderRadius.circular(12),
@@ -382,6 +410,8 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
                           const Icon(Icons.check_circle, size: 50, color: Color(0xFF009688)),
                           const SizedBox(height: 8),
                           Text('የተመረጠው ቪዲዮ ርዝመት፦ $_videoDuration ሰከንድ', style: const TextStyle(color: Colors.white)),
+                          const SizedBox(height: 4),
+                          const Text('ቪዲዮውን ለመቀየር መልሰው ይጫኑ', style: TextStyle(color: Colors.white38, fontSize: 12)),
                         ],
                       ),
               ),
