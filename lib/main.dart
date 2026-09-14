@@ -387,427 +387,15 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
     );
   }
 
-  // UPDATED COMMENT SHEET WITH INSTANT DISPLAY & LONG-PRESS DELETE
   void _showCommentSheet() {
-    final TextEditingController commentInputController = TextEditingController();
-    bool isSending = false;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF161B26),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (bottomSheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.60,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Comments ($_commentCount)',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                      ),
-                      const Divider(color: Colors.white12, height: 20),
-                      Expanded(
-                        child: FutureBuilder<List<Map<String, dynamic>>>(
-                          future: _supabase
-                              .from('comments')
-                              .select()
-                              .eq('video_id', widget.videoId)
-                              .order('created_at', ascending: false),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800)));
-                            }
-                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                              return const Center(
-                                child: Text('No comments yet. Be the first to comment!', style: TextStyle(color: Colors.white54)),
-                              );
-                            }
-
-                            final comments = snapshot.data!;
-                            return ListView.builder(
-                              itemCount: comments.length,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              itemBuilder: (context, index) {
-                                final item = comments[index];
-                                final commentId = item['id'];
-
-                                return GestureDetector(
-                                  onLongPress: () {
-                                    // LONG PRESS TO DELETE COMMENT
-                                    showDialog(
-                                      context: context,
-                                      builder: (dialogCtx) => AlertDialog(
-                                        backgroundColor: const Color(0xFF161B26),
-                                        title: const Text('Delete Comment', style: TextStyle(color: Colors.white)),
-                                        content: const Text('Are you sure you want to delete this comment?', style: TextStyle(color: Colors.white70)),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(dialogCtx),
-                                            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-                                          ),
-                                          TextButton(
-                                            onPressed: () async {
-                                              Navigator.pop(dialogCtx);
-                                              await _supabase.from('comments').delete().eq('id', commentId);
-                                              setSheetState(() {});
-                                              _fetchCommentCount();
-                                            },
-                                            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const CircleAvatar(
-                                          radius: 16,
-                                          backgroundColor: Color(0xFFFF9800),
-                                          child: Icon(Icons.person, size: 18, color: Colors.white),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                item['username'] ?? 'User',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white70),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                item['text'] ?? '',
-                                                style: const TextStyle(fontSize: 14, color: Colors.white),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0D0F14),
-                          border: Border(top: BorderSide(color: Colors.white12, width: 0.8)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: commentInputController,
-       void _showCommentSheet() {
-    final TextEditingController commentInputController = TextEditingController();
-    List<Map<String, dynamic>> localComments = [];
-    bool isLoadingComments = true;
-    bool isSending = false;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF161B26),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (bottomSheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            // First time load comments
-            if (isLoadingComments) {
-              _supabase
-                  .from('comments')
-                  .select()
-                  .eq('video_id', widget.videoId)
-                  .order('created_at', ascending: false)
-                  .then((data) {
-                if (mounted) {
-                  setSheetState(() {
-                    localComments = List<Map<String, dynamic>>.from(data);
-                    isLoadingComments = false;
-                  });
-                }
-              });
-            }
-
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.60,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                              color: Colors.white24,
-                              borderRadius: BorderRadius.circular(2)),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Comments (${localComments.length})',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.white),
-                      ),
-                      const Divider(color: Colors.white12, height: 20),
-                      Expanded(
-                        child: isLoadingComments
-                            ? const Center(
-                                child: CircularProgressIndicator(
-                                    color: Color(0xFFFF9800)))
-                            : localComments.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                        'No comments yet. Be the first to comment!',
-                                        style:
-                                            TextStyle(color: Colors.white54)),
-                                  )
-                                : ListView.builder(
-                                    itemCount: localComments.length,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                    itemBuilder: (context, index) {
-                                      final item = localComments[index];
-                                      final commentId = item['id'];
-
-                                      return GestureDetector(
-                                        onLongPress: () {
-                                          // DELETE DIALOG ON LONG PRESS
-                                          showDialog(
-                                            context: context,
-                                            builder: (dialogCtx) => AlertDialog(
-                                              backgroundColor:
-                                                  const Color(0xFF161B26),
-                                              title: const Text('Delete Comment',
-                                                  style: TextStyle(
-                                                      color: Colors.white)),
-                                              content: const Text(
-                                                  'Are you sure you want to delete this comment?',
-                                                  style: TextStyle(
-                                                      color: Colors.white70)),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(dialogCtx),
-                                                  child: const Text('Cancel',
-                                                      style: TextStyle(
-                                                          color:
-                                                              Colors.white54)),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () async {
-                                                    Navigator.pop(dialogCtx);
-                                                    setSheetState(() {
-                                                      localComments.removeAt(index);
-                                                    });
-                                                    if (commentId != null) {
-                                                      await _supabase
-                                                          .from('comments')
-                                                          .delete()
-                                                          .eq('id', commentId);
-                                                    }
-                                                    _fetchCommentCount();
-                                                  },
-                                                  child: const Text('Delete',
-                                                      style: TextStyle(
-                                                          color: Colors
-                                                              .redAccent)),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                        child: Container(
-                                          margin:
-                                              const EdgeInsets.only(bottom: 12),
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.white.withOpacity(0.05),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              const CircleAvatar(
-                                                radius: 16,
-                                                backgroundColor:
-                                                    Color(0xFFFF9800),
-                                                child: Icon(Icons.person,
-                                                    size: 18,
-                                                    color: Colors.white),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      item['username'] ?? 'User',
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 13,
-                                                          color:
-                                                              Colors.white70),
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      item['text'] ?? '',
-                                                      style: const TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.white),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0D0F14),
-                          border: Border(
-                              top: BorderSide(
-                                  color: Colors.white12, width: 0.8)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: commentInputController,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: InputDecoration(
-                                  hintText: 'Add a comment...',
-                                  hintStyle:
-                                      const TextStyle(color: Colors.white38),
-                                  filled: true,
-                                  fillColor: const Color(0xFF161B26),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 12),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: isSending
-                                  ? null
-                                  : () async {
-                                      final text =
-                                          commentInputController.text.trim();
-                                      if (text.isNotEmpty) {
-                                        final newComment = {
-                                          'video_id': widget.videoId,
-                                          'username': widget.username,
-                                          'text': text,
-                                          'created_at':
-                                              DateTime.now().toIso8601String(),
-                                        };
-
-                                        // INSTANT DISPLAY IN UI
-                                        setSheetState(() {
-                                          localComments.insert(0, newComment);
-                                          isSending = true;
-                                        });
-                                        commentInputController.clear();
-
-                                        try {
-                                          final inserted = await _supabase
-                                              .from('comments')
-                                              .insert({
-                                                'video_id': widget.videoId,
-                                                'username': widget.username,
-                                                'text': text,
-                                              })
-                                              .select()
-                                              .single();
-
-                                          setSheetState(() {
-                                            newComment['id'] = inserted['id'];
-                                            isSending = false;
-                                          });
-                                        } catch (e) {
-                                          setSheetState(() {
-                                            isSending = false;
-                                          });
-                                        }
-                                        _fetchCommentCount();
-                                      }
-                                    },
-                              icon: isSending
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Color(0xFFFF9800)),
-                                    )
-                                  : const Icon(Icons.send_rounded,
-                                      color: Color(0xFFFF9800)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
+    VideoCommentsSheet.show(
+      context,
+      videoId: widget.videoId,
+      username: widget.username,
+      onCommentCountUpdated: (newCount) {
+        setState(() {
+          _commentCount = newCount;
+        });
       },
     );
   }
@@ -1115,6 +703,301 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
         ],
+      ),
+    );
+  }
+}
+
+class VideoCommentsSheet extends StatefulWidget {
+  final String videoId;
+  final String username;
+  final Function(int) onCommentCountUpdated;
+
+  const VideoCommentsSheet({
+    super.key,
+    required this.videoId,
+    required this.username,
+    required this.onCommentCountUpdated,
+  });
+
+  static void show(
+    BuildContext context, {
+    required String videoId,
+    required String username,
+    required Function(int) onCommentCountUpdated,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF161B26),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => VideoCommentsSheet(
+        videoId: videoId,
+        username: username,
+        onCommentCountUpdated: onCommentCountUpdated,
+      ),
+    );
+  }
+
+  @override
+  State<VideoCommentsSheet> createState() => _VideoCommentsSheetState();
+}
+
+class _VideoCommentsSheetState extends State<VideoCommentsSheet> {
+  final SupabaseClient _supabase = Supabase.instance.client;
+  final TextEditingController _commentController = TextEditingController();
+
+  List<Map<String, dynamic>> _comments = [];
+  bool _isLoading = true;
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchComments();
+  }
+
+  Future<void> _fetchComments() async {
+    try {
+      final data = await _supabase
+          .from('comments')
+          .select()
+          .eq('video_id', widget.videoId)
+          .order('created_at', ascending: false);
+
+      if (mounted) {
+        setState(() {
+          _comments = List<Map<String, dynamic>>.from(data);
+          _isLoading = false;
+        });
+        widget.onCommentCountUpdated(_comments.length);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _sendComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty || _isSending) return;
+
+    final tempId = DateTime.now().millisecondsSinceEpoch.toString();
+    final newComment = {
+      'id': tempId,
+      'video_id': widget.videoId,
+      'username': widget.username,
+      'text': text,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    setState(() {
+      _comments.insert(0, newComment);
+      _isSending = true;
+    });
+    _commentController.clear();
+    widget.onCommentCountUpdated(_comments.length);
+
+    try {
+      final inserted = await _supabase
+          .from('comments')
+          .insert({
+            'video_id': widget.videoId,
+            'username': widget.username,
+            'text': text,
+          })
+          .select()
+          .single();
+
+      if (mounted) {
+        setState(() {
+          final index = _comments.indexWhere((element) => element['id'] == tempId);
+          if (index != -1) {
+            _comments[index] = inserted;
+          }
+          _isSending = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _comments.removeWhere((element) => element['id'] == tempId);
+          _isSending = false;
+        });
+        widget.onCommentCountUpdated(_comments.length);
+      }
+    }
+  }
+
+  void _confirmDeleteComment(int index, dynamic commentId) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF161B26),
+        title: const Text('Delete Comment', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to delete this comment?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+
+              final deletedItem = _comments[index];
+              setState(() {
+                _comments.removeAt(index);
+              });
+              widget.onCommentCountUpdated(_comments.length);
+
+              try {
+                if (commentId != null) {
+                  await _supabase.from('comments').delete().eq('id', commentId);
+                }
+              } catch (e) {
+                if (mounted) {
+                  setState(() {
+                    _comments.insert(index, deletedItem);
+                  });
+                  widget.onCommentCountUpdated(_comments.length);
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.60,
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Comments (${_comments.length})',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+              ),
+              const Divider(color: Colors.white12, height: 20),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800)))
+                    : _comments.isEmpty
+                        ? const Center(
+                            child: Text('No comments yet. Be the first to comment!', style: TextStyle(color: Colors.white54)),
+                          )
+                        : ListView.builder(
+                            itemCount: _comments.length,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            itemBuilder: (context, index) {
+                              final item = _comments[index];
+                              final commentId = item['id'];
+
+                              return GestureDetector(
+                                onLongPress: () => _confirmDeleteComment(index, commentId),
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const CircleAvatar(
+                                        radius: 16,
+                                        backgroundColor: Color(0xFFFF9800),
+                                        child: Icon(Icons.person, size: 18, color: Colors.white),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item['username'] ?? 'User',
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white70),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              item['text'] ?? '',
+                                              style: const TextStyle(fontSize: 14, color: Colors.white),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0D0F14),
+                  border: Border(top: BorderSide(color: Colors.white12, width: 0.8)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Add a comment...',
+                          hintStyle: const TextStyle(color: Colors.white38),
+                          filled: true,
+                          fillColor: const Color(0xFF161B26),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _sendComment,
+                      icon: _isSending
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF9800)),
+                            )
+                          : const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
