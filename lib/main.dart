@@ -98,12 +98,12 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
           }
           if (snapshot.hasError) {
             return Center(
-              child: Text('ስህተት ተፈጥሯል፦ ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)),
+              child: Text('An error occurred: ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)),
             );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
-              child: Text('ምንም ቪዲዮ አልተገኘም። አዲስ ቪዲዮ ይልቀቁ!', style: TextStyle(color: Colors.white54)),
+              child: Text('No videos found. Upload a new video!', style: TextStyle(color: Colors.white54)),
             );
           }
 
@@ -128,7 +128,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 }
 
 // -------------------------------------------------------------
-// VIRAL TIKTOK/REELS STYLE VIDEO CARD WITH CREATIVE OVERLAYS
+// VIRAL TIKTOK/REELS STYLE VIDEO CARD WITH VISIBLE INPUT SHEET
 // -------------------------------------------------------------
 class ViralVideoPlayerCard extends StatefulWidget {
   final String title;
@@ -157,6 +157,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   bool _showHeartAnimation = false;
 
   late AnimationController _discAnimationController;
+  final TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
@@ -193,6 +194,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   void dispose() {
     _discAnimationController.dispose();
     _controller.dispose();
+    _commentController.dispose();
     super.dispose();
   }
 
@@ -221,42 +223,76 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   void _showCommentSheet() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF161B26),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.55,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text('Comments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-              const SizedBox(height: 20),
-              const Center(
-                child: Text('እስካሁን ምንም አስተያየት የለም። የመጀመሪያው ይሁኑ!', style: TextStyle(color: Colors.white54)),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'አስተያየትዎን ያጋሩ...',
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  filled: true,
-                  fillColor: Colors.black26,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                  suffixIcon: const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
+                const SizedBox(height: 12),
+                const Text('Comments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                const SizedBox(height: 12),
+                const Expanded(
+                  child: Center(
+                    child: Text('No comments yet. Be the first to comment!', style: TextStyle(color: Colors.white54)),
+                  ),
                 ),
-              ),
-            ],
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _commentController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Add a comment...',
+                            hintStyle: const TextStyle(color: Colors.white38),
+                            filled: true,
+                            fillColor: const Color(0xFF0D0F14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () {
+                          if (_commentController.text.trim().isNotEmpty) {
+                            _commentController.clear();
+                            FocusScope.of(context).unfocus();
+                          }
+                        },
+                        icon: const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         );
       },
@@ -540,7 +576,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
       if (durationInSeconds > 300) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('የቪዲዮው ርዝመት ከ 5 ደቂቃ (300 ሰከንድ) መብለጥ የለበትም!')),
+            const SnackBar(content: Text('Video length must not exceed 5 minutes (300 seconds)!')),
           );
         }
         return;
@@ -556,14 +592,14 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
   Future<void> _uploadVideo() async {
     if (_videoFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎን መጀመሪያ ቪዲዮ ይምረጡ!')),
+        const SnackBar(content: Text('Please select a video first!')),
       );
       return;
     }
 
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎን የቪዲዮውን ርዕስ ይጻፉ!')),
+        const SnackBar(content: Text('Please enter a video title!')),
       );
       return;
     }
@@ -592,7 +628,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ቪዲዮው በስኬት ተጭኗል!')),
+          const SnackBar(content: Text('Video uploaded successfully!')),
         );
         setState(() {
           _videoFile = null;
@@ -603,7 +639,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ስህተት ተፈጥሯል፦ $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('An error occurred: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -640,7 +676,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
                         children: [
                           Icon(Icons.video_call_rounded, size: 50, color: Color(0xFFFF9800)),
                           SizedBox(height: 8),
-                          Text('ቪዲዮ ለመምረጥ እዚህ ይጫኑ (ከ0 - 5 ደቂቃ)', style: TextStyle(color: Colors.white70)),
+                          Text('Tap here to select video (0 - 5 minutes)', style: TextStyle(color: Colors.white70)),
                         ],
                       )
                     : Column(
@@ -648,9 +684,9 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
                         children: [
                           const Icon(Icons.check_circle, size: 50, color: Color(0xFF009688)),
                           const SizedBox(height: 8),
-                          Text('የተመረጠው ቪዲዮ ርዝመት፦ $_videoDuration ሰከንድ', style: const TextStyle(color: Colors.white)),
+                          Text('Selected video duration: $_videoDuration seconds', style: const TextStyle(color: Colors.white)),
                           const SizedBox(height: 4),
-                          const Text('ቪዲዮውን ለመቀየር መልሰው ይጫኑ', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                          const Text('Tap again to change video', style: TextStyle(color: Colors.white38, fontSize: 12)),
                         ],
                       ),
               ),
@@ -660,7 +696,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
               controller: _titleController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'የቪዲዮው ርዕስ (Title Block)',
+                hintText: 'Video Title Block',
                 hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
                 fillColor: const Color(0xFF161B26),
