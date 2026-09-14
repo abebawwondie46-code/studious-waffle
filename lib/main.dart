@@ -231,7 +231,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (bottomSheetContext) {
-        return StatefulWidget(
+        return StateBuilder(
           builder: (context, setSheetState) {
             return SafeArea(
               child: Padding(
@@ -638,6 +638,23 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
         ],
       ),
     );
+  }
+}
+
+// Helper Widget replacing StatefulWidget for BottomSheet dynamic state
+class StateBuilder extends StatefulWidget {
+  final StatefulWidgetBuilder builder;
+
+  const StateBuilder({super.key, required this.builder});
+
+  @override
+  State<StateBuilder> createState() => _StateBuilderState();
+}
+
+class _StateBuilderState extends State<StateBuilder> {
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, setState);
   }
 }
 
