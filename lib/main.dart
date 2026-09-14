@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
@@ -74,9 +75,6 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
   }
 }
 
-// -------------------------------------------------------------
-// 1. FULLSCREEN VIRAL VIDEO FEED SCREEN
-// -------------------------------------------------------------
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -86,62 +84,134 @@ class VideoFeedScreen extends StatefulWidget {
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final _supabase = Supabase.instance.client;
+  String _searchQuery = '';
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _supabase.from('videos').select().order('created_at', ascending: false),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800)));
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('An error occurred: ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)),
-            );
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text('No videos found. Upload a new video!', style: TextStyle(color: Colors.white54)),
-            );
-          }
+      body: Stack(
+        children: [
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _supabase.from('videos').select().order('created_at', ascending: false),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800)));
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('An error occurred: ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)),
+                );
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text('No videos found. Upload a new video!', style: TextStyle(color: Colors.white54)),
+                );
+              }
 
-          final videos = snapshot.data!;
-          return PageView.builder(
-            scrollDirection: Axis.vertical,
-            itemCount: videos.length,
-            itemBuilder: (context, index) {
-              final video = videos[index];
-              return ViralVideoPlayerCard(
-                title: video['title'] ?? 'Untitled Studio Content',
-                username: video['username'] ?? 'kuanyngne',
-                videoUrl: video['video_url'] ?? '',
-                duration: video['duration'] ?? 0,
+              final videos = snapshot.data!.where((v) {
+                final title = (v['title'] ?? '').toString().toLowerCase();
+                return title.contains(_searchQuery.toLowerCase());
+              }).toList();
+
+              if (videos.isEmpty) {
+                return const Center(
+                  child: Text('No videos match your search.', style: TextStyle(color: Colors.white54)),
+                );
+              }
+
+              return PageView.builder(
+                scrollDirection: Axis.vertical,
+                itemCount: videos.length,
+                itemBuilder: (context, index) {
+                  final video = videos[index];
+                  return ViralVideoPlayerCard(
+                    videoId: video['id'].toString(),
+                    title: video['title'] ?? 'Untitled Studio Content',
+                    username: video['username'] ?? 'kuanyngne',
+                    videoUrl: video['video_url'] ?? '',
+                    duration: video['duration'] ?? 0,
+                    onSearchTap: () {
+                      setState(() {
+                        _isSearching = !_isSearching;
+                      });
+                    },
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+
+          if (_isSearching)
+            Positioned(
+              top: 80,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161B26).withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(color: const Color(0xFFFF9800), width: 1.2),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search, color: Color(0xFFFF9800)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          hintText: 'Search video titles...',
+                          hintStyle: TextStyle(color: Colors.white38),
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            _searchQuery = val;
+                          });
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white54),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = '';
+                          _searchController.clear();
+                          _isSearching = false;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
-// -------------------------------------------------------------
-// VIRAL VIDEO PLAYER CARD
-// -------------------------------------------------------------
 class ViralVideoPlayerCard extends StatefulWidget {
+  final String videoId;
   final String title;
   final String username;
   final String videoUrl;
   final int duration;
+  final VoidCallback onSearchTap;
 
   const ViralVideoPlayerCard({
     super.key,
+    required this.videoId,
     required this.title,
     required this.username,
     required this.videoUrl,
     required this.duration,
+    required this.onSearchTap,
   });
 
   @override
@@ -151,15 +221,17 @@ class ViralVideoPlayerCard extends StatefulWidget {
 class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with SingleTickerProviderStateMixin {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
-  int _currentPositionInSeconds = 0;
-  int _totalDurationInSeconds = 0;
+  double _currentPositionInSeconds = 0.0;
+  double _totalDurationInSeconds = 0.0;
   bool _isLiked = false;
   bool _isBookmarked = false;
   bool _showHeartAnimation = false;
   bool _isMuted = false;
+  bool _isDraggingSlider = false;
+  int _commentCount = 0;
 
-  final List<Map<String, String>> _comments = [];
   late AnimationController _discAnimationController;
+  final _supabase = Supabase.instance.client;
 
   @override
   void initState() {
@@ -174,7 +246,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
         if (mounted) {
           setState(() {
             _isInitialized = true;
-            _totalDurationInSeconds = _controller.value.duration.inSeconds;
+            _totalDurationInSeconds = _controller.value.duration.inMilliseconds / 1000.0;
           });
           _controller.play();
           _controller.setLooping(true);
@@ -183,15 +255,25 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
       });
 
     _controller.addListener(() {
-      if (_controller.value.isInitialized && mounted) {
-        final currentSec = _controller.value.position.inSeconds;
-        if (currentSec != _currentPositionInSeconds) {
-          setState(() {
-            _currentPositionInSeconds = currentSec;
-          });
-        }
+      if (_controller.value.isInitialized && mounted && !_isDraggingSlider) {
+        setState(() {
+          _currentPositionInSeconds = _controller.value.position.inMilliseconds / 1000.0;
+        });
       }
     });
+
+    _fetchCommentCount();
+  }
+
+  Future<void> _fetchCommentCount() async {
+    try {
+      final res = await _supabase.from('comments').select().eq('video_id', widget.videoId);
+      if (mounted) {
+        setState(() {
+          _commentCount = (res as List).length;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -232,6 +314,79 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
     });
   }
 
+  String _formatSeconds(double seconds) {
+    int s = seconds.floor();
+    return "${s.toString().padLeft(2, '0')}s";
+  }
+
+  void _showShareOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161B26),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+                const SizedBox(height: 16),
+                const Text('Share video via', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildShareItem(Icons.send_rounded, 'Telegram', Colors.blue, () {
+                      Navigator.pop(context);
+                    }),
+                    _buildShareItem(Icons.facebook_rounded, 'Facebook', Colors.indigo, () {
+                      Navigator.pop(context);
+                    }),
+                    _buildShareItem(Icons.chat_bubble_rounded, 'WhatsApp', Colors.green, () {
+                      Navigator.pop(context);
+                    }),
+                    _buildShareItem(Icons.link_rounded, 'Copy Link', const Color(0xFFFF9800), () {
+                      Clipboard.setData(ClipboardData(text: widget.videoUrl));
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Video link copied!')),
+                      );
+                    }),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildShareItem(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: color.withOpacity(0.2),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
   void _showCommentSheet() {
     final TextEditingController commentInputController = TextEditingController();
 
@@ -243,7 +398,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (bottomSheetContext) {
-        return StateBuilder(
+        return StatefulBuilder(
           builder: (context, setSheetState) {
             return SafeArea(
               child: Padding(
@@ -264,85 +419,68 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Comments (${_comments.length})',
+                        'Comments ($_commentCount)',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                       ),
                       const Divider(color: Colors.white12, height: 20),
                       Expanded(
-                        child: _comments.isEmpty
-                            ? const Center(
+                        child: FutureBuilder<List<Map<String, dynamic>>>(
+                          future: _supabase.from('comments').select().eq('video_id', widget.videoId).order('created_at', ascending: false),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800)));
+                            }
+                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return const Center(
                                 child: Text('No comments yet. Be the first to comment!', style: TextStyle(color: Colors.white54)),
-                              )
-                            : ListView.builder(
-                                itemCount: _comments.length,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                itemBuilder: (context, index) {
-                                  final item = _comments[index];
-                                  return GestureDetector(
-                                    onLongPress: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (dialogContext) => AlertDialog(
-                                          backgroundColor: const Color(0xFF161B26),
-                                          title: const Text('Delete Comment', style: TextStyle(color: Colors.white)),
-                                          content: const Text('Do you want to delete this comment?', style: TextStyle(color: Colors.white70)),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(dialogContext),
-                                              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                              );
+                            }
+
+                            final comments = snapshot.data!;
+                            return ListView.builder(
+                              itemCount: comments.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              itemBuilder: (context, index) {
+                                final item = comments[index];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const CircleAvatar(
+                                        radius: 16,
+                                        backgroundColor: Color(0xFFFF9800),
+                                        child: Icon(Icons.person, size: 18, color: Colors.white),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item['username'] ?? 'User',
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white70),
                                             ),
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(dialogContext);
-                                                setSheetState(() {
-                                                  _comments.removeAt(index);
-                                                });
-                                                setState(() {});
-                                              },
-                                              child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              item['text'] ?? '',
+                                              style: const TextStyle(fontSize: 14, color: Colors.white),
                                             ),
                                           ],
                                         ),
-                                      );
-                                    },
-                                    child: Container(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.05),
-                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const CircleAvatar(
-                                            radius: 16,
-                                            backgroundColor: Color(0xFFFF9800),
-                                            child: Icon(Icons.person, size: 18, color: Colors.white),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  item['user'] ?? 'User',
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white70),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  item['text'] ?? '',
-                                                  style: const TextStyle(fontSize: 14, color: Colors.white),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -371,17 +509,17 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () {
+                              onPressed: () async {
                                 final text = commentInputController.text.trim();
                                 if (text.isNotEmpty) {
-                                  setSheetState(() {
-                                    _comments.insert(0, {
-                                      'user': widget.username,
-                                      'text': text,
-                                    });
+                                  await _supabase.from('comments').insert({
+                                    'video_id': widget.videoId,
+                                    'username': widget.username,
+                                    'text': text,
                                   });
-                                  setState(() {});
                                   commentInputController.clear();
+                                  setSheetState(() {});
+                                  _fetchCommentCount();
                                 }
                               },
                               icon: const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
@@ -402,15 +540,14 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
 
   @override
   Widget build(BuildContext context) {
-    final int displayTotalDuration = _totalDurationInSeconds > 0
+    final double maxDuration = _totalDurationInSeconds > 0
         ? _totalDurationInSeconds
-        : (widget.duration > 0 ? widget.duration : 0);
+        : (widget.duration > 0 ? widget.duration.toDouble() : 1.0);
 
     return Container(
       color: Colors.black,
       child: Stack(
         children: [
-          // 1. FULLSCREEN VIDEO CONTENT (TOUCHABLE SCREEN)
           Positioned.fill(
             child: GestureDetector(
               onTap: _togglePlayPause,
@@ -428,7 +565,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
             ),
           ),
 
-          // Double Tap Heart Overlay Animation
           if (_showHeartAnimation)
             Center(
               child: TweenAnimationBuilder<double>(
@@ -443,8 +579,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
               ),
             ),
 
-          // Play/Pause Overlay Icon (CLICKABLE BUTTON)
-          if (_isInitialized && !_controller.value.isPlaying)
+          if (_isInitialized && !_controller.value.isPlaying && !_isDraggingSlider)
             Center(
               child: GestureDetector(
                 onTap: _togglePlayPause,
@@ -459,7 +594,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
               ),
             ),
 
-          // 2. TOP HEADER OVERLAY WITH MUTE & REAL-TIME COUNTER
+          // TOP HEADER WITH COUNTER
           Positioned(
             top: 40,
             left: 16,
@@ -467,11 +602,28 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'kuanyngne Studio',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, shadows: [
-                    Shadow(blurRadius: 8, color: Colors.black)
-                  ]),
+                Row(
+                  children: [
+                    const Text(
+                      'kuanyngne Studio',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, shadows: [
+                        Shadow(blurRadius: 8, color: Colors.black)
+                      ]),
+                    ),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: widget.onSearchTap,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24, width: 0.8),
+                        ),
+                        child: const Icon(Icons.search_rounded, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  ],
                 ),
                 Row(
                   children: [
@@ -500,7 +652,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                         border: Border.all(color: Colors.white24, width: 0.8),
                       ),
                       child: Text(
-                        "${_currentPositionInSeconds}s / ${displayTotalDuration}s",
+                        "${_formatSeconds(_currentPositionInSeconds)} / ${_formatSeconds(maxDuration)}",
                         style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -510,7 +662,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
             ),
           ),
 
-          // 3. RIGHT SIDE ACTIONS BAR
+          // RIGHT SIDE ACTIONS
           Positioned(
             right: 12,
             bottom: 80,
@@ -553,7 +705,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                 const SizedBox(height: 18),
                 _buildSideActionButton(
                   icon: Icons.chat_bubble_outline_rounded,
-                  label: "${_comments.length}",
+                  label: "$_commentCount",
                   color: Colors.white,
                   onTap: _showCommentSheet,
                 ),
@@ -565,15 +717,29 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   onTap: () => setState(() => _isBookmarked = !_isBookmarked),
                 ),
                 const SizedBox(height: 18),
-                _buildSideActionButton(
-                  icon: Icons.reply_rounded,
-                  label: "Share",
-                  color: Colors.white,
-                  onTap: () {},
+                // OUTWARD TURNED SHARE ICON
+                GestureDetector(
+                  onTap: _showShareOptions,
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Transform.flip(
+                          flipX: true,
+                          child: const Icon(Icons.reply_rounded, color: Colors.white, size: 28),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
-                // Music Disc Animation (Controlled Play/Pause)
                 RotationTransition(
                   turns: _discAnimationController,
                   child: Container(
@@ -590,11 +756,11 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
             ),
           ),
 
-          // 4. BOTTOM LEFT CREATOR DETAILS
+          // BOTTOM LEFT DETAILS & DYNAMIC SEEKBAR
           Positioned(
             left: 16,
             right: 80,
-            bottom: 20,
+            bottom: 12,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -610,7 +776,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Row(
                   children: const [
                     Icon(Icons.music_note_rounded, size: 14, color: Color(0xFFFF9800)),
@@ -618,18 +784,37 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                     Text('Original Sound - kuanyngne Studio', style: TextStyle(fontSize: 12, color: Colors.white60)),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 4),
+
+                // WORKING INTERACTIVE SEEKBAR
                 if (_isInitialized)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: VideoProgressIndicator(
-                      _controller,
-                      allowScrubbing: true,
-                      colors: const VideoProgressColors(
-                        playedColor: Color(0xFFFF9800),
-                        bufferedColor: Colors.white30,
-                        backgroundColor: Colors.white10,
-                      ),
+                  SliderTheme(
+                    data: SliderThemeData(
+                      trackHeight: 3.0,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
+                      activeTrackColor: const Color(0xFFFF9800),
+                      inactiveTrackColor: Colors.white30,
+                      thumbColor: const Color(0xFFFF9800),
+                    ),
+                    child: Slider(
+                      value: _currentPositionInSeconds.clamp(0.0, maxDuration),
+                      min: 0.0,
+                      max: maxDuration > 0 ? maxDuration : 1.0,
+                      onChangeStart: (val) {
+                        setState(() => _isDraggingSlider = true);
+                      },
+                      onChanged: (val) {
+                        setState(() {
+                          _currentPositionInSeconds = val;
+                        });
+                        _controller.seekTo(Duration(milliseconds: (val * 1000).toInt()));
+                      },
+                      onChangeEnd: (val) {
+                        _controller.seekTo(Duration(milliseconds: (val * 1000).toInt()));
+                        _controller.play();
+                        setState(() => _isDraggingSlider = false);
+                      },
                     ),
                   ),
               ],
@@ -666,25 +851,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   }
 }
 
-class StateBuilder extends StatefulWidget {
-  final StatefulWidgetBuilder builder;
-
-  const StateBuilder({super.key, required this.builder});
-
-  @override
-  State<StateBuilder> createState() => _StateBuilderState();
-}
-
-class _StateBuilderState extends State<StateBuilder> {
-  @override
-  Widget build(BuildContext context) {
-    return widget.builder(context, setState);
-  }
-}
-
-// -------------------------------------------------------------
-// 2. UPLOAD STUDIO SCREEN
-// -------------------------------------------------------------
 class UploadStudioScreen extends StatefulWidget {
   const UploadStudioScreen({super.key});
 
