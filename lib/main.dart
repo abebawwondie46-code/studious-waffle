@@ -387,8 +387,10 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
     );
   }
 
+  // UPDATED COMMENT SHEET WITH INSTANT DISPLAY & LONG-PRESS DELETE
   void _showCommentSheet() {
     final TextEditingController commentInputController = TextEditingController();
+    bool isSending = false;
 
     showModalBottomSheet(
       context: context,
@@ -425,7 +427,11 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                       const Divider(color: Colors.white12, height: 20),
                       Expanded(
                         child: FutureBuilder<List<Map<String, dynamic>>>(
-                          future: _supabase.from('comments').select().eq('video_id', widget.videoId).order('created_at', ascending: false),
+                          future: _supabase
+                              .from('comments')
+                              .select()
+                              .eq('video_id', widget.videoId)
+                              .order('created_at', ascending: false),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800)));
@@ -442,39 +448,69 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               itemBuilder: (context, index) {
                                 final item = comments[index];
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const CircleAvatar(
-                                        radius: 16,
-                                        backgroundColor: Color(0xFFFF9800),
-                                        child: Icon(Icons.person, size: 18, color: Colors.white),
+                                final commentId = item['id'];
+
+                                return GestureDetector(
+                                  onLongPress: () {
+                                    // LONG PRESS TO DELETE COMMENT
+                                    showDialog(
+                                      context: context,
+                                      builder: (dialogCtx) => AlertDialog(
+                                        backgroundColor: const Color(0xFF161B26),
+                                        title: const Text('Delete Comment', style: TextStyle(color: Colors.white)),
+                                        content: const Text('Are you sure you want to delete this comment?', style: TextStyle(color: Colors.white70)),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(dialogCtx),
+                                            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                                          ),
+                                          TextButton(
+                                            onPressed: () async {
+                                              Navigator.pop(dialogCtx);
+                                              await _supabase.from('comments').delete().eq('id', commentId);
+                                              setSheetState(() {});
+                                              _fetchCommentCount();
+                                            },
+                                            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item['username'] ?? 'User',
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white70),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              item['text'] ?? '',
-                                              style: const TextStyle(fontSize: 14, color: Colors.white),
-                                            ),
-                                          ],
+                                    );
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: Color(0xFFFF9800),
+                                          child: Icon(Icons.person, size: 18, color: Colors.white),
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item['username'] ?? 'User',
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white70),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                item['text'] ?? '',
+                                                style: const TextStyle(fontSize: 14, color: Colors.white),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
@@ -509,20 +545,29 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () async {
-                                final text = commentInputController.text.trim();
-                                if (text.isNotEmpty) {
-                                  await _supabase.from('comments').insert({
-                                    'video_id': widget.videoId,
-                                    'username': widget.username,
-                                    'text': text,
-                                  });
-                                  commentInputController.clear();
-                                  setSheetState(() {});
-                                  _fetchCommentCount();
-                                }
-                              },
-                              icon: const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
+                              onPressed: isSending
+                                  ? null
+                                  : () async {
+                                      final text = commentInputController.text.trim();
+                                      if (text.isNotEmpty) {
+                                        setSheetState(() => isSending = true);
+                                        await _supabase.from('comments').insert({
+                                          'video_id': widget.videoId,
+                                          'username': widget.username,
+                                          'text': text,
+                                        });
+                                        commentInputController.clear();
+                                        setSheetState(() => isSending = false);
+                                        _fetchCommentCount();
+                                      }
+                                    },
+                              icon: isSending
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF9800)),
+                                    )
+                                  : const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
                             ),
                           ],
                         ),
@@ -594,7 +639,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
               ),
             ),
 
-          // TOP HEADER WITH COUNTER
           Positioned(
             top: 40,
             left: 16,
@@ -662,7 +706,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
             ),
           ),
 
-          // RIGHT SIDE ACTIONS
           Positioned(
             right: 12,
             bottom: 80,
@@ -717,7 +760,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   onTap: () => setState(() => _isBookmarked = !_isBookmarked),
                 ),
                 const SizedBox(height: 18),
-                // OUTWARD TURNED SHARE ICON
                 GestureDetector(
                   onTap: _showShareOptions,
                   child: Column(
@@ -756,7 +798,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
             ),
           ),
 
-          // BOTTOM LEFT DETAILS & DYNAMIC SEEKBAR
           Positioned(
             left: 16,
             right: 80,
@@ -786,7 +827,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                 ),
                 const SizedBox(height: 4),
 
-                // WORKING INTERACTIVE SEEKBAR
                 if (_isInitialized)
                   SliderTheme(
                     data: SliderThemeData(
