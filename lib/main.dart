@@ -7,7 +7,6 @@ import 'package:video_player/video_player.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Supabase Initialization
   await Supabase.initialize(
     url: 'https://ycvycgdnnmlfaebtxvfl.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljdnljZ2Rubm1sZmFlYnR4dmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTk2MjAsImV4cCI6MjA5Njg3NTYyMH0.Os73HGXe4EOijqpBVHk9Bcm6uzZXkgZjWRoroV1m2gE',
@@ -25,8 +24,8 @@ class Sketchware5MinApp extends StatelessWidget {
       title: 'kuanyngne Studio',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF1B1F2A),
-        primaryColor: const Color(0xFF5C6BC0),
+        scaffoldBackgroundColor: const Color(0xFF10141D),
+        primaryColor: const Color(0xFFFF9800),
       ),
       home: const MainStudioScreen(),
     );
@@ -55,16 +54,17 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
-        backgroundColor: const Color(0xFF1B1F2A),
+        backgroundColor: const Color(0xFF161B26),
         selectedItemColor: const Color(0xFFFF9800),
         unselectedItemColor: Colors.white54,
+        elevation: 10,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.play_circle_outline),
+            icon: Icon(Icons.play_circle_fill),
             label: '5-Min Feed',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_box_outlined),
+            icon: Icon(Icons.add_circle_outline),
             label: 'Upload Studio',
           ),
         ],
@@ -74,7 +74,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
 }
 
 // -------------------------------------------------------------
-// 1. VIDEO FEED SCREEN
+// 1. FULLSCREEN-STYLE VIDEO FEED SCREEN
 // -------------------------------------------------------------
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
@@ -90,8 +90,9 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF263238),
-        title: const Text('kuanyngne: 5-Min Studio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF161B26),
+        elevation: 0,
+        title: const Text('kuanyngne: 5-Min Studio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -117,7 +118,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
             itemCount: videos.length,
             itemBuilder: (context, index) {
               final video = videos[index];
-              return SketchwareBlockCard(
+              return ModernVideoPlayerCard(
                 title: video['title'] ?? 'Untitled',
                 username: video['username'] ?? 'User',
                 videoUrl: video['video_url'] ?? '',
@@ -132,15 +133,15 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 }
 
 // -------------------------------------------------------------
-// SKETCHWARE BLOCK CARD WIDGET (WITH PROGRESS BAR & CONTROLS)
+// MODERN FULL-COVER VIDEO CARD WITH OVERLAY CONTROLS
 // -------------------------------------------------------------
-class SketchwareBlockCard extends StatefulWidget {
+class ModernVideoPlayerCard extends StatefulWidget {
   final String title;
   final String username;
   final String videoUrl;
   final int duration;
 
-  const SketchwareBlockCard({
+  const ModernVideoPlayerCard({
     super.key,
     required this.title,
     required this.username,
@@ -149,13 +150,14 @@ class SketchwareBlockCard extends StatefulWidget {
   });
 
   @override
-  State<SketchwareBlockCard> createState() => _SketchwareBlockCardState();
+  State<ModernVideoPlayerCard> createState() => _ModernVideoPlayerCardState();
 }
 
-class _SketchwareBlockCardState extends State<SketchwareBlockCard> {
+class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
   int _currentPositionInSeconds = 0;
+  bool _isLiked = false;
 
   @override
   void initState() {
@@ -202,118 +204,190 @@ class _SketchwareBlockCardState extends State<SketchwareBlockCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF263238),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF5C6BC0), width: 2),
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF5C6BC0), width: 1.5),
       ),
-      child: Column(
-        children: [
-          // Block Top Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: const BoxDecoration(
-              color: Color(0xFF5C6BC0),
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Logic: @${widget.username}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.black38,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text("${_currentPositionInSeconds}s / ${widget.duration > 0 ? widget.duration : 300}s",
-                      style: const TextStyle(fontSize: 11, color: Colors.white)),
-                )
-              ],
-            ),
-          ),
-
-          // Video Canvas Area with Tap Controls
-          Expanded(
-            child: GestureDetector(
-              onTap: _togglePlayPause,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Center(
-                    child: _isInitialized
-                        ? AspectRatio(
-                            aspectRatio: _controller.value.aspectRatio,
-                            child: VideoPlayer(_controller),
-                          )
-                        : const CircularProgressIndicator(color: Color(0xFFFF9800)),
-                  ),
-                  if (_isInitialized && !_controller.value.isPlaying)
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.black45,
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      child: const Icon(Icons.play_arrow, size: 50, color: Colors.white),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          // የቪዲዮ የጊዜ መስመር (Video Progress Bar)
-          if (_isInitialized)
-            VideoProgressIndicator(
-              _controller,
-              allowScrubbing: true,
-              colors: const VideoProgressColors(
-                playedColor: Color(0xFFFF9800),
-                bufferedColor: Colors.white24,
-                backgroundColor: Colors.black26,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: Stack(
+          children: [
+            // 1. FULL COVER VIDEO AREA
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _togglePlayPause,
+                child: _isInitialized
+                    ? FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _controller.value.size.width,
+                          height: _controller.value.size.height,
+                          child: VideoPlayer(_controller),
+                        ),
+                      )
+                    : const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800))),
               ),
             ),
 
-          // Block Description & Action Buttons
-          Container(
-            padding: const EdgeInsets.all(12),
-            color: const Color(0xFF1B1F2A),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+            // Play/Pause Overlay Icon
+            if (_isInitialized && !_controller.value.isPlaying)
+              Center(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: const Icon(Icons.play_arrow_rounded, size: 60, color: Colors.white),
+                ),
+              ),
+
+            // 2. TOP OVERLAY HEADER
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.black87, Colors.transparent],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildBlockButton(Icons.thumb_up_alt_outlined, "Like", const Color(0xFF009688)),
-                    _buildBlockButton(Icons.comment_outlined, "Comment", const Color(0xFFFF9800)),
-                    _buildBlockButton(Icons.share_outlined, "Share", const Color(0xFFE91E63)),
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 14,
+                          backgroundColor: Color(0xFF5C6BC0),
+                          child: Icon(Icons.person, size: 16, color: Colors.white),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "@${widget.username}",
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black60,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white24, width: 0.8),
+                      ),
+                      child: Text(
+                        "${_currentPositionInSeconds}s / ${widget.duration > 0 ? widget.duration : 300}s",
+                        style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+
+            // 3. BOTTOM OVERLAY INFO & ACTIONS
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.black90, Colors.transparent],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Modern Bottom Action Bar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildGlassActionButton(
+                          icon: _isLiked ? Icons.thumb_up_alt : Icons.thumb_up_alt_outlined,
+                          label: "Like",
+                          color: _isLiked ? const Color(0xFF009688) : Colors.white,
+                          onTap: () => setState(() => _isLiked = !_isLiked),
+                        ),
+                        _buildGlassActionButton(
+                          icon: Icons.comment_outlined,
+                          label: "Comment",
+                          color: const Color(0xFFFF9800),
+                          onTap: () {},
+                        ),
+                        _buildGlassActionButton(
+                          icon: Icons.share_outlined,
+                          label: "Share",
+                          color: const Color(0xFFE91E63),
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Video Seek/Progress Bar
+                    if (_isInitialized)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: VideoProgressIndicator(
+                          _controller,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(
+                            playedColor: Color(0xFFFF9800),
+                            bufferedColor: Colors.white30,
+                            backgroundColor: Colors.white10,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBlockButton(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        border: Border.all(color: color, width: 1.5),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
-        ],
+  Widget _buildGlassActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.5), width: 1),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
@@ -380,7 +454,6 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
     try {
       final supabase = Supabase.instance.client;
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
-
       final bytes = await _videoFile!.readAsBytes();
 
       await supabase.storage.from('avatars').uploadBinary(
@@ -426,7 +499,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Logic Block (Upload)'),
-        backgroundColor: const Color(0xFF263238),
+        backgroundColor: const Color(0xFF161B26),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -438,9 +511,9 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
                 height: 220,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF263238),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFF9800), width: 2),
+                  color: const Color(0xFF161B26),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFF9800), width: 1.5),
                 ),
                 child: _videoFile == null
                     ? const Column(
@@ -471,8 +544,8 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
                 hintText: 'የቪዲዮው ርዕስ (Title Block)',
                 hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
-                fillColor: const Color(0xFF263238),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                fillColor: const Color(0xFF161B26),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 20),
@@ -481,7 +554,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: _isUploading
                   ? const CircularProgressIndicator(color: Colors.white)
