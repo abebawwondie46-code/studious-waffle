@@ -128,7 +128,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 }
 
 // -------------------------------------------------------------
-// VIRAL TIKTOK/REELS STYLE VIDEO CARD WITH VISIBLE INPUT SHEET
+// VIRAL VIDEO PLAYER CARD WITH VISIBLE INPUT & LONG-PRESS DELETE
 // -------------------------------------------------------------
 class ViralVideoPlayerCard extends StatefulWidget {
   final String title;
@@ -156,8 +156,9 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   bool _isBookmarked = false;
   bool _showHeartAnimation = false;
 
+  final List<Map<String, String>> _comments = [];
+
   late AnimationController _discAnimationController;
-  final TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
@@ -194,7 +195,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   void dispose() {
     _discAnimationController.dispose();
     _controller.dispose();
-    _commentController.dispose();
     super.dispose();
   }
 
@@ -221,79 +221,172 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
   }
 
   void _showCommentSheet() {
+    final TextEditingController commentInputController = TextEditingController();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF161B26),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.55,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                  ),
+      builder: (bottomSheetContext) {
+        return StatefulWidget(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
                 ),
-                const SizedBox(height: 12),
-                const Text('Comments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                const SizedBox(height: 12),
-                const Expanded(
-                  child: Center(
-                    child: Text('No comments yet. Be the first to comment!', style: TextStyle(color: Colors.white54)),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.60,
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _commentController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'Add a comment...',
-                            hintStyle: const TextStyle(color: Colors.white38),
-                            filled: true,
-                            fillColor: const Color(0xFF0D0F14),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () {
-                          if (_commentController.text.trim().isNotEmpty) {
-                            _commentController.clear();
-                            FocusScope.of(context).unfocus();
-                          }
-                        },
-                        icon: const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Comments (${_comments.length})',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                      ),
+                      const Divider(color: Colors.white12, height: 20),
+
+                      // Comments List Area
+                      Expanded(
+                        child: _comments.isEmpty
+                            ? const Center(
+                                child: Text('No comments yet. Be the first to comment!', style: TextStyle(color: Colors.white54)),
+                              )
+                            : ListView.builder(
+                                itemCount: _comments.length,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                itemBuilder: (context, index) {
+                                  final item = _comments[index];
+                                  return GestureDetector(
+                                    onLongPress: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (dialogContext) => AlertDialog(
+                                          backgroundColor: const Color(0xFF161B26),
+                                          title: const Text('Delete Comment', style: TextStyle(color: Colors.white)),
+                                          content: const Text('Do you want to delete this comment?', style: TextStyle(color: Colors.white70)),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(dialogContext),
+                                              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(dialogContext);
+                                                setSheetState(() {
+                                                  _comments.removeAt(index);
+                                                });
+                                                setState(() {});
+                                              },
+                                              child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const CircleAvatar(
+                                            radius: 16,
+                                            backgroundColor: Color(0xFFFF9800),
+                                            child: Icon(Icons.person, size: 18, color: Colors.white),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item['user'] ?? 'User',
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white70),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  item['text'] ?? '',
+                                                  style: const TextStyle(fontSize: 14, color: Colors.white),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+
+                      // Input Bar Floating above Keyboard
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF0D0F14),
+                          border: Border(top: BorderSide(color: Colors.white12, width: 0.8)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: commentInputController,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: InputDecoration(
+                                  hintText: 'Add a comment...',
+                                  hintStyle: const TextStyle(color: Colors.white38),
+                                  filled: true,
+                                  fillColor: const Color(0xFF161B26),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () {
+                                final text = commentInputController.text.trim();
+                                if (text.isNotEmpty) {
+                                  setSheetState(() {
+                                    _comments.insert(0, {
+                                      'user': widget.username,
+                                      'text': text,
+                                    });
+                                  });
+                                  setState(() {});
+                                  commentInputController.clear();
+                                }
+                              },
+                              icon: const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -429,7 +522,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                 // Comment Action
                 _buildSideActionButton(
                   icon: Icons.chat_bubble_outline_rounded,
-                  label: "84",
+                  label: "${_comments.length}",
                   color: Colors.white,
                   onTap: _showCommentSheet,
                 ),
