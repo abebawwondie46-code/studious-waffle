@@ -24,7 +24,7 @@ class Sketchware5MinApp extends StatelessWidget {
       title: 'kuanyngne Studio',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF10141D),
+        scaffoldBackgroundColor: const Color(0xFF0D0F14),
         primaryColor: const Color(0xFFFF9800),
       ),
       home: const MainStudioScreen(),
@@ -54,18 +54,19 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
-        backgroundColor: const Color(0xFF161B26),
+        backgroundColor: const Color(0xFF0D0F14),
         selectedItemColor: const Color(0xFFFF9800),
         unselectedItemColor: Colors.white54,
+        type: BottomNavigationBarType.fixed,
         elevation: 10,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.play_circle_fill),
+            icon: Icon(Icons.style_rounded),
             label: '5-Min Feed',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: 'Upload Studio',
+            icon: Icon(Icons.add_circle_rounded, size: 30),
+            label: 'Studio Upload',
           ),
         ],
       ),
@@ -74,7 +75,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
 }
 
 // -------------------------------------------------------------
-// 1. FULLSCREEN VIDEO FEED SCREEN
+// 1. FULLSCREEN VIRAL VIDEO FEED SCREEN
 // -------------------------------------------------------------
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
@@ -89,12 +90,6 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF161B26),
-        elevation: 0,
-        title: const Text('kuanyngne: 5-Min Studio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-        centerTitle: true,
-      ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _supabase.from('videos').select().order('created_at', ascending: false),
         builder: (context, snapshot) {
@@ -118,9 +113,9 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
             itemCount: videos.length,
             itemBuilder: (context, index) {
               final video = videos[index];
-              return ModernVideoPlayerCard(
-                title: video['title'] ?? 'Untitled',
-                username: video['username'] ?? 'User',
+              return ViralVideoPlayerCard(
+                title: video['title'] ?? 'Untitled Studio Content',
+                username: video['username'] ?? 'kuanyngne',
                 videoUrl: video['video_url'] ?? '',
                 duration: video['duration'] ?? 0,
               );
@@ -133,15 +128,15 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 }
 
 // -------------------------------------------------------------
-// MODERN BORDERLESS FULL-COVER VIDEO CARD
+// VIRAL TIKTOK/REELS STYLE VIDEO CARD WITH CREATIVE OVERLAYS
 // -------------------------------------------------------------
-class ModernVideoPlayerCard extends StatefulWidget {
+class ViralVideoPlayerCard extends StatefulWidget {
   final String title;
   final String username;
   final String videoUrl;
   final int duration;
 
-  const ModernVideoPlayerCard({
+  const ViralVideoPlayerCard({
     super.key,
     required this.title,
     required this.username,
@@ -150,18 +145,27 @@ class ModernVideoPlayerCard extends StatefulWidget {
   });
 
   @override
-  State<ModernVideoPlayerCard> createState() => _ModernVideoPlayerCardState();
+  State<ViralVideoPlayerCard> createState() => _ViralVideoPlayerCardState();
 }
 
-class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
+class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with SingleTickerProviderStateMixin {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
   int _currentPositionInSeconds = 0;
   bool _isLiked = false;
+  bool _isBookmarked = false;
+  bool _showHeartAnimation = false;
+
+  late AnimationController _discAnimationController;
 
   @override
   void initState() {
     super.initState();
+    _discAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
+
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
       ..initialize().then((_) {
         if (mounted) {
@@ -187,6 +191,7 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
 
   @override
   void dispose() {
+    _discAnimationController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -201,16 +206,74 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
     });
   }
 
+  void _onDoubleTap() {
+    setState(() {
+      _isLiked = true;
+      _showHeartAnimation = true;
+    });
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() => _showHeartAnimation = false);
+      }
+    });
+  }
+
+  void _showCommentSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161B26),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('Comments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+              const SizedBox(height: 20),
+              const Center(
+                child: Text('እስካሁን ምንም አስተያየት የለም። የመጀመሪያው ይሁኑ!', style: TextStyle(color: Colors.white54)),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'አስተያየትዎን ያጋሩ...',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: Colors.black26,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                  suffixIcon: const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.black,
       child: Stack(
         children: [
-          // 1. FULL COVER VIDEO AREA (NO BORDER, NO MARGIN)
+          // 1. FULLSCREEN VIDEO CONTENT
           Positioned.fill(
             child: GestureDetector(
               onTap: _togglePlayPause,
+              onDoubleTap: _onDoubleTap,
               child: _isInitialized
                   ? FittedBox(
                       fit: BoxFit.cover,
@@ -224,12 +287,27 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
             ),
           ),
 
+          // Double Tap Heart Overlay Animation
+          if (_showHeartAnimation)
+            Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.8, end: 1.4),
+                duration: const Duration(milliseconds: 300),
+                builder: (context, scale, child) {
+                  return Transform.scale(
+                    scale: scale,
+                    child: const Icon(Icons.favorite_rounded, size: 100, color: Colors.redAccent),
+                  );
+                },
+              ),
+            ),
+
           // Play/Pause Overlay Icon
           if (_isInitialized && !_controller.value.isPlaying)
             Center(
               child: Container(
                 decoration: const BoxDecoration(
-                  color: Colors.black54,
+                  color: Colors.black45,
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(16),
@@ -237,120 +315,170 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
               ),
             ),
 
-          // 2. TOP OVERLAY HEADER
+          // 2. TOP HEADER OVERLAY
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+            top: 40,
+            left: 16,
+            right: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'kuanyngne Studio',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, shadows: [
+                    Shadow(blurRadius: 8, color: Colors.black)
+                  ]),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Color(0xFF5C6BC0),
-                        child: Icon(Icons.person, size: 18, color: Colors.white),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "@${widget.username}",
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
-                      ),
-                    ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24, width: 0.8),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white24, width: 0.8),
-                    ),
-                    child: Text(
-                      "${_currentPositionInSeconds}s / ${widget.duration > 0 ? widget.duration : 300}s",
-                      style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
-                    ),
+                  child: Text(
+                    "${_currentPositionInSeconds}s / ${widget.duration > 0 ? widget.duration : 300}s",
+                    style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
-          // 3. BOTTOM OVERLAY INFO & ACTIONS
+          // 3. RIGHT SIDE ACTIONS BAR (VIRAL TIKTOK-STYLE)
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.black.withOpacity(0.85), Colors.transparent],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Bottom Action Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildGlassActionButton(
-                        icon: _isLiked ? Icons.thumb_up_alt : Icons.thumb_up_alt_outlined,
-                        label: "Like",
-                        color: _isLiked ? const Color(0xFF009688) : Colors.white,
-                        onTap: () => setState(() => _isLiked = !_isLiked),
+            right: 12,
+            bottom: 80,
+            child: Column(
+              children: [
+                // Profile Avatar with Follow Badge
+                Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFF9800), width: 2),
                       ),
-                      _buildGlassActionButton(
-                        icon: Icons.comment_outlined,
-                        label: "Comment",
-                        color: const Color(0xFFFF9800),
-                        onTap: () {},
-                      ),
-                      _buildGlassActionButton(
-                        icon: Icons.share_outlined,
-                        label: "Share",
-                        color: const Color(0xFFE91E63),
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Video Progress Indicator
-                  if (_isInitialized)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: VideoProgressIndicator(
-                        _controller,
-                        allowScrubbing: true,
-                        colors: const VideoProgressColors(
-                          playedColor: Color(0xFFFF9800),
-                          bufferedColor: Colors.white30,
-                          backgroundColor: Colors.white10,
-                        ),
+                      child: const CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Color(0xFF5C6BC0),
+                        child: Icon(Icons.person, color: Colors.white, size: 24),
                       ),
                     ),
-                ],
-              ),
+                    Positioned(
+                      bottom: -4,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF9800),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.add, size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Like Action
+                _buildSideActionButton(
+                  icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  label: _isLiked ? "1.2k" : "1.1k",
+                  color: _isLiked ? Colors.redAccent : Colors.white,
+                  onTap: () => setState(() => _isLiked = !_isLiked),
+                ),
+                const SizedBox(height: 18),
+
+                // Comment Action
+                _buildSideActionButton(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  label: "84",
+                  color: Colors.white,
+                  onTap: _showCommentSheet,
+                ),
+                const SizedBox(height: 18),
+
+                // Bookmark/Save Action
+                _buildSideActionButton(
+                  icon: _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                  label: "Save",
+                  color: _isBookmarked ? const Color(0xFFFF9800) : Colors.white,
+                  onTap: () => setState(() => _isBookmarked = !_isBookmarked),
+                ),
+                const SizedBox(height: 18),
+
+                // Share Action
+                _buildSideActionButton(
+                  icon: Icons.reply_rounded,
+                  label: "Share",
+                  color: Colors.white,
+                  onTap: () {},
+                ),
+                const SizedBox(height: 24),
+
+                // Rotating Music Disc Animation
+                RotationTransition(
+                  turns: _discAnimationController,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(colors: [Colors.grey, Colors.black]),
+                      border: Border.all(color: Colors.white24, width: 2),
+                    ),
+                    child: const Icon(Icons.music_note_rounded, size: 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 4. BOTTOM LEFT CREATOR DETAILS
+          Positioned(
+            left: 16,
+            right: 80,
+            bottom: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "@${widget.username}",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  widget.title,
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: const [
+                    Icon(Icons.music_note_rounded, size: 14, color: Color(0xFFFF9800)),
+                    SizedBox(width: 6),
+                    Text('Original Sound - kuanyngne Studio', style: TextStyle(fontSize: 12, color: Colors.white60)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Video Seek Bar
+                if (_isInitialized)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: VideoProgressIndicator(
+                      _controller,
+                      allowScrubbing: true,
+                      colors: const VideoProgressColors(
+                        playedColor: Color(0xFFFF9800),
+                        bufferedColor: Colors.white30,
+                        backgroundColor: Colors.white10,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
@@ -358,7 +486,7 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
     );
   }
 
-  Widget _buildGlassActionButton({
+  Widget _buildSideActionButton({
     required IconData icon,
     required String label,
     required Color color,
@@ -366,20 +494,19 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.4), width: 1),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 6),
-            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-          ],
-        ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.4),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
@@ -490,7 +617,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Logic Block (Upload)'),
+        title: const Text('Add Studio Content'),
         backgroundColor: const Color(0xFF161B26),
       ),
       body: SingleChildScrollView(
@@ -550,7 +677,7 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
               ),
               child: _isUploading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Post 5-Min Video', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  : const Text('Post Studio Video', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
           ],
         ),
