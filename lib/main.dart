@@ -529,13 +529,211 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                             Expanded(
                               child: TextField(
                                 controller: commentInputController,
+       void _showCommentSheet() {
+    final TextEditingController commentInputController = TextEditingController();
+    List<Map<String, dynamic>> localComments = [];
+    bool isLoadingComments = true;
+    bool isSending = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF161B26),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (bottomSheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            // First time load comments
+            if (isLoadingComments) {
+              _supabase
+                  .from('comments')
+                  .select()
+                  .eq('video_id', widget.videoId)
+                  .order('created_at', ascending: false)
+                  .then((data) {
+                if (mounted) {
+                  setSheetState(() {
+                    localComments = List<Map<String, dynamic>>.from(data);
+                    isLoadingComments = false;
+                  });
+                }
+              });
+            }
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.60,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(2)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Comments (${localComments.length})',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white),
+                      ),
+                      const Divider(color: Colors.white12, height: 20),
+                      Expanded(
+                        child: isLoadingComments
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFFFF9800)))
+                            : localComments.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                        'No comments yet. Be the first to comment!',
+                                        style:
+                                            TextStyle(color: Colors.white54)),
+                                  )
+                                : ListView.builder(
+                                    itemCount: localComments.length,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    itemBuilder: (context, index) {
+                                      final item = localComments[index];
+                                      final commentId = item['id'];
+
+                                      return GestureDetector(
+                                        onLongPress: () {
+                                          // DELETE DIALOG ON LONG PRESS
+                                          showDialog(
+                                            context: context,
+                                            builder: (dialogCtx) => AlertDialog(
+                                              backgroundColor:
+                                                  const Color(0xFF161B26),
+                                              title: const Text('Delete Comment',
+                                                  style: TextStyle(
+                                                      color: Colors.white)),
+                                              content: const Text(
+                                                  'Are you sure you want to delete this comment?',
+                                                  style: TextStyle(
+                                                      color: Colors.white70)),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(dialogCtx),
+                                                  child: const Text('Cancel',
+                                                      style: TextStyle(
+                                                          color:
+                                                              Colors.white54)),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () async {
+                                                    Navigator.pop(dialogCtx);
+                                                    setSheetState(() {
+                                                      localComments.removeAt(index);
+                                                    });
+                                                    if (commentId != null) {
+                                                      await _supabase
+                                                          .from('comments')
+                                                          .delete()
+                                                          .eq('id', commentId);
+                                                    }
+                                                    _fetchCommentCount();
+                                                  },
+                                                  child: const Text('Delete',
+                                                      style: TextStyle(
+                                                          color: Colors
+                                                              .redAccent)),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
+                                          margin:
+                                              const EdgeInsets.only(bottom: 12),
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.white.withOpacity(0.05),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const CircleAvatar(
+                                                radius: 16,
+                                                backgroundColor:
+                                                    Color(0xFFFF9800),
+                                                child: Icon(Icons.person,
+                                                    size: 18,
+                                                    color: Colors.white),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      item['username'] ?? 'User',
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 13,
+                                                          color:
+                                                              Colors.white70),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      item['text'] ?? '',
+                                                      style: const TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.white),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF0D0F14),
+                          border: Border(
+                              top: BorderSide(
+                                  color: Colors.white12, width: 0.8)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: commentInputController,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
                                   hintText: 'Add a comment...',
-                                  hintStyle: const TextStyle(color: Colors.white38),
+                                  hintStyle:
+                                      const TextStyle(color: Colors.white38),
                                   filled: true,
                                   fillColor: const Color(0xFF161B26),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(24),
                                     borderSide: BorderSide.none,
@@ -548,16 +746,44 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                               onPressed: isSending
                                   ? null
                                   : () async {
-                                      final text = commentInputController.text.trim();
+                                      final text =
+                                          commentInputController.text.trim();
                                       if (text.isNotEmpty) {
-                                        setSheetState(() => isSending = true);
-                                        await _supabase.from('comments').insert({
+                                        final newComment = {
                                           'video_id': widget.videoId,
                                           'username': widget.username,
                                           'text': text,
+                                          'created_at':
+                                              DateTime.now().toIso8601String(),
+                                        };
+
+                                        // INSTANT DISPLAY IN UI
+                                        setSheetState(() {
+                                          localComments.insert(0, newComment);
+                                          isSending = true;
                                         });
                                         commentInputController.clear();
-                                        setSheetState(() => isSending = false);
+
+                                        try {
+                                          final inserted = await _supabase
+                                              .from('comments')
+                                              .insert({
+                                                'video_id': widget.videoId,
+                                                'username': widget.username,
+                                                'text': text,
+                                              })
+                                              .select()
+                                              .single();
+
+                                          setSheetState(() {
+                                            newComment['id'] = inserted['id'];
+                                            isSending = false;
+                                          });
+                                        } catch (e) {
+                                          setSheetState(() {
+                                            isSending = false;
+                                          });
+                                        }
                                         _fetchCommentCount();
                                       }
                                     },
@@ -565,9 +791,12 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF9800)),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Color(0xFFFF9800)),
                                     )
-                                  : const Icon(Icons.send_rounded, color: Color(0xFFFF9800)),
+                                  : const Icon(Icons.send_rounded,
+                                      color: Color(0xFFFF9800)),
                             ),
                           ],
                         ),
