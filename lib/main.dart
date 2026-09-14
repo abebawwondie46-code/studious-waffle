@@ -74,9 +74,6 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
   }
 }
 
-// -------------------------------------------------------------
-// 1. FULLSCREEN VIRAL VIDEO FEED SCREEN
-// -------------------------------------------------------------
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -127,9 +124,6 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   }
 }
 
-// -------------------------------------------------------------
-// VIRAL VIDEO PLAYER CARD
-// -------------------------------------------------------------
 class ViralVideoPlayerCard extends StatefulWidget {
   final String title;
   final String username;
@@ -151,12 +145,13 @@ class ViralVideoPlayerCard extends StatefulWidget {
 class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with SingleTickerProviderStateMixin {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
-  int _currentPositionInSeconds = 0;
-  int _totalDurationInSeconds = 0;
+  double _currentPositionInSeconds = 0.0;
+  double _totalDurationInSeconds = 0.0;
   bool _isLiked = false;
   bool _isBookmarked = false;
   bool _showHeartAnimation = false;
   bool _isMuted = false;
+  bool _isDraggingSlider = false;
 
   final List<Map<String, String>> _comments = [];
   late AnimationController _discAnimationController;
@@ -174,7 +169,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
         if (mounted) {
           setState(() {
             _isInitialized = true;
-            _totalDurationInSeconds = _controller.value.duration.inSeconds;
+            _totalDurationInSeconds = _controller.value.duration.inMilliseconds / 1000.0;
           });
           _controller.play();
           _controller.setLooping(true);
@@ -183,13 +178,10 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
       });
 
     _controller.addListener(() {
-      if (_controller.value.isInitialized && mounted) {
-        final currentSec = _controller.value.position.inSeconds;
-        if (currentSec != _currentPositionInSeconds) {
-          setState(() {
-            _currentPositionInSeconds = currentSec;
-          });
-        }
+      if (_controller.value.isInitialized && mounted && !_isDraggingSlider) {
+        setState(() {
+          _currentPositionInSeconds = _controller.value.position.inMilliseconds / 1000.0;
+        });
       }
     });
   }
@@ -230,6 +222,11 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
         setState(() => _showHeartAnimation = false);
       }
     });
+  }
+
+  String _formatSeconds(double seconds) {
+    int s = seconds.floor();
+    return "${s.toString().padLeft(2, '0')}s";
   }
 
   void _showCommentSheet() {
@@ -402,15 +399,15 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
 
   @override
   Widget build(BuildContext context) {
-    final int displayTotalDuration = _totalDurationInSeconds > 0
+    final double maxDuration = _totalDurationInSeconds > 0
         ? _totalDurationInSeconds
-        : (widget.duration > 0 ? widget.duration : 0);
+        : (widget.duration > 0 ? widget.duration.toDouble() : 1.0);
 
     return Container(
       color: Colors.black,
       child: Stack(
         children: [
-          // 1. FULLSCREEN VIDEO CONTENT (TOUCHABLE SCREEN)
+          // 1. FULLSCREEN VIDEO CONTENT
           Positioned.fill(
             child: GestureDetector(
               onTap: _togglePlayPause,
@@ -443,8 +440,8 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
               ),
             ),
 
-          // Play/Pause Overlay Icon (CLICKABLE BUTTON)
-          if (_isInitialized && !_controller.value.isPlaying)
+          // Play/Pause Overlay Icon
+          if (_isInitialized && !_controller.value.isPlaying && !_isDraggingSlider)
             Center(
               child: GestureDetector(
                 onTap: _togglePlayPause,
@@ -500,7 +497,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                         border: Border.all(color: Colors.white24, width: 0.8),
                       ),
                       child: Text(
-                        "${_currentPositionInSeconds}s / ${displayTotalDuration}s",
+                        "${_formatSeconds(_currentPositionInSeconds)} / ${_formatSeconds(maxDuration)}",
                         style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -565,15 +562,16 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   onTap: () => setState(() => _isBookmarked = !_isBookmarked),
                 ),
                 const SizedBox(height: 18),
+                // Rotated/Outward Share Icon
                 _buildSideActionButton(
-                  icon: Icons.reply_rounded,
+                  icon: Icons.shortcut_rounded,
                   label: "Share",
                   color: Colors.white,
                   onTap: () {},
                 ),
                 const SizedBox(height: 24),
 
-                // Music Disc Animation (Controlled Play/Pause)
+                // Music Disc Animation
                 RotationTransition(
                   turns: _discAnimationController,
                   child: Container(
@@ -590,11 +588,11 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
             ),
           ),
 
-          // 4. BOTTOM LEFT CREATOR DETAILS
+          // 4. BOTTOM LEFT CREATOR DETAILS & INTERACTIVE SEEKBAR
           Positioned(
             left: 16,
             right: 80,
-            bottom: 20,
+            bottom: 12,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -610,7 +608,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Row(
                   children: const [
                     Icon(Icons.music_note_rounded, size: 14, color: Color(0xFFFF9800)),
@@ -618,18 +616,33 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                     Text('Original Sound - kuanyngne Studio', style: TextStyle(fontSize: 12, color: Colors.white60)),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 4),
+
+                // Interactive Seekbar (Drag / Forward / Rewind)
                 if (_isInitialized)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: VideoProgressIndicator(
-                      _controller,
-                      allowScrubbing: true,
-                      colors: const VideoProgressColors(
-                        playedColor: Color(0xFFFF9800),
-                        bufferedColor: Colors.white30,
-                        backgroundColor: Colors.white10,
-                      ),
+                  SliderTheme(
+                    data: SliderThemeData(
+                      trackHeight: 3.0,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
+                      activeTrackColor: const Color(0xFFFF9800),
+                      inactiveTrackColor: Colors.white30,
+                      thumbColor: const Color(0xFFFF9800),
+                    ),
+                    child: Slider(
+                      value: _currentPositionInSeconds.clamp(0.0, maxDuration),
+                      min: 0.0,
+                      max: maxDuration > 0 ? maxDuration : 1.0,
+                      onChangeStart: (val) {
+                        setState(() => _isDraggingSlider = true);
+                      },
+                      onChanged: (val) {
+                        setState(() => _currentPositionInSeconds = val);
+                      },
+                      onChangeEnd: (val) {
+                        _controller.seekTo(Duration(milliseconds: (val * 1000).toInt()));
+                        setState(() => _isDraggingSlider = false);
+                      },
                     ),
                   ),
               ],
@@ -682,9 +695,6 @@ class _StateBuilderState extends State<StateBuilder> {
   }
 }
 
-// -------------------------------------------------------------
-// 2. UPLOAD STUDIO SCREEN
-// -------------------------------------------------------------
 class UploadStudioScreen extends StatefulWidget {
   const UploadStudioScreen({super.key});
 
