@@ -74,7 +74,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
 }
 
 // -------------------------------------------------------------
-// 1. FULLSCREEN-STYLE VIDEO FEED SCREEN
+// 1. FULLSCREEN VIDEO FEED SCREEN
 // -------------------------------------------------------------
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
@@ -316,7 +316,7 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Modern Bottom Action Bar
+                    // Bottom Action Buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -342,7 +342,7 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
                     ),
                     const SizedBox(height: 6),
 
-                    // Video Seek/Progress Bar
+                    // Video Seek Bar
                     if (_isInitialized)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
