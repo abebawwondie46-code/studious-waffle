@@ -333,15 +333,15 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
       // 1. Read Bytes for Reliable Mobile Upload
       final bytes = await _videoFile!.readAsBytes();
 
-      // 2. Upload Video to Supabase Storage Bucket 'videos'
-      await supabase.storage.from('videos').uploadBinary(
+      // 2. Upload Video to Supabase Storage Bucket 'avatars'
+      await supabase.storage.from('avatars').uploadBinary(
             fileName,
             bytes,
             fileOptions: const FileOptions(contentType: 'video/mp4'),
           );
 
-      // 3. Get Public URL
-      final publicUrl = supabase.storage.from('videos').getPublicUrl(fileName);
+      // 3. Get Public URL from 'avatars' Bucket
+      final publicUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
 
       // 4. Insert Record to Database Table 'videos'
       await supabase.from('videos').insert({
