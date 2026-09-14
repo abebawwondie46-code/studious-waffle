@@ -251,9 +251,9 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
               right: 0,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black87, Colors.transparent],
+                    colors: [Colors.black.withOpacity(0.8), Colors.transparent],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -278,7 +278,7 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black60,
+                        color: Colors.black.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.white24, width: 0.8),
                       ),
@@ -299,9 +299,9 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
               right: 0,
               child: Container(
                 padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black90, Colors.transparent],
+                    colors: [Colors.black.withOpacity(0.9), Colors.transparent],
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                   ),
