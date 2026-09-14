@@ -1168,63 +1168,231 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('my_profile'),
-        backgroundColor: const Color(0xFF0D0D13),
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 20),
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: Color(0xFFFF2A5F),
-            child: Text(
-              'M',
-              style: TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0D0D13),
+          elevation: 0,
+          title: const Text(
+            'my_profile',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
           ),
-          const SizedBox(height: 10),
-          const Text('my_profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 20),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              itemCount: userVideos.length,
-              itemBuilder: (context, index) {
-                final video = userVideos[index];
-                return Stack(
-                  children: [
-                    Container(
-                      color: const Color(0xFF161622),
-                      child: const Center(
-                        child: Icon(Icons.play_arrow, color: Colors.white),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: const Icon(Icons.menu_rounded),
+              onPressed: () {},
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            const SizedBox(height: 12),
+            Center(
+              child: Stack(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFFF2A5F), Color(0xFF00E5FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: GestureDetector(
-                        onTap: () => onDeleteVideo(video.id),
-                        child: const CircleAvatar(
-                          radius: 12,
-                          backgroundColor: Colors.black54,
-                          child: Icon(Icons.close, size: 14, color: Colors.white),
+                    child: const CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Color(0xFF161622),
+                      child: Text(
+                        'M',
+                        style: TextStyle(
+                          fontSize: 36,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                  ],
-                );
-              },
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF2A5F),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.add, size: 16, color: Colors.white),
+                    ),
+                  )
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            const Text(
+              '@my_profile',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildStatColumn('142', 'Following'),
+                _buildDivider(),
+                _buildStatColumn('2.5K', 'Followers'),
+                _buildDivider(),
+                _buildStatColumn('18.4K', 'Likes'),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white24),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Edit profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white24),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Icon(Icons.share_outlined, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            const TabBar(
+              indicatorColor: Color(0xFFFF2A5F),
+              indicatorWeight: 2,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white38,
+              tabs: [
+                Tab(icon: Icon(Icons.grid_on_rounded)),
+                Tab(icon: Icon(Icons.lock_outline_rounded)),
+                Tab(icon: Icon(Icons.favorite_border_rounded)),
+              ],
+            ),
+
+            Expanded(
+              child: TabBarView(
+                children: [
+                  userVideos.isEmpty
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.video_library_outlined, size: 48, color: Colors.white24),
+                              SizedBox(height: 8),
+                              Text('No videos uploaded yet', style: TextStyle(color: Colors.white38)),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          padding: const EdgeInsets.all(2),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 2,
+                            mainAxisSpacing: 2,
+                            childAspectRatio: 0.75,
+                          ),
+                          itemCount: userVideos.length,
+                          itemBuilder: (context, index) {
+                            final video = userVideos[index];
+                            return Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Container(
+                                  color: const Color(0xFF161622),
+                                  child: const Center(
+                                    child: Icon(Icons.play_arrow_rounded, color: Colors.white54, size: 36),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 6,
+                                  left: 6,
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.play_arrow_outlined, color: Colors.white, size: 14),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        '${video.likes}',
+                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => onDeleteVideo(video.id),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black54,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                  const Center(child: Text('Private Videos', style: TextStyle(color: Colors.white54))),
+                  const Center(child: Text('Liked Videos', style: TextStyle(color: Colors.white54))),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildStatColumn(String count, String label) {
+    return Column(
+      children: [
+        Text(
+          count,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.white54),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      height: 15,
+      width: 1,
+      color: Colors.white12,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
     );
   }
 }
