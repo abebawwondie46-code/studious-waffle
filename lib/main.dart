@@ -25,8 +25,8 @@ class Sketchware5MinApp extends StatelessWidget {
       title: 'kuanyngne Studio',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF1B1F2A), // Sketchware Slate Grey
-        primaryColor: const Color(0xFF5C6BC0), // Sketchware Indigo Header
+        scaffoldBackgroundColor: const Color(0xFF1B1F2A),
+        primaryColor: const Color(0xFF5C6BC0),
       ),
       home: const MainStudioScreen(),
     );
@@ -56,7 +56,7 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         backgroundColor: const Color(0xFF1B1F2A),
-        selectedItemColor: const Color(0xFFFF9800), // Sketchware Orange
+        selectedItemColor: const Color(0xFFFF9800),
         unselectedItemColor: Colors.white54,
         items: const [
           BottomNavigationBarItem(
@@ -132,7 +132,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 }
 
 // -------------------------------------------------------------
-// SKETCHWARE BLOCK CARD WIDGET
+// SKETCHWARE BLOCK CARD WIDGET (WITH PROGRESS BAR & CONTROLS)
 // -------------------------------------------------------------
 class SketchwareBlockCard extends StatefulWidget {
   final String title;
@@ -155,6 +155,7 @@ class SketchwareBlockCard extends StatefulWidget {
 class _SketchwareBlockCardState extends State<SketchwareBlockCard> {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
+  int _currentPositionInSeconds = 0;
 
   @override
   void initState() {
@@ -169,12 +170,33 @@ class _SketchwareBlockCardState extends State<SketchwareBlockCard> {
           _controller.setLooping(true);
         }
       });
+
+    _controller.addListener(() {
+      if (_controller.value.isInitialized && mounted) {
+        final currentSec = _controller.value.position.inSeconds;
+        if (currentSec != _currentPositionInSeconds) {
+          setState(() {
+            _currentPositionInSeconds = currentSec;
+          });
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      if (_controller.value.isPlaying) {
+        _controller.pause();
+      } else {
+        _controller.play();
+      }
+    });
   }
 
   @override
@@ -184,7 +206,7 @@ class _SketchwareBlockCardState extends State<SketchwareBlockCard> {
       decoration: BoxDecoration(
         color: const Color(0xFF263238),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF5C6BC0), width: 2), // Sketchware Block Border
+        border: Border.all(color: const Color(0xFF5C6BC0), width: 2),
       ),
       child: Column(
         children: [
@@ -205,23 +227,53 @@ class _SketchwareBlockCardState extends State<SketchwareBlockCard> {
                     color: Colors.black38,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text("${widget.duration}s / 300s", style: const TextStyle(fontSize: 11, color: Colors.white)),
+                  child: Text("${_currentPositionInSeconds}s / ${widget.duration > 0 ? widget.duration : 300}s",
+                      style: const TextStyle(fontSize: 11, color: Colors.white)),
                 )
               ],
             ),
           ),
 
-          // Video Canvas Area
+          // Video Canvas Area with Tap Controls
           Expanded(
-            child: Center(
-              child: _isInitialized
-                  ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
-                  : const CircularProgressIndicator(color: Color(0xFFFF9800)),
+            child: GestureDetector(
+              onTap: _togglePlayPause,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Center(
+                    child: _isInitialized
+                        ? AspectRatio(
+                            aspectRatio: _controller.value.aspectRatio,
+                            child: VideoPlayer(_controller),
+                          )
+                        : const CircularProgressIndicator(color: Color(0xFFFF9800)),
+                  ),
+                  if (_isInitialized && !_controller.value.isPlaying)
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.black45,
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: const Icon(Icons.play_arrow, size: 50, color: Colors.white),
+                    ),
+                ],
+              ),
             ),
           ),
+
+          // የቪዲዮ የጊዜ መስመር (Video Progress Bar)
+          if (_isInitialized)
+            VideoProgressIndicator(
+              _controller,
+              allowScrubbing: true,
+              colors: const VideoProgressColors(
+                playedColor: Color(0xFFFF9800),
+                bufferedColor: Colors.white24,
+                backgroundColor: Colors.black26,
+              ),
+            ),
 
           // Block Description & Action Buttons
           Container(
@@ -292,7 +344,6 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
       final durationInSeconds = tempController.value.duration.inSeconds;
       tempController.dispose();
 
-      // የ 5 ደቂቃ (300 ሰከንድ) ማረጋገጫ
       if (durationInSeconds > 300) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -330,20 +381,16 @@ class _UploadStudioScreenState extends State<UploadStudioScreen> {
       final supabase = Supabase.instance.client;
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
 
-      // 1. Read Bytes for Reliable Mobile Upload
       final bytes = await _videoFile!.readAsBytes();
 
-      // 2. Upload Video to Supabase Storage Bucket 'avatars'
       await supabase.storage.from('avatars').uploadBinary(
             fileName,
             bytes,
             fileOptions: const FileOptions(contentType: 'video/mp4'),
           );
 
-      // 3. Get Public URL from 'avatars' Bucket
       final publicUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
 
-      // 4. Insert Record to Database Table 'videos'
       await supabase.from('videos').insert({
         'title': _titleController.text.trim(),
         'video_url': publicUrl,
