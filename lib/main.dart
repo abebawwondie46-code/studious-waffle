@@ -133,7 +133,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 }
 
 // -------------------------------------------------------------
-// MODERN FULL-COVER VIDEO CARD WITH OVERLAY CONTROLS
+// MODERN BORDERLESS FULL-COVER VIDEO CARD
 // -------------------------------------------------------------
 class ModernVideoPlayerCard extends StatefulWidget {
   final String title;
@@ -204,164 +204,156 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF5C6BC0), width: 1.5),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: Stack(
-          children: [
-            // 1. FULL COVER VIDEO AREA
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: _togglePlayPause,
-                child: _isInitialized
-                    ? FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: _controller.value.size.width,
-                          height: _controller.value.size.height,
-                          child: VideoPlayer(_controller),
-                        ),
-                      )
-                    : const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800))),
-              ),
+      color: Colors.black,
+      child: Stack(
+        children: [
+          // 1. FULL COVER VIDEO AREA (NO BORDER, NO MARGIN)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _togglePlayPause,
+              child: _isInitialized
+                  ? FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: _controller.value.size.width,
+                        height: _controller.value.size.height,
+                        child: VideoPlayer(_controller),
+                      ),
+                    )
+                  : const Center(child: CircularProgressIndicator(color: Color(0xFFFF9800))),
             ),
+          ),
 
-            // Play/Pause Overlay Icon
-            if (_isInitialized && !_controller.value.isPlaying)
-              Center(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: const Icon(Icons.play_arrow_rounded, size: 60, color: Colors.white),
-                ),
-              ),
-
-            // 2. TOP OVERLAY HEADER
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
+          // Play/Pause Overlay Icon
+          if (_isInitialized && !_controller.value.isPlaying)
+            Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.black.withOpacity(0.8), Colors.transparent],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 14,
-                          backgroundColor: Color(0xFF5C6BC0),
-                          child: Icon(Icons.person, size: 16, color: Colors.white),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "@${widget.username}",
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white24, width: 0.8),
-                      ),
-                      child: Text(
-                        "${_currentPositionInSeconds}s / ${widget.duration > 0 ? widget.duration : 300}s",
-                        style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
+                padding: const EdgeInsets.all(16),
+                child: const Icon(Icons.play_arrow_rounded, size: 60, color: Colors.white),
               ),
             ),
 
-            // 3. BOTTOM OVERLAY INFO & ACTIONS
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.black.withOpacity(0.9), Colors.transparent],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Bottom Action Buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildGlassActionButton(
-                          icon: _isLiked ? Icons.thumb_up_alt : Icons.thumb_up_alt_outlined,
-                          label: "Like",
-                          color: _isLiked ? const Color(0xFF009688) : Colors.white,
-                          onTap: () => setState(() => _isLiked = !_isLiked),
-                        ),
-                        _buildGlassActionButton(
-                          icon: Icons.comment_outlined,
-                          label: "Comment",
-                          color: const Color(0xFFFF9800),
-                          onTap: () {},
-                        ),
-                        _buildGlassActionButton(
-                          icon: Icons.share_outlined,
-                          label: "Share",
-                          color: const Color(0xFFE91E63),
-                          onTap: () {},
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-
-                    // Video Seek Bar
-                    if (_isInitialized)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: VideoProgressIndicator(
-                          _controller,
-                          allowScrubbing: true,
-                          colors: const VideoProgressColors(
-                            playedColor: Color(0xFFFF9800),
-                            bufferedColor: Colors.white30,
-                            backgroundColor: Colors.white10,
-                          ),
-                        ),
-                      ),
-                  ],
+          // 2. TOP OVERLAY HEADER
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Color(0xFF5C6BC0),
+                        child: Icon(Icons.person, size: 18, color: Colors.white),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "@${widget.username}",
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white24, width: 0.8),
+                    ),
+                    child: Text(
+                      "${_currentPositionInSeconds}s / ${widget.duration > 0 ? widget.duration : 300}s",
+                      style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+
+          // 3. BOTTOM OVERLAY INFO & ACTIONS
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.85), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Bottom Action Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildGlassActionButton(
+                        icon: _isLiked ? Icons.thumb_up_alt : Icons.thumb_up_alt_outlined,
+                        label: "Like",
+                        color: _isLiked ? const Color(0xFF009688) : Colors.white,
+                        onTap: () => setState(() => _isLiked = !_isLiked),
+                      ),
+                      _buildGlassActionButton(
+                        icon: Icons.comment_outlined,
+                        label: "Comment",
+                        color: const Color(0xFFFF9800),
+                        onTap: () {},
+                      ),
+                      _buildGlassActionButton(
+                        icon: Icons.share_outlined,
+                        label: "Share",
+                        color: const Color(0xFFE91E63),
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Video Progress Indicator
+                  if (_isInitialized)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: VideoProgressIndicator(
+                        _controller,
+                        allowScrubbing: true,
+                        colors: const VideoProgressColors(
+                          playedColor: Color(0xFFFF9800),
+                          bufferedColor: Colors.white30,
+                          backgroundColor: Colors.white10,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -375,17 +367,17 @@ class _ModernVideoPlayerCardState extends State<ModernVideoPlayerCard> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.12),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.5), width: 1),
+          border: Border.all(color: color.withOpacity(0.4), width: 1),
         ),
         child: Row(
           children: [
             Icon(icon, color: color, size: 18),
             const SizedBox(width: 6),
-            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
           ],
         ),
       ),
