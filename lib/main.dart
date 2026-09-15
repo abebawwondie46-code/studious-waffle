@@ -356,47 +356,66 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                 const Text('Share video via', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                 const SizedBox(height: 20),
                 SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-         physics: const BouncingScrollPhysics(),
-         child: Row(
-         children: [
-     _buildShareItem(Icons.flag_outlined, 'Report', () {
-  Navigator.pop(context);
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Report submitted. Thank you for making our community safe!'),
-      backgroundColor: Colors.redAccent,
-    ),
-  );
-}),
-      _buildShareItem(Icons.send_rounded, 'Telegram', Colors.blue, () {
-        Navigator.pop(context);
-        _launchUri('https://t.me/share/url?url=${Uri.encodeComponent(widget.videoUrl)}');
-      }),
-      _buildShareItem(Icons.facebook_rounded, 'Facebook', Colors.indigo, () {
-        Navigator.pop(context);
-        _launchUri('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(widget.videoUrl)}');
-      }),
-            _buildShareItem(Icons.link_rounded, 'Copy Link', const Color(0xFFFF9800), () {
-               Clipboard.setData(ClipboardData(text: widget.videoUrl));
-                 Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(content: Text('Video link copied!')),
-                   );
-                 }),
-                 _buildShareItem(Icons.more_horiz_rounded, 'More', Colors.lightBlue, () {
-                   Navigator.pop(context);
-                  Share.share(widget.videoUrl, subject: 'Check out this video!');
-                 }),
-                ],
-               )
-              ],
+  scrollDirection: Axis.horizontal,
+  physics: const BouncingScrollPhysics(),
+  child: Row(
+    children: [
+      _buildShareItem(
+        Icons.flag_outlined,
+        'Report',
+        Colors.redAccent,
+        () {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Report submitted. Thank you!'),
+              backgroundColor: Colors.redAccent,
             ),
-          ),
-        );
-      },
-    );
-  }
+          );
+        },
+      ),
+      _buildShareItem(
+        Icons.send_rounded,
+        'Telegram',
+        Colors.blue,
+        () {
+          Navigator.pop(context);
+          _launchUri('https://t.me/share/url?url=${Uri.encodeComponent(widget.videoUrl)}');
+        },
+      ),
+      _buildShareItem(
+        Icons.facebook_rounded,
+        'Facebook',
+        Colors.indigo,
+        () {
+          Navigator.pop(context);
+          _launchUri('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(widget.videoUrl)}');
+        },
+      ),
+      _buildShareItem(
+        Icons.link_rounded,
+        'Copy Link',
+        const Color(0xFFFF9800),
+        () {
+          Clipboard.setData(ClipboardData(text: widget.videoUrl));
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Video link copied!')),
+          );
+        },
+      ),
+      _buildShareItem(
+        Icons.more_horiz_rounded,
+        'More',
+        Colors.lightBlue,
+        () {
+          Navigator.pop(context);
+          Share.share(widget.videoUrl, subject: 'Check out this video!');
+        },
+      ),
+    ],
+  ),
+)
 
   Widget _buildShareItem(IconData icon, String label, Color color, VoidCallback onTap) {
     return GestureDetector(
