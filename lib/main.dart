@@ -390,6 +390,31 @@ void _showShareModal(BuildContext context) {
             SizedBox(
               height: 90,
               child: ListView(
+void _showShareModal(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: const Color(0xFF1E1E2C),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (BuildContext context) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Share video via',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 90,
+              child: ListView(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 children: [
@@ -399,6 +424,54 @@ void _showShareModal(BuildContext context) {
                     Colors.amber,
                     () => Navigator.pop(context),
                   ),
+                  _buildShareItem(
+                    Icons.send_rounded,
+                    'Telegram',
+                    Colors.blue,
+                    () {
+                      Navigator.pop(context);
+                      _launchUri('https://t.me/share/url?url=${Uri.encodeComponent(widget.videoUrl)}');
+                    },
+                  ),
+                  _buildShareItem(
+                    Icons.facebook_rounded,
+                    'Facebook',
+                    Colors.indigo,
+                    () {
+                      Navigator.pop(context);
+                      _launchUri('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(widget.videoUrl)}');
+                    },
+                  ),
+                  _buildShareItem(
+                    Icons.link_rounded,
+                    'Copy Link',
+                    const Color(0xFFFF9800),
+                    () {
+                      Clipboard.setData(ClipboardData(text: widget.videoUrl));
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Video link copied!')),
+                      );
+                    },
+                  ),
+                  _buildShareItem(
+                    Icons.more_horiz_rounded,
+                    'More',
+                    Colors.teal,
+                    () {
+                      Navigator.pop(context);
+                      Share.share(widget.videoUrl, subject: 'Check out this video!');
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
                   _buildShareItem(
                     Icons.send_rounded,
                     'Telegram',
