@@ -14,6 +14,7 @@ dependencies:
   video_player: ^2.8.2
   image_picker: ^1.0.7
   cupertino_icons: ^1.0.6
+  share_plus: ^10.0.0 # ይህንን ጨምር
 
 dev_dependencies:
   flutter_test:
