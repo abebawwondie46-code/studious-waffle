@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -378,7 +379,11 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                  Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                    const SnackBar(content: Text('Video link copied!')),
-                  );
+                   );
+                 }),
+                 _buildShareItem(Icons.more_horiz_rounded, 'More', Colors.lightBlue, () {
+                   Navigator.pop(context);
+                  Share.share(widget.videoUrl, subject: 'Check out this video!');
                  }),
                 ],
                )
