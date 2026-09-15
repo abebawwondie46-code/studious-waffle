@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -549,33 +550,47 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
             bottom: 80,
             child: Column(
               children: [
-                Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFFF9800), width: 2),
-                      ),
-                      child: const CircleAvatar(
-                        radius: 22,
-                        backgroundColor: Color(0xFF5C6BC0),
-                        child: Icon(Icons.person, color: Colors.white, size: 24),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -4,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF9800),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.add, size: 16, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
+                GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const UserProfileScreen(
+          userId: '123',
+          username: 'kuanyngne',
+          profileImageUrl: 'https://picsum.photos/200',
+        ),
+      ),
+    );
+  },
+  child: Stack(
+    alignment: Alignment.bottomCenter,
+    children: [
+      Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white),
+        ),
+        child: const CircleAvatar(
+          radius: 22,
+          backgroundColor: Color(0xFF5C6BC0),
+          child: Icon(Icons.person, color: Colors.white),
+        ),
+      ),
+      Positioned(
+        bottom: -4,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFF9800),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.add, size: 16, color: Colors.white),
+        ),
+      ),
+    ],
+  ),
+),
                 const SizedBox(height: 24),
                 _buildSideActionButton(
                   icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
