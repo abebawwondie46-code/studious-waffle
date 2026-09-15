@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -355,62 +354,64 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                 const SizedBox(height: 16),
                 const Text('Share video via', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                 const SizedBox(height: 20),
-                SingleChildScrollView(
-  scrollDirection: Axis.horizontal,
-  physics: const BouncingScrollPhysics(),
-  child: Row(
+                SizedBox(
+  height: 90,
+  child: ListView(
+    scrollDirection: Axis.horizontal,
+    physics: const BouncingScrollPhysics(),
     children: [
       _buildShareItem(
-        Icons.flag_outlined,
-        'Report',
-        Colors.redAccent,
+        Icons.repeat_rounded, 
+        'Repost', 
+        Colors.amber, 
+        () => Navigator.pop(context),
+      ),
+      _buildShareItem(
+        Icons.message_rounded, 
+        'SMS', 
+        Colors.lightBlue, 
         () {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Report submitted. Thank you!'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
+          _launchUri('sms:?body=${Uri.encodeComponent(widget.videoUrl)}');
         },
       ),
       _buildShareItem(
-        Icons.send_rounded,
-        'Telegram',
-        Colors.blue,
+        Icons.send_rounded, 
+        'Telegram', 
+        Colors.blue, 
         () {
           Navigator.pop(context);
           _launchUri('https://t.me/share/url?url=${Uri.encodeComponent(widget.videoUrl)}');
         },
       ),
       _buildShareItem(
-        Icons.facebook_rounded,
-        'Facebook',
-        Colors.indigo,
+        Icons.facebook_rounded, 
+        'Facebook', 
+        Colors.indigo, 
         () {
           Navigator.pop(context);
           _launchUri('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(widget.videoUrl)}');
         },
       ),
       _buildShareItem(
-        Icons.link_rounded,
-        'Copy Link',
-        const Color(0xFFFF9800),
+        Icons.chat_bubble_rounded, 
+        'WhatsApp', 
+        Colors.green, 
+        () {
+          Navigator.pop(context);
+          _launchUri('https://api.whatsapp.com/send?text=${Uri.encodeComponent(widget.videoUrl)}');
+        },
+      ),
+      _buildShareItem(
+        Icons.link_rounded, 
+        'Copy Link', 
+        const Color(0xFFFF9800), 
         () {
           Clipboard.setData(ClipboardData(text: widget.videoUrl));
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Video link copied!')),
           );
-        },
-      ),
-      _buildShareItem(
-        Icons.more_horiz_rounded,
-        'More',
-        Colors.lightBlue,
-        () {
-          Navigator.pop(context);
-          Share.share(widget.videoUrl, subject: 'Check out this video!');
         },
       ),
     ],
