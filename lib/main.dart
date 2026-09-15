@@ -367,15 +367,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
         () => Navigator.pop(context),
       ),
       _buildShareItem(
-        Icons.message_rounded, 
-        'SMS', 
-        Colors.lightBlue, 
-        () {
-          Navigator.pop(context);
-          _launchUri('sms:?body=${Uri.encodeComponent(widget.videoUrl)}');
-        },
-      ),
-      _buildShareItem(
         Icons.send_rounded, 
         'Telegram', 
         Colors.blue, 
@@ -394,15 +385,6 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
         },
       ),
       _buildShareItem(
-        Icons.chat_bubble_rounded, 
-        'WhatsApp', 
-        Colors.green, 
-        () {
-          Navigator.pop(context);
-          _launchUri('https://api.whatsapp.com/send?text=${Uri.encodeComponent(widget.videoUrl)}');
-        },
-      ),
-      _buildShareItem(
         Icons.link_rounded, 
         'Copy Link', 
         const Color(0xFFFF9800), 
@@ -412,6 +394,15 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Video link copied!')),
           );
+        },
+      ),
+      _buildShareItem(
+        Icons.more_horiz_rounded, 
+        'More', 
+        Colors.teal, 
+        () {
+          Navigator.pop(context);
+          Share.share(widget.videoUrl, subject: 'Check out this video!');
         },
       ),
     ],
