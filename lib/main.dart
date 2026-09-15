@@ -360,7 +360,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
          physics: const BouncingScrollPhysics(),
          child: Row(
          children: [
-     _buildActionItem(Icons.flag_outlined, 'Report', () {
+     _buildShareItem(Icons.flag_outlined, 'Report', () {
   Navigator.pop(context);
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(
