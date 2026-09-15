@@ -341,17 +341,18 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                 const SizedBox(height: 16),
                 const Text('Share video via', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                 const SizedBox(height: 20),
-                // 1. Horizontal Scrollable App Icons Row
+                
+// 1. Horizontal Scrollable App Icons Row
 SingleChildScrollView(
   scrollDirection: Axis.horizontal,
   child: Row(
     children: [
       _buildShareItem(Icons.repeat_rounded, 'Repost', Colors.amber, () => Navigator.pop(context)),
       _buildShareItem(Icons.message_rounded, 'SMS', Colors.blue, () {
-        _launchUri('sms:?body=${Uri.encodeComponent(widget.videoUrl)}', context);
+        _launchUri('sms:?body=${Uri.encodeComponent(widget.videoUrl)}');
       }),
       _buildShareItem(Icons.camera_alt_rounded, 'Instagram', Colors.pinkAccent, () {
-        _launchUri('https://www.instagram.com', context);
+        _launchUri('https://www.instagram.com');
       }),
       _buildShareItem(Icons.link_rounded, 'Copy link', Colors.blueAccent, () {
         Clipboard.setData(ClipboardData(text: widget.videoUrl));
@@ -361,10 +362,10 @@ SingleChildScrollView(
         );
       }),
       _buildShareItem(Icons.send_rounded, 'Telegram', const Color(0xFF29B6F6), () {
-        _launchUri('https://t.me/share/url?url=${Uri.encodeComponent(widget.videoUrl)}', context);
+        _launchUri('https://t.me/share/url?url=${Uri.encodeComponent(widget.videoUrl)}');
       }),
       _buildShareItem(Icons.facebook, 'Facebook', const Color(0xFF1877F2), () {
-        _launchUri('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(widget.videoUrl)}', context);
+        _launchUri('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(widget.videoUrl)}');
       }),
     ],
   ),
