@@ -232,6 +232,18 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
 
   late AnimationController _discAnimationController;
   final _supabase = Supabase.instance.client;
+  Future<void> _launchUri(String urlString) async {
+  final Uri uri = Uri.parse(urlString);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } else {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open application')),
+      );
+    }
+  }
+}
 
   @override
   void initState() {
