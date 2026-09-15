@@ -341,34 +341,49 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
                 const SizedBox(height: 16),
                 const Text('Share video via', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildShareItem(Icons.send_rounded, 'Telegram', Colors.blue, () {
-                      Navigator.pop(context);
-                    }),
-                    _buildShareItem(Icons.facebook_rounded, 'Facebook', Colors.indigo, () {
-                      Navigator.pop(context);
-                    }),
-                    _buildShareItem(Icons.chat_bubble_rounded, 'WhatsApp', Colors.green, () {
-                      Navigator.pop(context);
-                    }),
-                    _buildShareItem(Icons.link_rounded, 'Copy Link', const Color(0xFFFF9800), () {
-                      Clipboard.setData(ClipboardData(text: widget.videoUrl));
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Video link copied!')),
-                      );
-                    }),
-                  ],
-                ),
-              ],
-            ),
-          ),
+                // 1. Horizontal Scrollable App Icons Row
+SingleChildScrollView(
+  scrollDirection: Axis.horizontal,
+  child: Row(
+    children: [
+      _buildShareItem(Icons.repeat_rounded, 'Repost', Colors.amber, () => Navigator.pop(context)),
+      _buildShareItem(Icons.message_rounded, 'SMS', Colors.blue, () {
+        _launchUri('sms:?body=${Uri.encodeComponent(widget.videoUrl)}', context);
+      }),
+      _buildShareItem(Icons.camera_alt_rounded, 'Instagram', Colors.pinkAccent, () {
+        _launchUri('https://www.instagram.com', context);
+      }),
+      _buildShareItem(Icons.link_rounded, 'Copy link', Colors.blueAccent, () {
+        Clipboard.setData(ClipboardData(text: widget.videoUrl));
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Link copied!')),
         );
-      },
-    );
-  }
+      }),
+      _buildShareItem(Icons.send_rounded, 'Telegram', const Color(0xFF29B6F6), () {
+        _launchUri('https://t.me/share/url?url=${Uri.encodeComponent(widget.videoUrl)}', context);
+      }),
+      _buildShareItem(Icons.facebook, 'Facebook', const Color(0xFF1877F2), () {
+        _launchUri('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(widget.videoUrl)}', context);
+      }),
+    ],
+  ),
+),
+
+const Divider(color: Colors.white12, height: 24),
+
+// 2. Action Buttons Row (Report, Download, etc.)
+SingleChildScrollView(
+  scrollDirection: Axis.horizontal,
+  child: Row(
+    children: [
+      _buildActionItem(Icons.flag_outlined, 'Report', () => Navigator.pop(context)),
+      _buildActionItem(Icons.heart_broken_outlined, 'Not interested', () => Navigator.pop(context)),
+      _buildActionItem(Icons.file_download_outlined, 'Download', () => Navigator.pop(context)),
+      _buildActionItem(Icons.add_circle_outline, 'Add to Story', () => Navigator.pop(context)),
+    ],
+  ),
+),
 
   Widget _buildShareItem(IconData icon, String label, Color color, VoidCallback onTap) {
     return GestureDetector(
