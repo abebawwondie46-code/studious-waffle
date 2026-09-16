@@ -40,18 +40,53 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
         actions: [
-          IconButton(
-          icon: const Icon(Icons.more_vert, color: Colors.white),
-          onPressed: () {
-            showModalBottomSheet(
-              context: context,
-              backgroundColor: const Color(0xFF1E1E2C),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              builder: (context) => Container(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Column(
+          PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: Colors.white),
+      color: const Color(0xFF1E1E2C),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (value) {
+        if (value == 'settings') {
+          // Settings Logic
+        } else if (value == 'share') {
+          // Share Logic
+        } else if (value == 'logout') {
+          // Logout Logic
+        }
+      },
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+        const PopupMenuItem<String>(
+          value: 'settings',
+          child: Row(
+            children: [
+              Icon(Icons.settings, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Text('Settings', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'share',
+          child: Row(
+            children: [
+              Icon(Icons.share, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Text('Share Profile', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(height: 1),
+        const PopupMenuItem<String>(
+          value: 'logout',
+          child: Row(
+            children: [
+              Icon(Icons.logout, color: Colors.redAccent, size: 20),
+              SizedBox(width: 12),
+              Text('Log Out', style: TextStyle(color: Colors.redAccent)),
+            ],
+          ),
+        ),
+      ],
+    ),
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ListTile(
@@ -87,11 +122,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   children: [
                     const SizedBox(height: 12),
                     // Profile Image
-                    CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Colors.grey.shade800,
-                      backgroundImage: NetworkImage(widget.profileImageUrl),
-                    ),
+                    GestureDetector(
+          onTap: () async {
+            final ImagePicker picker = ImagePicker();
+            final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+            if (image != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Selected image: ${image.name}')),
+              );
+            }
+          },
+          child: CircleAvatar(
+            radius: 45,
+            backgroundColor: Colors.grey.shade800,
+            backgroundImage: NetworkImage(widget.profileImageUrl),
+          ),
+        ),
                     const SizedBox(height: 10),
                     // Username Handle
                     Text(
@@ -120,29 +166,69 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: () {
+          final TextEditingController nameController =
+              TextEditingController(text: widget.username);
+          final TextEditingController bioController = TextEditingController();
+
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
               backgroundColor: const Color(0xFF1E1E2C),
               title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
-              content: const Text(
-                'Profile editing features will be connected to Supabase soon.',
-                style: TextStyle(color: Colors.white70),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      labelStyle: TextStyle(color: Colors.white70),
+                      enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24)),
+                      focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFFFF2B54))),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: bioController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Bio',
+                      labelStyle: TextStyle(color: Colors.white70),
+                      enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24)),
+                      focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFFFF2B54))),
+                    ),
+                  ),
+                ],
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('OK', style: TextStyle(color: Color(0xFFFF2B54))),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF2B54)),
+                  onPressed: () {
+                    // Supabase Update Logic
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
           );
         },
-             style: ElevatedButton.styleFrom(
-               backgroundColor: const Color(0xFFFF2B54),
-                  padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 12,
+      },
+        style: ElevatedButton.styleFrom(
+           backgroundColor: const Color(0xFFFF2B54),
+               padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                            vertical: 12,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
