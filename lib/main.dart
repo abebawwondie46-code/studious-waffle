@@ -572,7 +572,24 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white),
         ),
-        child: const CircleAvatar(
+        child: FutureBuilder<String?>(
+  future: SharedPreferences.getInstance().then((prefs) => prefs.getString('user_image_path')),
+  builder: (context, snapshot) {
+    String? imagePath = snapshot.data;
+    bool hasLocalImage = imagePath != null && File(imagePath).existsSync();
+
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: const Color(0xFF5C6BC0),
+      backgroundImage: hasLocalImage
+          ? FileImage(File(imagePath)) as ImageProvider
+          : null,
+      child: hasLocalImage
+          ? null
+          : const Icon(Icons.person, color: Colors.white),
+    );
+  },
+),
           radius: 22,
           backgroundColor: Color(0xFF5C6BC0),
           child: Icon(Icons.person, color: Colors.white),
