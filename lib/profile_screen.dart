@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadSavedData();
   }
 
-  // 1. Load Saved Data from Local Storage (SharedPreferences)
+  // 1. Load Saved Profile Data permanently
   Future<void> _loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -55,7 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  // Save profile updates to local storage
+  // Save profile updates to storage
   Future<void> _saveData(String name, String bio, String? imagePath) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_name', name);
@@ -68,7 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // 2. Camera or Gallery Image Picker Modal
+  // 2. Camera or Gallery Selector
   void _showImageSourcePicker() {
     showModalBottomSheet(
       context: context,
@@ -110,7 +110,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Image capture & update logic
   Future<void> _pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: source, imageQuality: 85);
@@ -121,13 +120,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _saveData(_username, _bio, image.path);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile photo saved permanently!')),
+          const SnackBar(content: Text('Profile photo saved successfully!')),
         );
       }
     }
   }
 
-  // 3. Fixed Settings Bottom Sheet (Fits properly on all screens)
+  // 3. Complete Log Out Handler
+  Future<void> _handleLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clear all user session data
+
+    if (!mounted) return;
+
+    // Pop current screen or navigate to login/root page
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Navigator.of(context).pushReplacementNamed('/'); // or login route
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Logged out successfully')),
+    );
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: const Text('Log Out', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to log out?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2B54)),
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              _handleLogout(); // Perform logout & exit screen
+            },
+            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSettingsModal() {
     showModalBottomSheet(
       context: context,
@@ -166,48 +208,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: const Text('Privacy & Security', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context),
               ),
-              ListTile(
-                leading: const Icon(Icons.dark_mode_outlined, color: Colors.white),
-                title: const Text('Dark Appearance', style: TextStyle(color: Colors.white)),
-                trailing: const Icon(Icons.check_circle, color: Color(0xFFFF2B54)),
-                onTap: () => Navigator.pop(context),
-              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _shareProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Profile link copied: https://vibe.ai/@${_username.toLowerCase()}')),
-    );
-  }
-
-  void _confirmLogout() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2C),
-        title: const Text('Log Out', style: TextStyle(color: Colors.white)),
-        content: const Text('Are you sure you want to log out?', style: TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2B54)),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Logged out successfully')),
-              );
-            },
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -227,6 +230,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFF12121C),
         elevation: 0,
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.maybePop(context),
+        ),
         title: Text(
           _username,
           style: const TextStyle(
@@ -243,8 +250,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onSelected: (value) {
               if (value == 'settings') {
                 _showSettingsModal();
-              } else if (value == 'share') {
-                _shareProfile();
               } else if (value == 'logout') {
                 _confirmLogout();
               }
@@ -257,16 +262,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Icon(Icons.settings, color: Colors.white, size: 20),
                     SizedBox(width: 12),
                     Text('Settings', style: TextStyle(color: Colors.white)),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'share',
-                child: Row(
-                  children: [
-                    Icon(Icons.share, color: Colors.white, size: 20),
-                    SizedBox(width: 12),
-                    Text('Share Profile', style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
@@ -294,7 +289,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 10),
-                    // Profile Image with Camera overlay & Click Handler
                     GestureDetector(
                       onTap: _showImageSourcePicker,
                       child: Stack(
@@ -302,9 +296,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(3),
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 colors: [Color(0xFFFF2B54), Color(0xFFFF8E53)],
                               ),
                             ),
@@ -337,7 +331,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Dynamic Bio Display
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32.0),
                       child: Text(
@@ -347,7 +340,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    // Interactive Stats Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -359,7 +351,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // Edit Profile Action
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -382,8 +373,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       decoration: const InputDecoration(
                                         labelText: 'Username',
                                         labelStyle: TextStyle(color: Colors.white70),
-                                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2B54))),
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -393,8 +382,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       decoration: const InputDecoration(
                                         labelText: 'Bio',
                                         labelStyle: TextStyle(color: Colors.white70),
-                                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2B54))),
                                       ),
                                     ),
                                   ],
@@ -427,28 +414,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: const Text('Edit Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ),
-                        const SizedBox(width: 10),
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white24),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.bookmark_border, color: Colors.white),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Bookmarks feature coming soon!')),
-                              );
-                            },
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
                   ],
                 ),
               ),
-              // Tab Header Bar
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _SliverTabBarDelegate(
@@ -467,15 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           body: TabBarView(
             children: [
               _buildVideoGrid(),
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: Text(
-                    'No liked videos yet',
-                    style: TextStyle(color: Colors.white54, fontSize: 16),
-                  ),
-                ),
-              ),
+              const Center(child: Text('No liked videos yet', style: TextStyle(color: Colors.white54))),
             ],
           ),
         ),
@@ -486,22 +449,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildStatColumn(String label, String count) {
     return Column(
       children: [
-        Text(
-          count,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(count, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white54,
-            fontSize: 12,
-          ),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
       ],
     );
   }
@@ -516,14 +466,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildVideoGrid() {
-    if (userVideos.isEmpty) {
-      return const Center(
-        child: Text(
-          'No videos uploaded yet',
-          style: TextStyle(color: Colors.white54, fontSize: 16),
-        ),
-      );
-    }
     return GridView.builder(
       padding: const EdgeInsets.all(2),
       itemCount: userVideos.length,
@@ -534,69 +476,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         mainAxisSpacing: 2,
       ),
       itemBuilder: (context, index) {
-        return GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => Dialog(
-                backgroundColor: Colors.transparent,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.network(
-                        userVideos[index],
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          height: 300,
-                          color: Colors.grey.shade900,
-                          child: const Center(
-                            child: Icon(Icons.movie_creation_outlined, color: Colors.white38, size: 48),
-                          ),
-                        ),
-                      ),
-                      const Icon(Icons.play_circle_fill, color: Colors.white70, size: 64),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.network(
-                userVideos[index],
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey.shade900,
-                    child: const Center(
-                      child: Icon(Icons.movie_creation_outlined, color: Colors.white38, size: 32),
-                    ),
-                  );
-                },
-              ),
-              Positioned(
-                bottom: 8,
-                left: 8,
-                child: Row(
-                  children: const [
-                    Icon(Icons.play_arrow_outlined, color: Colors.white, size: 16),
-                    SizedBox(width: 2),
-                    Text(
-                      '2.4K',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        return Image.network(
+          userVideos[index],
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: Colors.grey.shade900,
+            child: const Icon(Icons.movie_creation_outlined, color: Colors.white38),
           ),
         );
       },
@@ -606,25 +491,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar _tabBar;
-
   _SliverTabBarDelegate(this._tabBar);
 
   @override
   double get minExtent => _tabBar.preferredSize.height;
-
   @override
   double get maxExtent => _tabBar.preferredSize.height;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: const Color(0xFF12121C),
-      child: _tabBar,
-    );
+    return Container(color: const Color(0xFF12121C), child: _tabBar);
   }
 
   @override
-  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
-    return false;
-  }
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) => false;
 }
