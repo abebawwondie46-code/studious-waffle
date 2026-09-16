@@ -1,15 +1,18 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String username;
   final String profileImageUrl;
+  final Function(String newUsername, String newImagePath)? onProfileUpdated;
 
   const ProfileScreen({
     super.key,
     required this.username,
     required this.profileImageUrl,
+    this.onProfileUpdated,
   });
 
   @override
@@ -20,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late String _username;
   String _bio = '📱 Tech Creator & Developer | Building cool apps 🚀';
   File? _selectedImageFile;
+  bool _isLoading = true;
 
   final List<String> userVideos = [
     'https://picsum.photos/id/10/300/400',
@@ -34,66 +38,153 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _username = widget.username;
+    _loadSavedData();
   }
 
-  // 1. Profile Picture Picker with State Update
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _selectedImageFile = File(image.path);
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile picture updated successfully!')),
-        );
+  // 1. Load Saved Data from Local Storage (SharedPreferences)
+  Future<void> _loadSavedData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _username = prefs.getString('user_name') ?? widget.username;
+      _bio = prefs.getString('user_bio') ?? '📱 Tech Creator & Developer | Building cool apps 🚀';
+      String? imagePath = prefs.getString('user_image_path');
+      if (imagePath != null && File(imagePath).existsSync()) {
+        _selectedImageFile = File(imagePath);
       }
+      _isLoading = false;
+    });
+  }
+
+  // Save profile updates to local storage
+  Future<void> _saveData(String name, String bio, String? imagePath) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_name', name);
+    await prefs.setString('user_bio', bio);
+    if (imagePath != null) {
+      await prefs.setString('user_image_path', imagePath);
+    }
+    if (widget.onProfileUpdated != null) {
+      widget.onProfileUpdated!(name, imagePath ?? '');
     }
   }
 
-  // 2. Settings Bottom Sheet
-  void _showSettingsModal() {
+  // 2. Camera or Gallery Image Picker Modal
+  void _showImageSourcePicker() {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E1E2C),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.person, color: Colors.white),
-              title: const Text('Account', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.notifications, color: Colors.white),
-              title: const Text('Notifications', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.lock, color: Colors.white),
-              title: const Text('Privacy', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Change Profile Photo',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFFFF2B54)),
+                title: const Text('Take Photo with Camera', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFFFF2B54)),
+                title: const Text('Choose from Gallery', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // 3. Share Action
-  void _shareProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Profile link copied: https://myapp.com/@${_username.toLowerCase()}')),
+  // Image capture & update logic
+  Future<void> _pickImage(ImageSource source) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source, imageQuality: 85);
+    if (image != null) {
+      setState(() {
+        _selectedImageFile = File(image.path);
+      });
+      await _saveData(_username, _bio, image.path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo saved permanently!')),
+        );
+      }
+    }
+  }
+
+  // 3. Fixed Settings Bottom Sheet (Fits properly on all screens)
+  void _showSettingsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E2C),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.person, color: Colors.white),
+                title: const Text('Account Settings', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_active, color: Colors.white),
+                title: const Text('Notifications', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.lock_outline, color: Colors.white),
+                title: const Text('Privacy & Security', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.dark_mode_outlined, color: Colors.white),
+                title: const Text('Dark Appearance', style: TextStyle(color: Colors.white)),
+                trailing: const Icon(Icons.check_circle, color: Color(0xFFFF2B54)),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  // 4. Logout Confirmation Dialog
+  void _shareProfile() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Profile link copied: https://vibe.ai/@${_username.toLowerCase()}')),
+    );
+  }
+
   void _confirmLogout() {
     showDialog(
       context: context,
@@ -107,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2B54)),
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -123,6 +214,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF12121C),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFFFF2B54))),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF12121C),
       appBar: AppBar(
@@ -195,27 +293,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SliverToBoxAdapter(
                 child: Column(
                   children: [
-                    const SizedBox(height: 12),
-                    // Profile Image with Dynamic File/Network Switch
+                    const SizedBox(height: 10),
+                    // Profile Image with Camera overlay & Click Handler
                     GestureDetector(
-                      onTap: _pickImage,
+                      onTap: _showImageSourcePicker,
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          CircleAvatar(
-                            radius: 45,
-                            backgroundColor: Colors.grey.shade800,
-                            backgroundImage: _selectedImageFile != null
-                                ? FileImage(_selectedImageFile!) as ImageProvider
-                                : NetworkImage(widget.profileImageUrl),
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFF2B54), Color(0xFFFF8E53)],
+                              ),
+                            ),
+                            child: CircleAvatar(
+                              radius: 46,
+                              backgroundColor: Colors.grey.shade900,
+                              backgroundImage: _selectedImageFile != null
+                                  ? FileImage(_selectedImageFile!) as ImageProvider
+                                  : NetworkImage(widget.profileImageUrl),
+                            ),
                           ),
                           Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(6),
                             decoration: const BoxDecoration(
                               color: Color(0xFFFF2B54),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
                           ),
                         ],
                       ),
@@ -226,10 +333,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Bio Section
+                    // Dynamic Bio Display
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32.0),
                       child: Text(
@@ -238,8 +346,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: const TextStyle(color: Colors.white60, fontSize: 13),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // Stats Row
+                    const SizedBox(height: 18),
+                    // Interactive Stats Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -251,7 +359,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // Edit Profile Button
+                    // Edit Profile Action
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -298,12 +406,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2B54)),
-                                    onPressed: () {
+                                    onPressed: () async {
                                       setState(() {
                                         _username = nameController.text;
                                         _bio = bioController.text;
                                       });
-                                      Navigator.pop(context);
+                                      await _saveData(_username, _bio, _selectedImageFile?.path);
+                                      if (mounted) Navigator.pop(context);
                                     },
                                     child: const Text('Save', style: TextStyle(color: Colors.white)),
                                   ),
@@ -339,13 +448,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-              // Tab Header
+              // Tab Header Bar
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _SliverTabBarDelegate(
                   const TabBar(
-                    indicatorColor: Colors.white,
-                    indicatorWeight: 2,
+                    indicatorColor: Color(0xFFFF2B54),
+                    indicatorWeight: 3,
                     tabs: [
                       Tab(icon: Icon(Icons.grid_on_rounded, color: Colors.white)),
                       Tab(icon: Icon(Icons.favorite_border, color: Colors.white)),
@@ -427,7 +536,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       itemBuilder: (context, index) {
         return GestureDetector(
           onTap: () {
-            // Creative Video Preview Dialog
             showDialog(
               context: context,
               builder: (context) => Dialog(
@@ -437,7 +545,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Image.network(userVideos[index], fit: BoxFit.cover),
+                      Image.network(
+                        userVideos[index],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 300,
+                          color: Colors.grey.shade900,
+                          child: const Center(
+                            child: Icon(Icons.movie_creation_outlined, color: Colors.white38, size: 48),
+                          ),
+                        ),
+                      ),
                       const Icon(Icons.play_circle_fill, color: Colors.white70, size: 64),
                     ],
                   ),
@@ -451,6 +569,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Image.network(
                 userVideos[index],
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey.shade900,
+                    child: const Center(
+                      child: Icon(Icons.movie_creation_outlined, color: Colors.white38, size: 32),
+                    ),
+                  );
+                },
               ),
               Positioned(
                 bottom: 8,
