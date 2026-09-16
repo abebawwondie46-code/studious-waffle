@@ -557,7 +557,7 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
       context,
       MaterialPageRoute(
         builder: (context) => ProfileScreen(
-          username: _username,
+          username: 'User',
           profileImageUrl: 'https://picsum.photos/id/64/200/200',
         ),
       ),
@@ -608,7 +608,8 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
     ],
   ),
 ),
-const SizedBox(height: 24),
+
+    const SizedBox(height: 24),
                 
                 _buildSideActionButton(
                   icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
