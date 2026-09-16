@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -16,7 +17,10 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Demo video thumbnails list
+  late String _username;
+  String _bio = '📱 Tech Creator & Developer | Building cool apps 🚀';
+  File? _selectedImageFile;
+
   final List<String> userVideos = [
     'https://picsum.photos/id/10/300/400',
     'https://picsum.photos/id/20/300/400',
@@ -27,6 +31,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _username = widget.username;
+  }
+
+  // 1. Profile Picture Picker with State Update
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _selectedImageFile = File(image.path);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated successfully!')),
+        );
+      }
+    }
+  }
+
+  // 2. Settings Bottom Sheet
+  void _showSettingsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E2C),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person, color: Colors.white),
+              title: const Text('Account', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications, color: Colors.white),
+              title: const Text('Notifications', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.lock, color: Colors.white),
+              title: const Text('Privacy', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 3. Share Action
+  void _shareProfile() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Profile link copied: https://myapp.com/@${_username.toLowerCase()}')),
+    );
+  }
+
+  // 4. Logout Confirmation Dialog
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: const Text('Log Out', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to log out?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Logged out successfully')),
+              );
+            },
+            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF12121C),
@@ -35,7 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          widget.username,
+          _username,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -49,11 +144,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onSelected: (value) {
               if (value == 'settings') {
-                // Settings Action
+                _showSettingsModal();
               } else if (value == 'share') {
-                // Share Action
+                _shareProfile();
               } else if (value == 'logout') {
-                // Logout Action
+                _confirmLogout();
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -101,29 +196,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 12),
-                    // Profile Image with Gallery Picker
+                    // Profile Image with Dynamic File/Network Switch
                     GestureDetector(
-                      onTap: () async {
-                        final ImagePicker picker = ImagePicker();
-                        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                        if (image != null && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Selected image: ${image.name}')),
-                          );
-                        }
-                      },
-                      child: CircleAvatar(
-                        radius: 45,
-                        backgroundColor: Colors.grey.shade800,
-                        backgroundImage: NetworkImage(widget.profileImageUrl),
+                      onTap: _pickImage,
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          CircleAvatar(
+                            radius: 45,
+                            backgroundColor: Colors.grey.shade800,
+                            backgroundImage: _selectedImageFile != null
+                                ? FileImage(_selectedImageFile!) as ImageProvider
+                                : NetworkImage(widget.profileImageUrl),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF2B54),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      '@${widget.username.toLowerCase().replaceAll(' ', '')}',
+                      '@${_username.toLowerCase().replaceAll(' ', '')}',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Bio Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: Text(
+                        _bio,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white60, fontSize: 13),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -145,8 +257,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: () {
-                            final nameController = TextEditingController(text: widget.username);
-                            final bioController = TextEditingController();
+                            final nameController = TextEditingController(text: _username);
+                            final bioController = TextEditingController(text: _bio);
 
                             showDialog(
                               context: context,
@@ -187,6 +299,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2B54)),
                                     onPressed: () {
+                                      setState(() {
+                                        _username = nameController.text;
+                                        _bio = bioController.text;
+                                      });
                                       Navigator.pop(context);
                                     },
                                     child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -210,7 +326,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: IconButton(
                             icon: const Icon(Icons.bookmark_border, color: Colors.white),
-                            onPressed: () {},
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Bookmarks feature coming soon!')),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -305,32 +425,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
         mainAxisSpacing: 2,
       ),
       itemBuilder: (context, index) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(
-              userVideos[index],
-              fit: BoxFit.cover,
-            ),
-            Positioned(
-              bottom: 8,
-              left: 8,
-              child: Row(
-                children: const [
-                  Icon(Icons.play_arrow_outlined, color: Colors.white, size: 16),
-                  SizedBox(width: 2),
-                  Text(
-                    '2.4K',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+        return GestureDetector(
+          onTap: () {
+            // Creative Video Preview Dialog
+            showDialog(
+              context: context,
+              builder: (context) => Dialog(
+                backgroundColor: Colors.transparent,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Image.network(userVideos[index], fit: BoxFit.cover),
+                      const Icon(Icons.play_circle_fill, color: Colors.white70, size: 64),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            );
+          },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                userVideos[index],
+                fit: BoxFit.cover,
+              ),
+              Positioned(
+                bottom: 8,
+                left: 8,
+                child: Row(
+                  children: const [
+                    Icon(Icons.play_arrow_outlined, color: Colors.white, size: 16),
+                    SizedBox(width: 2),
+                    Text(
+                      '2.4K',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
