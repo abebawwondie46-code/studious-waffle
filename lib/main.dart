@@ -557,54 +557,59 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
       context,
       MaterialPageRoute(
         builder: (context) => ProfileScreen(
-        username: 'Abebaw',
-          profileImageUrl: 'https://picsum.photos/id/10/300/400',
-        )
+          username: _username,
+          profileImageUrl: 'https://picsum.photos/id/64/200/200',
+        ),
       ),
-    );
+    ).then((_) {
+      setState(() {});
+    });
   },
   child: Stack(
-  alignment: Alignment.bottomCenter,
-  children: [
-    Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 1.5),
-      ),
-      child: FutureBuilder<String?>(
-        future: SharedPreferences.getInstance()
-            .then((prefs) => prefs.getString('user_image_path')),
-        builder: (context, snapshot) {
-          String? imagePath = snapshot.data;
-          bool hasLocalImage =
-              imagePath != null && File(imagePath).existsSync();
-
-          return CircleAvatar(
-            radius: 22,
-            backgroundColor: const Color(0xFF5C6BC0),
-            backgroundImage:
-                hasLocalImage ? FileImage(File(imagePath)) as ImageProvider : null,
-            child: hasLocalImage
-                ? null
-                : const Icon(Icons.person, color: Colors.white),
-          );
-        },
-      ),
-    ),
-    Positioned(
-      bottom: -4,
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFFF9800),
+    alignment: Alignment.bottomCenter,
+    children: [
+      Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 1.5),
         ),
-        child: const Icon(Icons.add, size: 16, color: Colors.white),
+        child: FutureBuilder<String?>(
+          future: SharedPreferences.getInstance()
+              .then((prefs) => prefs.getString('user_image_path')),
+          builder: (context, snapshot) {
+            String? imagePath = snapshot.data;
+            bool hasLocalImage =
+                imagePath != null && File(imagePath).existsSync();
+
+            return CircleAvatar(
+              radius: 22,
+              backgroundColor: const Color(0xFF5C6BC0),
+              backgroundImage: hasLocalImage
+                  ? FileImage(File(imagePath)) as ImageProvider
+                  : null,
+              child: hasLocalImage
+                  ? null
+                  : const Icon(Icons.person, color: Colors.white),
+            );
+          },
+        ),
       ),
-    ),
-  ],
-)
-                const SizedBox(height: 24),
+      Positioned(
+        bottom: -4,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFF9800),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.add, size: 16, color: Colors.white),
+        ),
+      ),
+    ],
+  ),
+),
+const SizedBox(height: 24),
+                
                 _buildSideActionButton(
                   icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                   label: _isLiked ? "1.2k" : "1.1k",
