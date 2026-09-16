@@ -41,9 +41,40 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onPressed: () {},
-          ),
+          icon: const Icon(Icons.more_vert, color: Colors.white),
+          onPressed: () {
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: const Color(0xFF1E1E2C),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              builder: (context) => Container(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.settings, color: Colors.white),
+                      title: const Text('Settings', style: TextStyle(color: Colors.white)),
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.share, color: Colors.white),
+                      title: const Text('Share Profile', style: TextStyle(color: Colors.white)),
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.redAccent),
+                      title: const Text('Log Out', style: TextStyle(color: Colors.redAccent)),
+                      onTap: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+         ),
         ],
       ),
       body: DefaultTabController(
@@ -88,10 +119,28 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF2B54),
-                            padding: const EdgeInsets.symmetric(
+                          onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1E2C),
+              title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
+              content: const Text(
+                'Profile editing features will be connected to Supabase soon.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK', style: TextStyle(color: Color(0xFFFF2B54))),
+                ),
+              ],
+            ),
+          );
+        },
+             style: ElevatedButton.styleFrom(
+               backgroundColor: const Color(0xFFFF2B54),
+                  padding: const EdgeInsets.symmetric(
                               horizontal: 32,
                               vertical: 12,
                             ),
@@ -148,9 +197,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               // User Uploaded Videos Grid
               _buildVideoGrid(),
               // Liked Videos Grid Placeholder
-              _buildVideoGrid(),
-            ],
-          ),
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Text(
+                'No liked videos yet',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
+              ),
+            ),
+           ),
+          ],
+         ),
         ),
       ),
     );
