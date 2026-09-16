@@ -555,11 +555,10 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => UserProfileScreen(
-          userId: '123',
-          username: 'kuanyngne',
-          profileImageUrl: 'https://picsum.photos/200',
-        ),
+        builder: (context) => ProfileScreen(
+        username: 'Abebaw',
+          profileImageUrl: 'https://picsum.photos/id/10/300/400',
+        )
       ),
     );
   },
