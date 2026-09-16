@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
-class UserProfileScreen extends StatefulWidget {
-  final String userId;
+class ProfileScreen extends StatefulWidget {
   final String username;
   final String profileImageUrl;
 
-  const UserProfileScreen({
+  const ProfileScreen({
     super.key,
-    required this.userId,
     required this.username,
     required this.profileImageUrl,
   });
 
   @override
-  State<UserProfileScreen> createState() => _UserProfileScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _UserProfileScreenState extends State<UserProfileScreen> {
-  // Demo video list placeholder for grid view
-  final List<String> userVideos = List.generate(
-    12,
-    (index) => 'https://picsum.photos/300/400?random=$index',
-  );
+class _ProfileScreenState extends State<ProfileScreen> {
+  // Demo video thumbnails list
+  final List<String> userVideos = [
+    'https://picsum.photos/id/10/300/400',
+    'https://picsum.photos/id/20/300/400',
+    'https://picsum.photos/id/30/300/400',
+    'https://picsum.photos/id/40/300/400',
+    'https://picsum.photos/id/50/300/400',
+    'https://picsum.photos/id/60/300/400',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -41,75 +44,52 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ),
         actions: [
           PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.white),
-      color: const Color(0xFF1E1E2C),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: (value) {
-        if (value == 'settings') {
-          // Settings Logic
-        } else if (value == 'share') {
-          // Share Logic
-        } else if (value == 'logout') {
-          // Logout Logic
-        }
-      },
-      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-        const PopupMenuItem<String>(
-          value: 'settings',
-          child: Row(
-            children: [
-              Icon(Icons.settings, color: Colors.white, size: 20),
-              SizedBox(width: 12),
-              Text('Settings', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'share',
-          child: Row(
-            children: [
-              Icon(Icons.share, color: Colors.white, size: 20),
-              SizedBox(width: 12),
-              Text('Share Profile', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(height: 1),
-        const PopupMenuItem<String>(
-          value: 'logout',
-          child: Row(
-            children: [
-              Icon(Icons.logout, color: Colors.redAccent, size: 20),
-              SizedBox(width: 12),
-              Text('Log Out', style: TextStyle(color: Colors.redAccent)),
-            ],
-          ),
-        ),
-      ],
-    ),
-                  mainAxisSize: MainAxisSize.min,
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            color: const Color(0xFF1E1E2C),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onSelected: (value) {
+              if (value == 'settings') {
+                // Settings Action
+              } else if (value == 'share') {
+                // Share Action
+              } else if (value == 'logout') {
+                // Logout Action
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
                   children: [
-                    ListTile(
-                      leading: const Icon(Icons.settings, color: Colors.white),
-                      title: const Text('Settings', style: TextStyle(color: Colors.white)),
-                      onTap: () => Navigator.pop(context),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.share, color: Colors.white),
-                      title: const Text('Share Profile', style: TextStyle(color: Colors.white)),
-                      onTap: () => Navigator.pop(context),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.logout, color: Colors.redAccent),
-                      title: const Text('Log Out', style: TextStyle(color: Colors.redAccent)),
-                      onTap: () => Navigator.pop(context),
-                    ),
+                    Icon(Icons.settings, color: Colors.white, size: 20),
+                    SizedBox(width: 12),
+                    Text('Settings', style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
-            );
-          },
-         ),
+              const PopupMenuItem<String>(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share, color: Colors.white, size: 20),
+                    SizedBox(width: 12),
+                    Text('Share Profile', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(height: 1),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.redAccent, size: 20),
+                    SizedBox(width: 12),
+                    Text('Log Out', style: TextStyle(color: Colors.redAccent)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: DefaultTabController(
@@ -121,34 +101,33 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 12),
-                    // Profile Image
+                    // Profile Image with Gallery Picker
                     GestureDetector(
-          onTap: () async {
-            final ImagePicker picker = ImagePicker();
-            final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-            if (image != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Selected image: ${image.name}')),
-              );
-            }
-          },
-          child: CircleAvatar(
-            radius: 45,
-            backgroundColor: Colors.grey.shade800,
-            backgroundImage: NetworkImage(widget.profileImageUrl),
-          ),
-        ),
+                      onTap: () async {
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                        if (image != null && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Selected image: ${image.name}')),
+                          );
+                        }
+                      },
+                      child: CircleAvatar(
+                        radius: 45,
+                        backgroundColor: Colors.grey.shade800,
+                        backgroundImage: NetworkImage(widget.profileImageUrl),
+                      ),
+                    ),
                     const SizedBox(height: 10),
-                    // Username Handle
                     Text(
-                      '@${widget.username.toLowerCase().replaceAll(' ', '_')}',
+                      '@${widget.username.toLowerCase().replaceAll(' ', '')}',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Stats Row (Following, Followers, Likes)
+                    // Stats Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -160,87 +139,68 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // Action Buttons (Edit Profile / Follow)
+                    // Edit Profile Button
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ElevatedButton(
                           onPressed: () {
-          final TextEditingController nameController =
-              TextEditingController(text: widget.username);
-          final TextEditingController bioController = TextEditingController();
+                            final nameController = TextEditingController(text: widget.username);
+                            final bioController = TextEditingController();
 
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: const Color(0xFF1E1E2C),
-              title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Username',
-                      labelStyle: TextStyle(color: Colors.white70),
-                      enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white24)),
-                      focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFFFF2B54))),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: bioController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Bio',
-                      labelStyle: TextStyle(color: Colors.white70),
-                      enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white24)),
-                      focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFFFF2B54))),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF2B54)),
-                  onPressed: () {
-                    // Supabase Update Logic
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Save', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            ),
-          );
-        },
-      },
-        style: ElevatedButton.styleFrom(
-           backgroundColor: const Color(0xFFFF2B54),
-               padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                            vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                backgroundColor: const Color(0xFF1E1E2C),
+                                title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextField(
+                                      controller: nameController,
+                                      style: const TextStyle(color: Colors.white),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Username',
+                                        labelStyle: TextStyle(color: Colors.white70),
+                                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2B54))),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      controller: bioController,
+                                      style: const TextStyle(color: Colors.white),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Bio',
+                                        labelStyle: TextStyle(color: Colors.white70),
+                                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2B54))),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2B54)),
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Save', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF2B54),
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          child: const Text(
-                            'Edit Profile',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: const Text('Edit Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(width: 10),
                         Container(
@@ -249,10 +209,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: IconButton(
-                            icon: const Icon(
-                              Icons.bookmark_border,
-                              color: Colors.white,
-                            ),
+                            icon: const Icon(Icons.bookmark_border, color: Colors.white),
                             onPressed: () {},
                           ),
                         ),
@@ -262,7 +219,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ],
                 ),
               ),
-              // Grid View Tab Bar Header
+              // Tab Header
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _SliverTabBarDelegate(
@@ -271,7 +228,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     indicatorWeight: 2,
                     tabs: [
                       Tab(icon: Icon(Icons.grid_on_rounded, color: Colors.white)),
-                      Tab(icon: Icon(Icons.favorite_border_rounded, color: Colors.white70)),
+                      Tab(icon: Icon(Icons.favorite_border, color: Colors.white)),
                     ],
                   ),
                 ),
@@ -280,20 +237,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           },
           body: TabBarView(
             children: [
-              // User Uploaded Videos Grid
               _buildVideoGrid(),
-              // Liked Videos Grid Placeholder
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Text(
-                'No liked videos yet',
-                style: TextStyle(color: Colors.white54, fontSize: 16),
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Text(
+                    'No liked videos yet',
+                    style: TextStyle(color: Colors.white54, fontSize: 16),
+                  ),
+                ),
               ),
-            ),
-           ),
-          ],
-         ),
+            ],
+          ),
         ),
       ),
     );
@@ -324,22 +279,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildStatDivider() {
     return Container(
-      height: 15,
+      height: 16,
       width: 1,
       color: Colors.white24,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 24),
     );
   }
 
   Widget _buildVideoGrid() {
+    if (userVideos.isEmpty) {
+      return const Center(
+        child: Text(
+          'No videos uploaded yet',
+          style: TextStyle(color: Colors.white54, fontSize: 16),
+        ),
+      );
+    }
     return GridView.builder(
       padding: const EdgeInsets.all(2),
       itemCount: userVideos.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
+        childAspectRatio: 0.75,
         crossAxisSpacing: 2,
         mainAxisSpacing: 2,
-        childAspectRatio: 0.75,
       ),
       itemBuilder: (context, index) {
         return Stack(
@@ -350,8 +313,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               fit: BoxFit.cover,
             ),
             Positioned(
-              bottom: 6,
-              left: 6,
+              bottom: 8,
+              left: 8,
               child: Row(
                 children: const [
                   Icon(Icons.play_arrow_outlined, color: Colors.white, size: 16),
@@ -360,7 +323,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     '2.4K',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -374,7 +337,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 }
 
-// Custom Delegate to keep TabBar pinned at the top
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar _tabBar;
 
@@ -382,12 +344,12 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get minExtent => _tabBar.preferredSize.height;
+
   @override
   double get maxExtent => _tabBar.preferredSize.height;
 
   @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: const Color(0xFF12121C),
       child: _tabBar,
