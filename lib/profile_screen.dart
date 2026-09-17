@@ -536,22 +536,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar _tabBar;
+  final TabBar tabBar;
 
-  _SliverTabBarDelegate(this._tabBar);
-
-  @override
-  double get minExtent => _tabBar.preferredSize.height;
+  _SliverTabBarDelegate(this.tabBar);
 
   @override
-  double get maxExtent => _tabBar.preferredSize.height;
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
 
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: const Color(0xFF12121C),
-      child: _tabBar,
+      child: tabBar,
     );
   }
 
