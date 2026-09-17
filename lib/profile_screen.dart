@@ -534,6 +534,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
+}
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;
 
@@ -558,4 +559,4 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _SliverTabBarDelegate oldDelegate) {
     return false;
   }
-}
+
