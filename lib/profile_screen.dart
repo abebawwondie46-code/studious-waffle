@@ -534,7 +534,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;
 
