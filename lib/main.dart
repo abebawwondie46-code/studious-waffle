@@ -280,7 +280,21 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
 
     _fetchCommentCount();
   }
+void _handleDoubleTap() {
+    setState(() {
+      _isLiked = true;
+      _showHeartAnimation = true;
+    });
 
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          _showHeartAnimation = false;
+        });
+      }
+    });
+  }
+  
   Future<void> _fetchCommentCount() async {
     try {
       final res = await _supabase.from('comments').select().eq('video_id', widget.videoId);
@@ -317,15 +331,18 @@ class _ViralVideoPlayerCardState extends State<ViralVideoPlayerCard> with Single
       _controller.setVolume(_isMuted ? 0.0 : 1.0);
     });
   }
-
+bool _showHeartAnimation = false;
+int _viewCount = 1250; // አጠቃላይ የተመልካች ቁጥር (ለአብነት)
   void _onDoubleTap() {
     setState(() {
       _isLiked = true;
       _showHeartAnimation = true;
     });
-    Future.delayed(const Duration(milliseconds: 800), () {
+    Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
-        setState(() => _showHeartAnimation = false);
+        setState(() {
+           _showHeartAnimation = false);
+        };
       }
     });
   }
