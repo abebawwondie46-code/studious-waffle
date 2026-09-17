@@ -33,6 +33,18 @@ class AccountScreen extends StatelessWidget {
             subtitle: const Text('user@example.com', style: TextStyle(color: Colors.grey)),
             onTap: () {},
           ),
+          ListTile(
+            leading: const Icon(Icons.phone, color: Colors.white),
+            title: const Text('Phone Number', style: TextStyle(color: Colors.white)),
+            subtitle: const Text('+251 9...', style: TextStyle(color: Colors.grey)),
+            trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PhoneSettingsScreen()),
+              );
+            },
+          ),
           const Divider(color: Colors.white24),
           const SizedBox(height: 10),
           const Text(
@@ -180,6 +192,79 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
             onTap: () {},
           ),
         ],
+      ),
+    );
+  }
+}
+// --- 4. Phone Settings Screen ---
+class PhoneSettingsScreen extends StatefulWidget {
+  const PhoneSettingsScreen({super.key});
+
+  @override
+  State<PhoneSettingsScreen> createState() => _PhoneSettingsScreenState();
+}
+
+class _PhoneSettingsScreenState extends State<PhoneSettingsScreen> {
+  final TextEditingController _phoneController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0F1A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0F0F1A),
+        title: const Text('Phone Number', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Add or Update Phone Number',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'We will send a verification code to this number.',
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 25),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                prefixText: '+251 ',
+                prefixStyle: const TextStyle(color: Colors.white, fontSize: 16),
+                hintText: '911234567',
+                hintStyle: const TextStyle(color: Colors.grey),
+                filled: true,
+                fillColor: const Color(0xFF1E1E2C),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 25),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF2B55),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {},
+                child: const Text('Send Verification Code', style: TextStyle(color: Colors.white, fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
