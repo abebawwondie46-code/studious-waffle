@@ -12,6 +12,7 @@ class DownloadsScreen extends StatefulWidget {
 
 class _DownloadsScreenState extends State<DownloadsScreen> {
   List<Map<String, dynamic>> videos = [];
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -23,7 +24,41 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     final list = await OfflineDownloadService().getDownloadedVideos();
     setState(() {
       videos = list;
+      isLoading = false;
     });
+  }
+
+  void _confirmDelete(String videoId, String title) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1E2C),
+          title: const Text("Delete Video", style: TextStyle(color: Colors.white)),
+          content: Text("Are you sure you want to delete '$title'?",
+              style: const TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await OfflineDownloadService().deleteVideo(videoId);
+                _loadVideos();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Video deleted successfully')),
+                  );
+                }
+              },
+              child: const Text("Delete", style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -31,50 +66,73 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF121217),
       appBar: AppBar(
-        title: const Text("Offline Downloads"),
+        title: const Text("Offline Downloads", style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF121217),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: videos.isEmpty
-          ? const Center(
-              child: Text("No offline downloads found.", style: TextStyle(color: Colors.white70)),
-            )
-          : ListView.builder(
-              itemCount: videos.length,
-              itemBuilder: (context, index) {
-                final item = videos[index];
-                return ListTile(
-                  leading: const Icon(Icons.check_circle, color: Colors.pinkAccent),
-                  title: Text(item['title'] ?? 'Video', style: const TextStyle(color: Colors.white)),
-                  subtitle: const Text("Expires in 5 days", style: TextStyle(color: Colors.grey)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.play_circle_fill, color: Colors.white, size: 32),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => OfflinePlayerScreen(
-                                filePath: item['localPath'],
-                                title: item['title'],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.redAccent),
-                        onPressed: () async {
-                          await OfflineDownloadService().deleteVideo(item['id']);
-                          _loadVideos();
-                        },
-                      ),
-                    ],
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.pinkAccent))
+          : videos.isEmpty
+              ? const Center(
+                  child: Text(
+                    "No offline downloads found.",
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
                   ),
-                );
-              },
-            ),
+                )
+              : ListView.builder(
+                  itemCount: videos.length,
+                  itemBuilder: (context, index) {
+                    final item = videos[index];
+                    int daysLeft = item['daysLeft'] ?? 5;
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E2C),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        leading: const Icon(Icons.check_circle, color: Colors.pinkAccent),
+                        title: Text(
+                          item['title'] ?? 'Video',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          "Expires in $daysLeft day${daysLeft > 1 ? 's' : ''}",
+                          style: TextStyle(
+                            color: daysLeft <= 1 ? Colors.redAccent : Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.play_circle_fill, color: Colors.white, size: 32),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OfflinePlayerScreen(
+                                      filePath: item['localPath'],
+                                      title: item['title'] ?? 'Offline Video',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                              onPressed: () => _confirmDelete(item['id'], item['title'] ?? 'Video'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
@@ -86,25 +144,37 @@ class OfflinePlayerScreen extends StatefulWidget {
   const OfflinePlayerScreen({super.key, required this.filePath, required this.title});
 
   @override
-  State<OfflinePlayerScreen> meState() => _OfflinePlayerScreenState();
+  State<OfflinePlayerScreen> createState() => _OfflinePlayerScreenState();
 }
 
 class _OfflinePlayerScreenState extends State<OfflinePlayerScreen> {
   late VideoPlayerController _controller;
+  bool _isError = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.file(File(widget.filePath))
-      ..initialize().then((_) {
-        setState(() {});
-        _controller.play();
-      });
+    final file = File(widget.filePath);
+    if (file.existsSync()) {
+      _controller = VideoPlayerController.file(file)
+        ..initialize().then((_) {
+          setState(() {});
+          _controller.play();
+        }).catchError((e) {
+          setState(() {
+            _isError = true;
+          });
+        });
+    } else {
+      _isError = true;
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (!_isError) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -112,14 +182,20 @@ class _OfflinePlayerScreenState extends State<OfflinePlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: Text(widget.title), backgroundColor: Colors.black),
+      appBar: AppBar(
+        title: Text(widget.title, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Center(
-        child: _controller.value.isInitialized
-            ? AspectRatio(
-                aspectRatio: _controller.value.aspectRatio,
-                child: VideoPlayer(_controller),
-              )
-            : const CircularProgressIndicator(),
+        child: _isError
+            ? const Text("Video file not found or expired.", style: TextStyle(color: Colors.white))
+            : _controller.value.isInitialized
+                ? AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio,
+                    child: VideoPlayer(_controller),
+                  )
+                : const CircularProgressIndicator(color: Colors.pinkAccent),
       ),
     );
   }
