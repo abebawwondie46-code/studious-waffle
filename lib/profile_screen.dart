@@ -195,35 +195,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.person_outline, color: Colors.white),
-                title: const Text('Account Settings', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Account Settings opened')),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.notifications_none, color: Colors.white),
-                title: const Text('Notifications', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Notifications opened')),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock_outline, color: Colors.white),
-                title: const Text('Privacy & Security', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Privacy & Security opened')),
-                  );
-                },
-              ),
+              leading: const Icon(Icons.person_outline, color: Colors.white),
+              title: const Text('Account Settings', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AccountScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications_none, color: Colors.white),
+              title: const Text('Notifications', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.lock_outline, color: Colors.white),
+              title: const Text('Privacy & Security', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+                );
+              },
+             ),
             ],
           ),
         ),
