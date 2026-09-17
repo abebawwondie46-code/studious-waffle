@@ -85,49 +85,44 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     final item = videos[index];
                     int daysLeft = item['daysLeft'] ?? 5;
 
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E2C),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(Icons.check_circle, color: Colors.pinkAccent),
-                        title: Text(
-                          item['title'] ?? 'Video',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    return GestureDetector(
+                      // በጣት ተጭኖ ሲያዝ ድሌት ማድረጊያ መጠየቂያ ይመጣል
+                      onLongPress: () => _confirmDelete(item['id'], item['title'] ?? 'Video'),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E2C),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        subtitle: Text(
-                          "Expires in $daysLeft day${daysLeft > 1 ? 's' : ''}",
-                          style: TextStyle(
-                            color: daysLeft <= 1 ? Colors.redAccent : Colors.grey,
-                            fontSize: 12,
+                        child: ListTile(
+                          leading: const Icon(Icons.check_circle, color: Colors.pinkAccent),
+                          title: Text(
+                            item['title'] ?? 'Video',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.play_circle_fill, color: Colors.white, size: 32),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => OfflinePlayerScreen(
-                                      filePath: item['localPath'],
-                                      title: item['title'] ?? 'Offline Video',
-                                    ),
+                          subtitle: Text(
+                            "Expires in $daysLeft day${daysLeft > 1 ? 's' : ''}",
+                            style: TextStyle(
+                              color: daysLeft <= 1 ? Colors.redAccent : Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.play_circle_fill, color: Colors.white, size: 36),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => OfflinePlayerScreen(
+                                    filePath: item['localPath'],
+                                    title: item['title'] ?? 'Offline Video',
                                   ),
-                                );
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                              onPressed: () => _confirmDelete(item['id'], item['title'] ?? 'Video'),
-                            ),
-                          ],
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     );
