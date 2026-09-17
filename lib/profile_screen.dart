@@ -323,7 +323,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      '@${_username.toLowerCase().replaceAll(' ', '')}',
+                      '@$_username',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
