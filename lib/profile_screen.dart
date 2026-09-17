@@ -556,7 +556,7 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+  bool shouldRebuild(covariant _SliverTabBarDelegate oldDelegate) {
     return false;
   }
 }
