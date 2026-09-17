@@ -180,33 +180,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: 15),
                 decoration: BoxDecoration(
                   color: Colors.white24,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.person, color: Colors.white),
+                leading: const Icon(Icons.person_outline, color: Colors.white),
                 title: const Text('Account Settings', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Account Settings opened')),
+                  );
+                },
               ),
               ListTile(
-                leading: const Icon(Icons.notifications_active, color: Colors.white),
+                leading: const Icon(Icons.notifications_none, color: Colors.white),
                 title: const Text('Notifications', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Notifications opened')),
+                  );
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.lock_outline, color: Colors.white),
                 title: const Text('Privacy & Security', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Privacy & Security opened')),
+                  );
+                },
               ),
             ],
           ),
@@ -476,18 +491,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
         mainAxisSpacing: 2,
       ),
       itemBuilder: (context, index) {
-        return Image.network(
-          userVideos[index],
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            color: Colors.grey.shade900,
-            child: const Icon(Icons.movie_creation_outlined, color: Colors.white38),
+        final imageUrl = userVideos[index];
+        return GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) => Dialog(
+                backgroundColor: Colors.black,
+                insetPadding: EdgeInsets.zero,
+                child: Stack(
+                  children: [
+                    Center(
+                      child: InteractiveViewer(
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 40,
+                      right: 20,
+                      child: IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: Colors.grey.shade900,
+              child: const Icon(Icons.movie_creation, color: Colors.white54),
+            ),
           ),
         );
       },
     );
   }
-}
 
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar _tabBar;
