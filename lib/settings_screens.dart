@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'downloads_screen.dart';
 
 // --- 1. Account Screen ---
 class AccountScreen extends StatelessWidget {
@@ -42,6 +43,18 @@ class AccountScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const PhoneSettingsScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.download_for_offline, color: Color(0xFFFF2B55)),
+            title: const Text('Offline Downloads', style: TextStyle(color: Colors.white)),
+            subtitle: const Text('Saved videos (Expires in 5 days)', style: TextStyle(color: Colors.grey)),
+            trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DownloadsScreen()),
               );
             },
           ),
