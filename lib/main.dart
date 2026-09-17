@@ -1,13 +1,14 @@
-import 'dart:io';
+import 'import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package0:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'profile_screen.dart';
+import 'download_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -665,6 +666,33 @@ void _onDoubleTap() {
                     ],
                   ),
                 ),
+              const SizedBox(height: 18),
+              _buildSideActionButton(
+                icon: Icons.download_for_offline,
+                label: "Download",
+                color: Colors.white,
+                onTap: () async {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Downloading video...')),
+                  );
+
+                  bool success = await OfflineDownloadService().downloadVideo(
+                    widget.videoId,
+                    widget.title,
+                    widget.videoUrl,
+                  );
+
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Downloaded! Valid for 5 days offline.')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Download failed!')),
+                    );
+                  }
+                },
+              ),  
                 const SizedBox(height: 24),
 
                 RotationTransition(
