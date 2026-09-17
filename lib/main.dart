@@ -331,18 +331,14 @@ void _handleDoubleTap() {
       _controller.setVolume(_isMuted ? 0.0 : 1.0);
     });
   }
-bool _showHeartAnimation = false;
-int _viewCount = 1250; // አጠቃላይ የተመልካች ቁጥር (ለአብነት)
-  void _onDoubleTap() {
+void _onDoubleTap() {
     setState(() {
       _isLiked = true;
       _showHeartAnimation = true;
     });
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
-        setState(() {
-           _showHeartAnimation = false);
-        };
+        setState(() => _showHeartAnimation = false);
       }
     });
   }
