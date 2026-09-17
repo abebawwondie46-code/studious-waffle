@@ -1,3 +1,4 @@
+import 'dart0:io' if (dart.library.html) 'dart:html';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -86,7 +87,6 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     int daysLeft = item['daysLeft'] ?? 5;
 
                     return GestureDetector(
-                      // በጣት ተጭኖ ሲያዝ ድሌት ማድረጊያ መጠየቂያ ይመጣል
                       onLongPress: () => _confirmDelete(item['id'], item['title'] ?? 'Video'),
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -145,6 +145,7 @@ class OfflinePlayerScreen extends StatefulWidget {
 class _OfflinePlayerScreenState extends State<OfflinePlayerScreen> {
   late VideoPlayerController _controller;
   bool _isError = false;
+  bool _showControls = true;
 
   @override
   void initState() {
@@ -160,6 +161,10 @@ class _OfflinePlayerScreenState extends State<OfflinePlayerScreen> {
             _isError = true;
           });
         });
+
+      _controller.addListener(() {
+        if (mounted) setState(() {});
+      });
     } else {
       _isError = true;
     }
@@ -171,6 +176,13 @@ class _OfflinePlayerScreenState extends State<OfflinePlayerScreen> {
       _controller.dispose();
     }
     super.dispose();
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
   @override
@@ -186,9 +198,81 @@ class _OfflinePlayerScreenState extends State<OfflinePlayerScreen> {
         child: _isError
             ? const Text("Video file not found or expired.", style: TextStyle(color: Colors.white))
             : _controller.value.isInitialized
-                ? AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio,
-                    child: VideoPlayer(_controller),
+                ? GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showControls = !_showControls;
+                      });
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AspectRatio(
+                          aspectRatio: _controller.value.aspectRatio,
+                          child: VideoPlayer(_controller),
+                        ),
+
+                        // Play/Pause button on screen overlay
+                        if (_showControls)
+                          IconButton(
+                            iconSize: 64,
+                            icon: Icon(
+                              _controller.value.isPlaying
+                                  ? Icons.pause_circle_filled
+                                  : Icons.play_circle_filled,
+                              color: Colors.white.withOpacity(0.8),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                if (_controller.value.isPlaying) {
+                                  _controller.pause();
+                                } else {
+                                  _controller.play();
+                                }
+                              });
+                            },
+                          ),
+
+                        // Bottom Video Progress Bar (የጊዜ መስመር)
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            color: Colors.black54,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                VideoProgressIndicator(
+                                  _controller,
+                                  allowScrubbing: true, // በጣት ጎትቶ ጊዜውን ለማቀያየር
+                                  colors: const VideoProgressColors(
+                                    playedColor: Colors.pinkAccent,
+                                    bufferedColor: Colors.white30,
+                                    backgroundColor: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _formatDuration(_controller.value.position),
+                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                    ),
+                                    Text(
+                                      _formatDuration(_controller.value.duration),
+                                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   )
                 : const CircularProgressIndicator(color: Colors.pinkAccent),
       ),
