@@ -559,4 +559,4 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _SliverTabBarDelegate oldDelegate) {
     return false;
   }
-
+}
