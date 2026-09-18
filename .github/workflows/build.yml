@@ -17,7 +17,7 @@ jobs:
       - name: Disable Analytics
         run: flutter config --no-analytics
 
-      - name: Recreate Valid Android Directory Structure
+      - name: Recreate Valid Android Directory
         run: |
           rm -rf android
           flutter create --project-name studious_waffle --platforms=android --overwrite .
@@ -53,6 +53,9 @@ jobs:
               </application>
           </manifest>
           EOF
+
+      - name: Restore original lib folder
+        run: git checkout HEAD -- lib/
 
       - name: Install Dependencies
         run: flutter pub get
