@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'watch_party_screen.dart';
+import 'analytics_screen.dart';
+import 'vault_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -54,7 +57,10 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
     final List<Widget> pages = [
       const VideoFeedScreen(),
       const UploadStudioScreen(),
-    ];
+      const WatchPartyScreen(), // አዲስ የተጨመረ
+      const AnalyticsScreen(),  // አዲስ የተጨመረ
+      const VaultScreen(),
+     ];
 
     return Scaffold(
       body: pages[_currentIndex],
@@ -74,6 +80,18 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_rounded, size: 30),
             label: 'Studio Upload',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.groups_rounded),
+            label: 'Watch Party',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics_rounded),
+            label: 'Analytics',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.lock_rounded),
+            label: 'Vault',
           ),
         ],
       ),
