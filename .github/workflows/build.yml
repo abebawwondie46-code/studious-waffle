@@ -12,7 +12,7 @@ jobs:
         with:
           flutter-version: '3.x'
 
-      - name: Force recreate Android files cleanly
+      - name: Recreate Android directory properly
         run: |
           rm -rf android
           flutter create --platforms=android --org com.example .
@@ -28,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: build/app/outputs/**/app-debug.apk
