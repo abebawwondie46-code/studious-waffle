@@ -199,7 +199,7 @@ class _VaultScreenState extends State<VaultScreen> {
               SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text("Vault Unlocked", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     Text("እነዚህ ቪዲዮዎች ለእርስዎ ብቻ የሚታዩ ናቸው።", style: TextStyle(color: Colors.grey, fontSize: 12)),
