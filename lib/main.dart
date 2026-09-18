@@ -75,15 +75,15 @@ class _MainStudioScreenState extends State<MainStudioScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.style_rounded),
-            label: '5-Min Feed',
+            label: 'Feed',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_rounded, size: 30),
-            label: 'Studio Upload',
+            label: 'Upload',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.groups_rounded),
-            label: 'Watch Party',
+            label: 'Party',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics_rounded),
