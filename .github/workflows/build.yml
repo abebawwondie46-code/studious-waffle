@@ -12,9 +12,6 @@ jobs:
         with:
           flutter-version: '3.x'
 
-      - name: Generate Android project files
-        run: flutter create --platforms=android .
-
       - run: echo "android.enableR8.fullMode=false" >> android/gradle.properties
 
       - run: flutter pub get
