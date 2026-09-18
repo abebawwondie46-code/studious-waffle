@@ -10,7 +10,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.22.0'
 
       - name: Recreate Android directory properly
         run: |
@@ -28,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: build/app/outputs/apk/debug/app-debug.apk
+          path: build/app/outputs/flutter-apk/*.apk
