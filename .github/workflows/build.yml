@@ -16,6 +16,8 @@ jobs:
 
       - name: Recreate Android directory cleanly
         run: |
+          flutter config --no-analytics
+          flutter config --no-cli-animations
           rm -rf android
           flutter create --platforms=android --suppress-analytics --overwrite .
           echo "android.enableR8.fullMode=false" >> android/gradle.properties
