@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'dartdart:math';
 
-// የነቁ የሩም ኮዶችን እና መልእክቶችን መያዣ (Active Rooms & Messages)
 final Map<String, List<Map<String, String>>> _activeRooms = {};
 String? _activeRoomCode;
 
@@ -20,7 +19,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final ScrollController _chatScrollController = ScrollController();
 
   bool _isPlaying = true;
-  String _currentVideoTitle = 'Sample Live Stream Video';
+  String _currentContentTitle = 'Sample Live Stream Video';
+  String _contentType = 'video'; // 'video' ወይም 'document'
 
   void _showCreateRoomDialog() {
     _createRoomController.clear();
@@ -71,7 +71,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
               setState(() {
                 _activeRoomCode = finalCode;
-                // አዲሱን ሩም በሲስተሙ ውስጥ መመዝገብ
                 _activeRooms[finalCode] = [
                   {
                     'id': '1',
@@ -101,7 +100,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       return;
     }
 
-    // የተገባው ኮድ በትክክል መፈጠሩን ማረጋገጥ (Validation)
     if (_activeRooms.containsKey(inputCode)) {
       setState(() {
         _activeRoomCode = inputCode;
@@ -127,42 +125,94 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  void _showSelectVideoDialog() {
+  void _showSelectMediaDialog() {
     _videoUrlController.clear();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E2C),
-        title: const Text('Select Video Source', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.folder_outlined, color: Colors.pinkAccent),
-              title: const Text('Choose Local Video File', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() {
-                  _currentVideoTitle = 'Local Video Selected';
-                });
-              },
-            ),
-            const Divider(color: Colors.white24),
-            TextField(
-              controller: _videoUrlController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Paste Video URL or YouTube link...',
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                filled: true,
-                fillColor: const Color(0xFF0D0F14),
-                border: OutlineInputBorder(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Select Video or Document',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Choose media to watch or study together:',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              
+              // 1. Choose Local Video
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D0F14),
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.video_file_outlined, color: Colors.pinkAccent),
+                  title: const Text('Choose Local Video', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  subtitle: const Text('From your phone storage', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _contentType = 'video';
+                      _currentContentTitle = 'Local Video Selected';
+                    });
+                  },
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+
+              // 2. Choose Document / PDF for Study
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D0F14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.menu_book_outlined, color: Colors.amberAccent),
+                  title: const Text('Upload Document / PDF', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  subtitle: const Text('Study and discuss with friends', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _contentType = 'document';
+                      _currentContentTitle = 'Study Document Selected';
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              const Text(
+                'Or Paste Online Link:',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+
+              // 3. Online Link Input
+              TextField(
+                controller: _videoUrlController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Paste Video URL, YouTube, or PDF link...',
+                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                  filled: true,
+                  fillColor: const Color(0xFF0D0F14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -171,15 +221,20 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (_videoUrlController.text.trim().isNotEmpty) {
+              final link = _videoUrlController.text.trim();
+              if (link.isNotEmpty) {
                 setState(() {
-                  _currentVideoTitle = _videoUrlController.text.trim();
+                  _contentType = link.endsWith('.pdf') ? 'document' : 'video';
+                  _currentContentTitle = link;
                 });
               }
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
-            child: const Text('Load Video', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pinkAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Load Media', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -265,8 +320,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ? [
                 IconButton(
                   icon: const Icon(Icons.video_library, color: Colors.amberAccent),
-                  onPressed: _showSelectVideoDialog,
-                  tooltip: 'Select Video',
+                  onPressed: _showSelectMediaDialog,
+                  tooltip: 'Select Content',
                 ),
                 IconButton(
                   icon: const Icon(Icons.exit_to_app, color: Colors.pinkAccent),
@@ -305,7 +360,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Watch videos together in sync and chat with friends in real-time.',
+            'Watch videos or study documents together in sync with friends in real-time.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
@@ -389,7 +444,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
     return Column(
       children: [
-        // Video Viewport Area
+        // Media Viewport Area (Video / Document)
         Container(
           width: double.infinity,
           height: 220,
@@ -397,38 +452,56 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    iconSize: 56,
-                    icon: Icon(
-                      _isPlaying
-                          ? Icons.pause_circle_filled
-                          : Icons.play_circle_fill,
-                      color: Colors.pinkAccent,
+              _contentType == 'document'
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.picture_as_pdf, size: 56, color: Colors.amberAccent),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Studying Document: $_currentContentTitle',
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          iconSize: 56,
+                          icon: Icon(
+                            _isPlaying
+                                ? Icons.pause_circle_filled
+                                : Icons.play_circle_fill,
+                            color: Colors.pinkAccent,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPlaying = !_isPlaying;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            _isPlaying
+                                ? 'Playing: $_currentContentTitle'
+                                : 'Video Paused',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ),
+                      ],
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _isPlaying = !_isPlaying;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      _isPlaying
-                          ? 'Playing: $_currentVideoTitle'
-                          : 'Video Paused',
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
               Positioned(
                 top: 12,
                 right: 12,
@@ -475,9 +548,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ],
               ),
               InkWell(
-                onTap: _showSelectVideoDialog,
+                onTap: _showSelectMediaDialog,
                 child: const Text(
-                  '+ Change Video',
+                  '+ Media / Doc',
                   style: TextStyle(color: Colors.pinkAccent, fontSize: 12),
                 ),
               ),
