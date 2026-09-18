@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: true
+      FLUTTER_SUPPRESS_ANALYTICS: true
     steps:
       - uses: actions/checkout@v4
 
@@ -14,11 +15,15 @@ jobs:
         with:
           flutter-version: '3.22.0'
 
-      - name: Force Fix Android Configs & ProGuard
+      - name: Recreate Valid Android Directory Structure
         run: |
-          mkdir -p android/app/src/main
+          rm -rf android
+          flutter create --platforms=android --suppress-analytics --overwrite .
+          echo "android.enableR8.fullMode=false" >> android/gradle.properties
+          echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
           
-          # Fix Manifest for Flutter v2 Embedding
+          # Force v2 embedding in AndroidManifest
+          mkdir -p android/app/src/main
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <application
@@ -46,28 +51,6 @@ jobs:
                       android:value="2" />
               </application>
           </manifest>
-          EOF
-
-          # Bypass ProGuard & R8 Old Syntax Check
-          echo "android.enableR8.fullMode=false" >> android/gradle.properties
-          echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
-          
-          cat << 'EOF' > android/build.gradle
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          subprojects {
-              afterEvaluate { project ->
-                  if (project.hasProperty("android")) { 
-                      project.android { 
-                          compileSdkVersion 36 
-                      } 
-                  }
-              }
-          }
           EOF
 
       - name: Install Dependencies
