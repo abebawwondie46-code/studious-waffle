@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
+// መልእክቶች ከሩም ወጥተህ ስትመለስ እንዳይጠፉ በState ደረጃ መቀመጥ አለባቸው
+List<Map<String, String>> _globalMessages = [];
+String? _activeRoomCode;
+
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
 
@@ -13,33 +17,38 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
-  String? _activeRoomCode;
   bool _isPlaying = true;
-
-  final List<Map<String, String>> _messages = [
-    {'sender': 'Abebe', 'text': 'Welcome to the watch party!'},
-    {'sender': 'Sara', 'text': 'This video quality looks amazing 🔥'},
-  ];
 
   void _createRoom() {
     final randomCode = (100000 + Random().nextInt(900000)).toString();
     setState(() {
       _activeRoomCode = randomCode;
+      _globalMessages = [
+        {'id': '1', 'sender': 'System', 'text': 'Room created! Share code: $randomCode'},
+      ];
     });
   }
 
   void _joinRoom() {
-    if (_roomCodeController.text.trim().isNotEmpty) {
+    final inputCode = _roomCodeController.text.trim();
+    if (inputCode.isNotEmpty) {
       setState(() {
-        _activeRoomCode = _roomCodeController.text.trim();
+        _activeRoomCode = inputCode;
+        if (_globalMessages.isEmpty) {
+          _globalMessages.add({
+            'id': DateTime.now().millisecondsSinceEpoch.toString(),
+            'sender': 'System',
+            'text': 'Joined Room: $inputCode',
+          });
+        }
       });
+      _roomCodeController.clear();
     }
   }
 
   void _leaveRoom() {
     setState(() {
       _activeRoomCode = null;
-      _messages.clear();
     });
   }
 
@@ -47,19 +56,54 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     final text = _messageController.text.trim();
     if (text.isNotEmpty) {
       setState(() {
-        _messages.add({'sender': 'You', 'text': text});
+        _globalMessages.add({
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+          'sender': 'You',
+          'text': text,
+        });
         _messageController.clear();
       });
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_chatScrollController.hasClients) {
-          _chatScrollController.animateTo(
-            _chatScrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+      _scrollToBottom();
     }
+  }
+
+  void _deleteMessage(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: const Text('Delete Message', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to delete this message?',
+            style: TextStyle(color: Colors.grey)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _globalMessages.removeAt(index);
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
@@ -154,7 +198,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           TextField(
             controller: _roomCodeController,
             style: const TextStyle(color: Colors.white),
-            keyboardType: TextInputType.number,
+            keyboardType: TextInputType.text,
             decoration: InputDecoration(
               hintText: 'Enter Room Code...',
               hintStyle: const TextStyle(color: Colors.white38),
@@ -279,43 +323,65 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           child: ListView.builder(
             controller: _chatScrollController,
             padding: const EdgeInsets.all(16),
-            itemCount: _messages.length,
+            itemCount: _globalMessages.length,
             itemBuilder: (context, index) {
-              final msg = _messages[index];
+              final msg = _globalMessages[index];
               final isMe = msg['sender'] == 'You';
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: isMe
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      msg['sender']!,
-                      style: TextStyle(
-                        color: isMe ? Colors.pinkAccent : Colors.amberAccent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
+              final isSystem = msg['sender'] == 'System';
+
+              if (isSystem) {
+                return Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white10,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 2),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isMe
-                            ? Colors.pinkAccent.withOpacity(0.2)
-                            : const Color(0xFF1E1E2C),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        msg['text']!,
-                        style: const TextStyle(color: Colors.white),
-                      ),
+                    child: Text(
+                      msg['text']!,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
-                  ],
+                  ),
+                );
+              }
+
+              return GestureDetector(
+                onLongPress: () => _deleteMessage(index),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: isMe
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        msg['sender']!,
+                        style: TextStyle(
+                          color: isMe ? Colors.pinkAccent : Colors.amberAccent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isMe
+                              ? Colors.pinkAccent.withOpacity(0.2)
+                              : const Color(0xFF1E1E2C),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          msg['text']!,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -332,11 +398,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 child: TextField(
                   controller: _messageController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: 'Type a message...',
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: TextStyle(color: Colors.white38),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8),
                   ),
                   onSubmitted: (_) => _sendMessage(),
                 ),
