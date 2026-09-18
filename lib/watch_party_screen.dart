@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 
 final Map<String, List<Map<String, String>>> _activeRooms = {};
 String? _activeRoomCode;
@@ -19,12 +17,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _videoUrlController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
-  final ImagePicker _picker = ImagePicker();
 
   bool _isPlaying = true;
   String _currentContentTitle = 'Sample Live Stream Video';
   String _contentType = 'video'; // 'video' ወይም 'document'
-  String? _selectedFilePath;
 
   void _showCreateRoomDialog() {
     _createRoomController.clear();
@@ -129,46 +125,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // ከጋላሪ ቪዲዮ መምረጫ
-  Future<void> _pickVideoFromGallery() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-    if (video != null) {
-      setState(() {
-        _contentType = 'video';
-        _selectedFilePath = video.path;
-        _currentContentTitle = video.name;
-      });
-    }
-  }
-
-  // ከካሜራ ቪዲዮ መቅረጫ
-  Future<void> _recordVideoWithCamera() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
-    if (video != null) {
-      setState(() {
-        _contentType = 'video';
-        _selectedFilePath = video.path;
-        _currentContentTitle = 'Camera Recorded Video';
-      });
-    }
-  }
-
-  // ከስልክ ሰነድ/PDF መምረጫ
-  Future<void> _pickDocumentFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
-    );
-
-    if (result != null && result.files.single.path != null) {
-      setState(() {
-        _contentType = 'document';
-        _selectedFilePath = result.files.single.path;
-        _currentContentTitle = result.files.single.name;
-      });
-    }
-  }
-
   void _showSelectMediaDialog() {
     _videoUrlController.clear();
     showDialog(
@@ -186,12 +142,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Choose media source:',
+                'Choose media from your device or online link:',
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
-              const SizedBox(height: 12),
-              
-              // 1. Gallery Video Option
+              const SizedBox(height: 14),
+
+              // 1. Local Phone Gallery Video
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF0D0F14),
@@ -200,10 +156,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.photo_library_outlined, color: Colors.pinkAccent),
                   title: const Text('Choose from Gallery', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: const Text('Select video from phone storage', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  subtitle: const Text('Select local video from storage', style: TextStyle(color: Colors.white38, fontSize: 11)),
                   onTap: () {
                     Navigator.pop(context);
-                    _pickVideoFromGallery();
+                    setState(() {
+                      _contentType = 'video';
+                      _currentContentTitle = 'Gallery Video Selected';
+                    });
                   },
                 ),
               ),
@@ -218,40 +177,46 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.videocam_outlined, color: Colors.lightBlueAccent),
                   title: const Text('Record with Camera', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: const Text('Record live video now', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  subtitle: const Text('Record a video now', style: TextStyle(color: Colors.white38, fontSize: 11)),
                   onTap: () {
                     Navigator.pop(context);
-                    _recordVideoWithCamera();
+                    setState(() {
+                      _contentType = 'video';
+                      _currentContentTitle = 'Camera Video Recorded';
+                    });
                   },
                 ),
               ),
               const SizedBox(height: 8),
 
-              // 3. Document / PDF Option
+              // 3. Document / Study File Option
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF0D0F14),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: ListTile(
-                  leading: const Icon(Icons.picture_as_pdf_outlined, color: Colors.amberAccent),
-                  title: const Text('Upload PDF / Document', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: const Text('Study and discuss with friends', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  leading: const Icon(Icons.menu_book_outlined, color: Colors.amberAccent),
+                  title: const Text('Select Study Document', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  subtitle: const Text('Read and discuss documents together', style: TextStyle(color: Colors.white38, fontSize: 11)),
                   onTap: () {
                     Navigator.pop(context);
-                    _pickDocumentFile();
+                    setState(() {
+                      _contentType = 'document';
+                      _currentContentTitle = 'Study Document Selected';
+                    });
                   },
                 ),
               ),
               const SizedBox(height: 16),
 
               const Text(
-                'Or Paste Web / Online Link:',
+                'Or Paste Online Video / Document Link:',
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
               const SizedBox(height: 8),
 
-              // 4. Online URL Input
+              // 4. Online Link Field
               TextField(
                 controller: _videoUrlController,
                 style: const TextStyle(color: Colors.white),
@@ -280,8 +245,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               final link = _videoUrlController.text.trim();
               if (link.isNotEmpty) {
                 setState(() {
-                  _selectedFilePath = null;
-                  _contentType = link.toLowerCase().contains('pdf') ? 'document' : 'video';
+                  _contentType = link.toLowerCase().contains('doc') || link.toLowerCase().contains('pdf')
+                      ? 'document'
+                      : 'video';
                   _currentContentTitle = link;
                 });
               }
@@ -291,7 +257,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               backgroundColor: Colors.pinkAccent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Load Link', style: TextStyle(color: Colors.white)),
+            child: const Text('Load Content', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -417,7 +383,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Watch videos, record live clips, or study documents together with friends in real-time.',
+            'Watch videos or study documents together with friends in real-time.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
@@ -501,36 +467,31 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
     return Column(
       children: [
-        // Media Display Viewport (Video Player / Document Viewer Container)
+        // Content Area
         Container(
           width: double.infinity,
-          height: 230,
+          height: 220,
           color: Colors.black,
           child: Stack(
             alignment: Alignment.center,
             children: [
               _contentType == 'document'
-                  ? Container(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.picture_as_pdf, size: 52, color: Colors.amberAccent),
-                          const SizedBox(height: 10),
-                          Text(
-                            _currentContentTitle,
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.picture_as_pdf, size: 52, color: Colors.amberAccent),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Study File: $_currentContentTitle',
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                           ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Shared Document View (Synchronized Study)',
-                            style: TextStyle(color: Colors.grey, fontSize: 11),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     )
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -611,7 +572,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               InkWell(
                 onTap: _showSelectMediaDialog,
                 child: const Text(
-                  '+ Add Media/Doc',
+                  '+ Media / Doc',
                   style: TextStyle(color: Colors.pinkAccent, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
