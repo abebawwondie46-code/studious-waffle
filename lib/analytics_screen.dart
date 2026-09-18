@@ -22,7 +22,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Timeframe Selector
             Row(
@@ -90,7 +90,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     height: 150,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         _buildBar("ሰኞ", 0.4),
                         _buildBar("ማክሰኞ", 0.7),
@@ -161,7 +161,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildBar(String day, String heightFactor) {
+  Widget _buildBar(String day, double heightFactor) {
     double height = double.parse(heightFactor.toString());
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
