@@ -20,7 +20,7 @@ jobs:
       - name: Recreate Valid Android Directory Structure
         run: |
           rm -rf android
-          flutter create --platforms=android --overwrite .
+          flutter create --project-name studious_waffle --platforms=android --overwrite .
           echo "android.enableR8.fullMode=false" >> android/gradle.properties
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
           
