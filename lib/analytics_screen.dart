@@ -79,7 +79,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
-                crossAxisAlignment: CrossAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     "የዕይታዎች እድገት (Views Trend)",
@@ -150,7 +150,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ],
           ),
           Column(
-            crossAxisAlignment: CrossAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
               Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
