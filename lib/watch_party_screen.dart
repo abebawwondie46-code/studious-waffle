@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 final Map<String, List<Map<String, String>>> _activeRooms = {};
 String? _activeRoomCode;
@@ -241,28 +242,31 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () {
-              final link = _videoUrlController.text.trim();
-              if (link.isNotEmpty) {
-                setState(() {
-                  _contentType = link.toLowerCase().contains('doc') || link.toLowerCase().contains('pdf')
-                      ? 'document'
-                      : 'video';
-                  _currentContentTitle = link;
-                });
-              }
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.pinkAccent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Load Content', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
+          ElevatedButton(
+  onPressed: () {
+    final link = _videoUrlController.text.trim();
+    if (link.isNotEmpty) {
+      Navigator.pop(context);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OnlineVideoPlayerScreen(videoUrl: link),
+        ),
+      );
+    }
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.pinkAccent,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+    ),
+  ),
+    child: const Text('Load Content'),
+    )
+   ],
+  ),
+ );
+}
 
   void _leaveRoom() {
     setState(() {
@@ -677,6 +681,36 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+class OnlineVideoPlayerScreen extends StatefulWidget {
+  final String videoUrl;
+
+  const OnlineVideoPlayerScreen({super.key, required this.videoUrl});
+
+  @override
+  State<OnlineVideoPlayerScreen> createState() => _OnlineVideoPlayerScreenState();
+}
+
+class _OnlineVideoPlayerScreenState extends State<OnlineVideoPlayerScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Watch Party Player'),
+        backgroundColor: Colors.black,
+      ),
+      body: InAppWebView(
+        initialUrlRequest: URLRequest(
+          url: WebUri(widget.videoUrl),
+        ),
+        initialSettings: InAppWebViewSettings(
+          allowsInlineMediaPlayback: true,
+          mediaPlaybackRequiresUserGesture: false,
+          javaScriptEnabled: true,
+        ),
+      ),
     );
   }
 }
