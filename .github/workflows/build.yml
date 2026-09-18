@@ -12,8 +12,12 @@ jobs:
         with:
           flutter-version: '3.x'
 
-      - name: Generate Android project files
-        run: flutter create --platforms=android .
+      - name: Recreate Android Project with SDK 36
+        run: |
+          flutter create --platforms=android .
+          echo "android.enableR8.fullMode=false" >> android/gradle.properties
+          sed -i 's/compileSdk = .*/compileSdk = 36/' android/app/build.gradle || true
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 36/' android/app/build.gradle || true
 
       - run: flutter pub get
 
