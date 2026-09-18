@@ -12,9 +12,12 @@ jobs:
         with:
           flutter-version: '3.x'
 
-      - run: echo "android.enableR8.fullMode=false" >> android/gradle.properties
-
       - run: flutter pub get
+
+      - name: Generate Android project files
+        run: flutter create --platforms=android . --offline
+
+      - run: echo "android.enableR8.fullMode=false" >> android/gradle.properties
 
       - run: flutter build apk --debug
 
