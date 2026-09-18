@@ -239,7 +239,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Column(
-                    crossAxisAlignment: isMe ? CrossAlignment.end : CrossAlignment.start,
+                   crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                     children: [
                       Text(
                         msg['user']!,
