@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
-// መልእክቶች ከሩም ወጥተህ ስትመለስ እንዳይጠፉ በState ደረጃ መቀመጥ አለባቸው
 List<Map<String, String>> _globalMessages = [];
 String? _activeRoomCode;
 
@@ -14,19 +13,81 @@ class WatchPartyScreen extends StatefulWidget {
 
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _roomCodeController = TextEditingController();
+  final TextEditingController _createRoomController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
   bool _isPlaying = true;
 
-  void _createRoom() {
-    final randomCode = (100000 + Random().nextInt(900000)).toString();
-    setState(() {
-      _activeRoomCode = randomCode;
-      _globalMessages = [
-        {'id': '1', 'sender': 'System', 'text': 'Room created! Share code: $randomCode'},
-      ];
-    });
+  void _showCreateRoomDialog() {
+    _createRoomController.clear();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: const Text(
+          'Create a Room',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter a room name or code:',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _createRoomController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Room Name or Code (e.g. Abebe, 1234)',
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                filled: true,
+                fillColor: const Color(0xFF0D0F14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final customInput = _createRoomController.text.trim();
+              // ተጠቃሚው ካልጻፈ በራሱ 4 አሃዝ ቁጥር (1000-9999) ያመነጫል
+              final finalCode = customInput.isNotEmpty
+                  ? customInput
+                  : (1000 + Random().nextInt(9000)).toString();
+
+              setState(() {
+                _activeRoomCode = finalCode;
+                _globalMessages = [
+                  {
+                    'id': '1',
+                    'sender': 'System',
+                    'text': 'Room created! Code/Name: $finalCode'
+                  },
+                ];
+              });
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pinkAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _joinRoom() {
@@ -164,7 +225,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
           const SizedBox(height: 36),
           ElevatedButton.icon(
-            onPressed: _createRoom,
+            onPressed: _showCreateRoomDialog,
             icon: const Icon(Icons.add_circle_outline),
             label: const Text('Create Room'),
             style: ElevatedButton.styleFrom(
@@ -200,7 +261,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             style: const TextStyle(color: Colors.white),
             keyboardType: TextInputType.text,
             decoration: InputDecoration(
-              hintText: 'Enter Room Code...',
+              hintText: 'Enter Room Code or Name...',
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true,
               fillColor: const Color(0xFF1E1E2C),
@@ -308,7 +369,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   color: Colors.pinkAccent, size: 18),
               const SizedBox(width: 8),
               Text(
-                'Live Chat (Room Code: $_activeRoomCode)',
+                'Live Chat (Room: $_activeRoomCode)',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
