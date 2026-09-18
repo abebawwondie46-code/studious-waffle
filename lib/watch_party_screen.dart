@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package0:flutter/material.dart';
 import 'dart:math';
 
-List<Map<String, String>> _globalMessages = [];
+// የነቁ የሩም ኮዶችን እና መልእክቶችን መያዣ (Active Rooms & Messages)
+final Map<String, List<Map<String, String>>> _activeRooms = {};
 String? _activeRoomCode;
 
 class WatchPartyScreen extends StatefulWidget {
@@ -14,10 +15,12 @@ class WatchPartyScreen extends StatefulWidget {
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _roomCodeController = TextEditingController();
   final TextEditingController _createRoomController = TextEditingController();
+  final TextEditingController _videoUrlController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
   bool _isPlaying = true;
+  String _currentVideoTitle = 'Sample Live Stream Video';
 
   void _showCreateRoomDialog() {
     _createRoomController.clear();
@@ -31,7 +34,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAlignment.start,
           children: [
             const Text(
               'Enter a room name or code:',
@@ -62,18 +65,18 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ElevatedButton(
             onPressed: () {
               final customInput = _createRoomController.text.trim();
-              // ተጠቃሚው ካልጻፈ በራሱ 4 አሃዝ ቁጥር (1000-9999) ያመነጫል
               final finalCode = customInput.isNotEmpty
                   ? customInput
                   : (1000 + Random().nextInt(9000)).toString();
 
               setState(() {
                 _activeRoomCode = finalCode;
-                _globalMessages = [
+                // አዲሱን ሩም በሲስተሙ ውስጥ መመዝገብ
+                _activeRooms[finalCode] = [
                   {
                     'id': '1',
                     'sender': 'System',
-                    'text': 'Room created! Code/Name: $finalCode'
+                    'text': 'Room created! Share Code/Name: $finalCode'
                   },
                 ];
               });
@@ -92,19 +95,95 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   void _joinRoom() {
     final inputCode = _roomCodeController.text.trim();
-    if (inputCode.isNotEmpty) {
+    
+    if (inputCode.isEmpty) {
+      _showErrorSnackBar('Please enter a room code or name.');
+      return;
+    }
+
+    // የተገባው ኮድ በትክክል መፈጠሩን ማረጋገጥ (Validation)
+    if (_activeRooms.containsKey(inputCode)) {
       setState(() {
         _activeRoomCode = inputCode;
-        if (_globalMessages.isEmpty) {
-          _globalMessages.add({
-            'id': DateTime.now().millisecondsSinceEpoch.toString(),
-            'sender': 'System',
-            'text': 'Joined Room: $inputCode',
-          });
-        }
+        _activeRooms[inputCode]!.add({
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+          'sender': 'System',
+          'text': 'A user joined Room: $inputCode',
+        });
       });
       _roomCodeController.clear();
+    } else {
+      _showErrorSnackBar('Invalid Room Code! Please enter a valid room code.');
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showSelectVideoDialog() {
+    _videoUrlController.clear();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: const Text('Select Video Source', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_outlined, color: Colors.pinkAccent),
+              title: const Text('Choose Local Video File', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _currentVideoTitle = 'Local Video Selected';
+                });
+              },
+            ),
+            const Divider(color: Colors.white24),
+            TextField(
+              controller: _videoUrlController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Paste Video URL or YouTube link...',
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                filled: true,
+                fillColor: const Color(0xFF0D0F14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_videoUrlController.text.trim().isNotEmpty) {
+                setState(() {
+                  _currentVideoTitle = _videoUrlController.text.trim();
+                });
+              }
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
+            child: const Text('Load Video', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _leaveRoom() {
@@ -115,9 +194,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   void _sendMessage() {
     final text = _messageController.text.trim();
-    if (text.isNotEmpty) {
+    if (text.isNotEmpty && _activeRoomCode != null) {
       setState(() {
-        _globalMessages.add({
+        _activeRooms[_activeRoomCode]!.add({
           'id': DateTime.now().millisecondsSinceEpoch.toString(),
           'sender': 'You',
           'text': text,
@@ -143,9 +222,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
           TextButton(
             onPressed: () {
-              setState(() {
-                _globalMessages.removeAt(index);
-              });
+              if (_activeRoomCode != null) {
+                setState(() {
+                  _activeRooms[_activeRoomCode]!.removeAt(index);
+                });
+              }
               Navigator.pop(context);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
@@ -182,6 +263,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         elevation: 0,
         actions: _activeRoomCode != null
             ? [
+                IconButton(
+                  icon: const Icon(Icons.video_library, color: Colors.amberAccent),
+                  onPressed: _showSelectVideoDialog,
+                  tooltip: 'Select Video',
+                ),
                 IconButton(
                   icon: const Icon(Icons.exit_to_app, color: Colors.pinkAccent),
                   onPressed: _leaveRoom,
@@ -299,6 +385,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   Widget _buildActiveRoomUI() {
+    final messages = _activeRooms[_activeRoomCode] ?? [];
+
     return Column(
       children: [
         // Video Viewport Area
@@ -327,11 +415,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _isPlaying
-                        ? 'Live Synced Video Playing...'
-                        : 'Video Paused',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      _isPlaying
+                          ? 'Playing: $_currentVideoTitle'
+                          : 'Video Paused',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
                   ),
                 ],
               ),
@@ -364,15 +458,27 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           color: const Color(0xFF1E1E2C),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.chat_bubble_outline,
-                  color: Colors.pinkAccent, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                'Live Chat (Room: $_activeRoomCode)',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+              Row(
+                children: [
+                  const Icon(Icons.chat_bubble_outline,
+                      color: Colors.pinkAccent, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Live Chat (Room: $_activeRoomCode)',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: _showSelectVideoDialog,
+                child: const Text(
+                  '+ Change Video',
+                  style: TextStyle(color: Colors.pinkAccent, fontSize: 12),
                 ),
               ),
             ],
@@ -384,9 +490,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           child: ListView.builder(
             controller: _chatScrollController,
             padding: const EdgeInsets.all(16),
-            itemCount: _globalMessages.length,
+            itemCount: messages.length,
             itemBuilder: (context, index) {
-              final msg = _globalMessages[index];
+              final msg = messages[index];
               final isMe = msg['sender'] == 'You';
               final isSystem = msg['sender'] == 'System';
 
