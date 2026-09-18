@@ -142,8 +142,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               Expanded(child: Divider(color: Colors.white24)),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12),
-                style: TextStyle(color: Colors.grey),
-                child: Text('OR'),
+                child: Text(
+                  'OR',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
               Expanded(child: Divider(color: Colors.white24)),
             ],
