@@ -1,4 +1,4 @@
-import 'package0:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:math';
 
 // የነቁ የሩም ኮዶችን እና መልእክቶችን መያዣ (Active Rooms & Messages)
@@ -34,7 +34,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Enter a room name or code:',
@@ -95,7 +95,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   void _joinRoom() {
     final inputCode = _roomCodeController.text.trim();
-    
+
     if (inputCode.isEmpty) {
       _showErrorSnackBar('Please enter a room code or name.');
       return;
