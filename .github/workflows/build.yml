@@ -12,15 +12,20 @@ jobs:
         with:
           flutter-version: '3.x'
 
-      - name: Generate Android project files
-        run: flutter create --platforms=android .
-
-      - run: flutter pub get
+      - name: Recreate Android directory safely
+        run: |
+          rm -rf android
+          flutter create --project-name kuanyngne --platforms=android --overwrite .
 
       - name: Set Android SDK Version to 34
         run: |
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
           sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
+
+      - name: Restore original code
+        run: git checkout HEAD -- lib/
+
+      - run: flutter pub get
 
       - run: flutter build apk --debug
 
