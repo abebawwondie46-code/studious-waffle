@@ -1,239 +1,241 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:video_player/video_player.dart';
 
-// በነፃ ከ console.agora.io የሚያገኘውን App ID እዚህ ያስገባሉ (ለሙከራ ይህ ይሰራል)
-const String appId = "YOUR_AGORA_APP_ID"; 
-
-class WatchPartyScreen extends StatefulWidget {
-  const WatchPartyScreen({super.key});
+class WatchPartyRoomScreen extends StatefulWidget {
+  final String roomId;
+  
+  const WatchPartyRoomScreen({super.key, required this.roomId});
 
   @override
-  State<WatchPartyScreen> createState() => _WatchPartyScreenState();
+  State<WatchPartyRoomScreen> createState() => _WatchPartyRoomScreenState();
 }
 
-class _WatchPartyScreenState extends State<WatchPartyScreen> {
-  final TextEditingController _codeController = TextEditingController();
-  String? _currentRoomCode;
-  int? _remoteUid;
-  bool _localUserJoined = false;
-  bool _isMuted = false;
-  bool _isVideoDisabled = false;
-  late RtcEngine _engine;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  Future<void> initAgora(String channelName) async {
-    // Request Camera & Microphone Permissions
-    await [Permission.microphone, Permission.camera].request();
-
-    // Create RtcEngine
-    _engine = createAgoraRtcEngine();
-    await _engine.initialize(const RtcEngineContext(
-      appId: appId,
-      channelProfile: ChannelProfileType.channelProfileCommunication,
-    ));
-
-    _engine.registerEventHandler(
-      RtcEngineEventHandler(
-        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-          setState(() {
-            _localUserJoined = true;
-          });
-        },
-        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
-          setState(() {
-            _remoteUid = remoteUid;
-          });
-        },
-        onUserOffline: (RtcConnection connection, int remoteUid, UserOfflineReasonType reason) {
-          setState(() {
-            _remoteUid = null;
-          });
-        },
-      ),
-    );
-
-    await _engine.enableVideo();
-    await _engine.startPreview();
-
-    await _engine.joinChannel(
-      token: '',
-      channelId: channelName,
-      uid: 0,
-      options: const ChannelMediaOptions(),
-    );
-  }
-
-  String _generateRoomCode() {
-    final random = Random();
-    final code = 1000 + random.nextInt(9000);
-    return "STD-$code";
-  }
-
-  void _createRoom() {
-    final code = _generateRoomCode();
-    setState(() {
-      _currentRoomCode = code;
-    });
-    initAgora(code);
-  }
-
-  void _joinRoom() {
-    final code = _codeController.text.trim();
-    if (code.isNotEmpty) {
-      setState(() {
-        _currentRoomCode = code;
-      });
-      initAgora(code);
-    }
-  }
-
-  void _leaveRoom() async {
-    await _engine.leaveChannel();
-    await _engine.release();
-    setState(() {
-      _localUserJoined = false;
-      _remoteUid = null;
-      _currentRoomCode = null;
-    });
-  }
+class _WatchPartyRoomScreenState extends State<WatchPartyRoomScreen> {
+  final TextEditingController _messageController = TextEditingController();
+  final List<Map<String, String>> _messages = [];
+  
+  VideoPlayerController? _videoController;
+  bool _isInitialized = false;
+  String _selectedMediaTitle = "No Video Loaded";
 
   @override
   void dispose() {
-    _codeController.dispose();
+    _videoController?.dispose();
+    _messageController.dispose();
     super.dispose();
+  }
+
+  void _loadVideo(String url) {
+    _videoController?.dispose();
+    setState(() {
+      _isInitialized = false;
+      _selectedMediaTitle = "Loading Video...";
+    });
+
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
+      ..initialize().then((_) {
+        setState(() {
+          _isInitialized = true;
+          _selectedMediaTitle = "Playing Video";
+          _videoController!.play();
+        });
+      }).catchError((error) {
+        setState(() {
+          _selectedMediaTitle = "Error loading video";
+        });
+      });
+  }
+
+  void _sendMessage() {
+    if (_messageController.text.trim().isNotEmpty) {
+      setState(() {
+        _messages.add({
+          'sender': 'You',
+          'text': _messageController.text.trim(),
+        });
+        _messageController.clear();
+      });
+    }
+  }
+
+  void _showLinkInputDialog() {
+    final TextEditingController linkController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: const Text("Paste Video Link", style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: linkController,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: "https://... (.mp4)",
+            hintStyle: TextStyle(color: Colors.grey),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (linkController.text.isNotEmpty) {
+                _loadVideo(linkController.text.trim());
+              }
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
+            child: const Text("Load Video"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
-        title: Text(_currentRoomCode == null ? 'Live Study Room' : 'Room: $_currentRoomCode'),
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: Text("Watch Party (Room: ${widget.roomId})"),
         actions: [
-          if (_localUserJoined)
-            IconButton(
-              icon: const Icon(Icons.call_end, color: Colors.red),
-              onPressed: _leaveRoom,
-            )
+          IconButton(
+            icon: const Icon(Icons.link, color: Colors.pinkAccent),
+            onPressed: _showLinkInputDialog,
+          ),
         ],
       ),
-      body: _currentRoomCode == null ? _buildJoinLobby() : _buildVideoRoom(),
-    );
-  }
-
-  Widget _buildJoinLobby() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
         children: [
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-              backgroundColor: Colors.blueAccent,
-            ),
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text('አዲስ የጥናት ሩም ክፈት (Create Room)', style: TextStyle(color: Colors.white, fontSize: 16)),
-            onPressed: _createRoom,
-          ),
-          const SizedBox(height: 30),
-          const Row(
-            children: [
-              Expanded(child: Divider()),
-              Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text("ወይም")),
-              Expanded(child: Divider()),
-            ],
-          ),
-          const SizedBox(height: 30),
-          TextField(
-            controller: _codeController,
-            decoration: const InputDecoration(
-              labelText: 'የሩም ኮድ አስገባ (e.g. STD-4821)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 15),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-              backgroundColor: Colors.green,
-            ),
-            icon: const Icon(Icons.login, color: Colors.white),
-            label: const Text('በኮድ ተቀላቀል (Join Room)', style: TextStyle(color: Colors.white, fontSize: 16)),
-            onPressed: _joinRoom,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVideoRoom() {
-    return Column(
-      children: [
-        Expanded(
-          child: Stack(
-            children: [
-              Center(
-                child: _remoteUid != null
-                    ? AgoraVideoView(
-                        controller: VideoViewController.remote(
-                          rtcEngine: _engine,
-                          canvas: VideoCanvas(uid: _remoteUid),
-                          connection: RtcConnection(channelId: _currentRoomCode),
+          // Video Player Area
+          Container(
+            height: 240,
+            width: double.infinity,
+            color: Colors.black,
+            child: _isInitialized && _videoController != null
+                ? Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      AspectRatio(
+                        aspectRatio: _videoController!.value.aspectRatio,
+                        child: VideoPlayer(_videoController!),
+                      ),
+                      VideoProgressIndicator(
+                        _videoController!,
+                        allowScrubbing: true,
+                        colors: const VideoProgressColors(
+                          playedColor: Colors.pinkAccent,
                         ),
-                      )
-                    : const Text(
-                        'ተማሪዎች ኮዱን ተጠቅመው እስኪገቡ በመጠባበቅ ላይ...',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16),
                       ),
-              ),
-              if (_localUserJoined)
-                Align(
-                  alignment: Alignment.topRight,
-                  child: SizedBox(
-                    width: 120,
-                    height: 160,
-                    child: AgoraVideoView(
-                      controller: VideoViewController(
-                        rtcEngine: _engine,
-                        canvas: const VideoCanvas(uid: 0),
+                      IconButton(
+                        iconSize: 50,
+                        icon: Icon(
+                          _videoController!.value.isPlaying
+                              ? Icons.pause_circle_filled
+                              : Icons.play_circle_filled,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _videoController!.value.isPlaying
+                                ? _videoController!.pause()
+                                : _videoController!.play();
+                          });
+                        },
                       ),
+                    ],
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.video_library, size: 50, color: Colors.pinkAccent),
+                        const SizedBox(height: 10),
+                        Text(_selectedMediaTitle, style: const TextStyle(color: Colors.white)),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: _showLinkInputDialog,
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
+                          child: const Text("Paste Video Link"),
+                        )
+                      ],
+                    ),
+                  ),
+          ),
+
+          // Sync Status Bar
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+            color: const Color(0xFF1E1E2C),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Row(
+                  children: [
+                    Icon(Icons.sync, color: Colors.green, size: 18),
+                    SizedBox(width: 6),
+                    Text("LIVE SYNC ACTIVE", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                  ],
+                ),
+                Text("2 Users Connected", style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+          ),
+
+          // Chat Area
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final msg = _messages[index];
+                return Align(
+                  alignment: msg['sender'] == 'You' ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: msg['sender'] == 'You' ? Colors.pinkAccent : const Color(0xFF2C2C3E),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      msg['text'] ?? '',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Chat Input Field
+          Container(
+            padding: const EdgeInsets.all(8.0),
+            color: const Color(0xFF1E1E2C),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: "Type a message...",
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: InputBorder.none,
                     ),
                   ),
                 ),
-            ],
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.pinkAccent),
+                  onPressed: _sendMessage,
+                ),
+              ],
+            ),
           ),
-        ),
-        Container(
-          color: Colors.black12,
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                icon: Icon(_isMuted ? Icons.mic_off : Icons.mic),
-                onPressed: () {
-                  setState(() => _isMuted = !_isMuted);
-                  _engine.muteLocalAudioStream(_isMuted);
-                },
-              ),
-              IconButton(
-                icon: Icon(_isVideoDisabled ? Icons.videocam_off : Icons.videocam),
-                onPressed: () {
-                  setState(() => _isVideoDisabled = !_isVideoDisabled);
-                  _engine.muteLocalVideoStream(_isVideoDisabled);
-                },
-              ),
-            ],
-          ),
-        )
-      ],
+        ],
+      ),
     );
   }
 }
