@@ -376,7 +376,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         if (!isMe) const SizedBox(width: 8),
                         Flexible(
                           child: Column(
-                            crossAxisAlignment: isMe ? CrossAlignment.end : CrossAlignment.start,
+                            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
