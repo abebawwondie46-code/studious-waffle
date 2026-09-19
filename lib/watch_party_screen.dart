@@ -19,7 +19,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _setPasscodeController = TextEditingController();
 
   final List<Map<String, String>> _messages = [
-    {'id': '1', 'sender': 'System', 'text': '🔒 End-to-End Encrypted Private Room Created', 'time': '12:00 PM', 'isGhost': 'false'},
+    {'id': '1', 'sender': 'System', 'text': '🔒 End-to-End Encrypted Private Room Created', 'time': '12:00 PM', 'isGhost': 'false', 'isAudio': 'false'},
   ];
 
   final ImagePicker _picker = ImagePicker();
@@ -29,15 +29,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _showControls = true;
   bool _isFullScreen = false;
   
+  // Audio Recording States
+  bool _isRecordingAudio = false;
+  int _audioRecordDuration = 0;
+  Timer? _audioTimer;
+
   // Security & Authentication States
-  bool _isLocked = true;
-  bool _isAuthenticated = false;
+  bool _isLocked = false; // Default unlocked according to status
+  bool _isAuthenticated = true;
   bool _ghostMode = false;
 
   final String _roomId = "SEC-7069";
   String _roomPasscode = "1234";
 
-  // Expanded Emoji List
   final List<String> _emojiList = [
     '🤫', '🔒', '🔥', '😂', '👏', '🎉', '👻', '❤️',
     '🥳', '👍', '💯', '😎', '👀', '🚀', '✨', '🍿',
@@ -47,10 +51,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_isLocked && !_isAuthenticated) {
-        _showPasscodePromptDialog();
-      }
+    _messageController.addListener(() {
+      setState(() {}); // Rebuild to toggle send/mic icon dynamically
     });
   }
 
@@ -61,7 +63,65 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _urlController.dispose();
     _passcodeController.dispose();
     _setPasscodeController.dispose();
+    _audioTimer?.cancel();
     super.dispose();
+  }
+
+  // Audio Recording Toggle
+  void _toggleAudioRecording() {
+    if (_isLocked && !_isAuthenticated) {
+      _showPasscodePromptDialog();
+      return;
+    }
+
+    if (_isRecordingAudio) {
+      // Stop Recording and Send Voice Message
+      _audioTimer?.cancel();
+      final durationStr = "${_audioRecordDuration}s";
+      _sendVoiceMessage(durationStr);
+      setState(() {
+        _isRecordingAudio = false;
+        _audioRecordDuration = 0;
+      });
+    } else {
+      // Start Recording
+      setState(() {
+        _isRecordingAudio = true;
+        _audioRecordDuration = 0;
+      });
+      _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        setState(() {
+          _audioRecordDuration++;
+        });
+      });
+    }
+  }
+
+  void _sendVoiceMessage(String duration) {
+    final now = DateTime.now();
+    final timeStr = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
+    final msgMap = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'sender': 'You',
+      'text': '🎤 Voice Note ($duration)',
+      'time': timeStr,
+      'isGhost': _ghostMode ? 'true' : 'false',
+      'isAudio': 'true',
+    };
+
+    setState(() {
+      _messages.add(msgMap);
+    });
+
+    if (_ghostMode) {
+      Timer(const Duration(seconds: 15), () {
+        if (mounted) {
+          setState(() {
+            _messages.removeWhere((m) => m['id'] == msgMap['id']);
+          });
+        }
+      });
+    }
   }
 
   // Passcode Verification Dialog
@@ -202,7 +262,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Toggles Room Lock / Public status AND communicates with bottom text
+  // Toggles Room Lock / Public status
   void _toggleRoomLock() {
     setState(() {
       _isLocked = !_isLocked;
@@ -219,7 +279,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Pick Video from Gallery
   Future<void> _pickFromGallery() async {
     final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
     if (video != null) {
@@ -227,7 +286,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Record Video with Camera
   Future<void> _recordWithCamera() async {
     final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
     if (video != null) {
@@ -235,7 +293,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Play Network Video URL
   void _playNetworkUrl(String url) {
     if (url.trim().isEmpty) return;
     _videoController?.dispose();
@@ -289,6 +346,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         'text': textToSend,
         'time': timeStr,
         'isGhost': _ghostMode ? 'true' : 'false',
+        'isAudio': 'false',
       };
 
       setState(() {
@@ -485,7 +543,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     );
                   },
                 ),
-                // Lock Icon: Toggles Lock status & syncs with status bar below
                 IconButton(
                   constraints: const BoxConstraints(),
                   padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -495,9 +552,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     size: 20,
                   ),
                   onPressed: _toggleRoomLock,
-                  onLongPress: _showSetPasscodeDialog, // Long press allows changing passcode!
+                  onLongPress: _showSetPasscodeDialog,
                 ),
-                // Dynamic Eye Icon
                 IconButton(
                   constraints: const BoxConstraints(),
                   padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -528,7 +584,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
       body: Column(
         children: [
-          // Fixed Video Player Container (Clips bounds to prevent chat overlap)
+          // Video Player Container
           GestureDetector(
             onTap: () {
               setState(() {
@@ -546,7 +602,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
 
           if (!_isFullScreen) ...[
-            // Room Status Bar (Directly synced with Lock Icon)
+            // Status Bar
             GestureDetector(
               onTap: _showSetPasscodeDialog,
               child: Container(
@@ -630,7 +686,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Chat Messages Area
+            // Messages Area
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(12),
@@ -640,6 +696,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   final isMe = msg['sender'] == 'You';
                   final isSystem = msg['sender'] == 'System';
                   final isGhost = msg['isGhost'] == 'true';
+                  final isAudio = msg['isAudio'] == 'true';
 
                   if (isSystem) {
                     return Center(
@@ -688,7 +745,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      if (isGhost) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.timer, size: 14, color: Colors.white70)),
+                                      if (isAudio) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.graphic_eq, size: 18, color: Colors.white)),
+                                      if (isGhost && !isAudio) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.timer, size: 14, color: Colors.white70)),
                                       Text(
                                         msg['text'] ?? '',
                                         style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -709,7 +767,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Message Input
+            // Message Input & Audio Mic Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
@@ -724,26 +782,46 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF0F0F17),
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: _ghostMode ? Colors.purpleAccent : Colors.transparent),
+                        border: Border.all(color: _isRecordingAudio ? Colors.redAccent : (_ghostMode ? Colors.purpleAccent : Colors.transparent)),
                       ),
-                      child: TextField(
-                        controller: _messageController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: _ghostMode ? "Ghost message (disappears)..." : "Type secret message...",
-                          hintStyle: TextStyle(color: _ghostMode ? Colors.purpleAccent.withOpacity(0.7) : Colors.grey, fontSize: 13),
-                          border: InputBorder.none,
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
+                      child: _isRecordingAudio
+                          ? Row(
+                              children: [
+                                const Icon(Icons.fiber_manual_record, color: Colors.redAccent, size: 16),
+                                const SizedBox(width: 8),
+                                Text("Recording... ${_audioRecordDuration}s", style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                              ],
+                            )
+                          : TextField(
+                              controller: _messageController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                hintText: _ghostMode ? "Ghost message (disappears)..." : "Type secret message...",
+                                hintStyle: TextStyle(color: _ghostMode ? Colors.purpleAccent.withOpacity(0.7) : Colors.grey, fontSize: 13),
+                                border: InputBorder.none,
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   CircleAvatar(
-                    backgroundColor: Colors.purpleAccent,
+                    backgroundColor: _isRecordingAudio ? Colors.redAccent : Colors.purpleAccent,
                     child: IconButton(
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                      onPressed: () => _sendMessage(),
+                      icon: Icon(
+                        _messageController.text.trim().isNotEmpty
+                            ? Icons.send_rounded
+                            : (_isRecordingAudio ? Icons.stop_rounded : Icons.mic_rounded),
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      onPressed: () {
+                        if (_messageController.text.trim().isNotEmpty) {
+                          _sendMessage();
+                        } else {
+                          _toggleAudioRecording();
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -762,7 +840,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         children: [
           SizedBox.expand(
             child: FittedBox(
-              fit: BoxFit.contain, // Keeps video ratio clean without overflowing into chat
+              fit: BoxFit.contain,
               child: SizedBox(
                 width: _videoController!.value.size.width,
                 height: _videoController!.value.size.height,
