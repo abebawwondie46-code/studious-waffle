@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
@@ -13,7 +13,6 @@ class WatchPartyScreen extends StatefulWidget {
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = [];
-  final ImagePicker _picker = ImagePicker();
 
   VideoPlayerController? _videoController;
   String _selectedFileName = "No Content Loaded";
@@ -26,19 +25,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     super.dispose();
   }
 
-  // Pick Video from Gallery
-  Future<void> _pickFromGallery() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-    if (video != null) {
-      _loadLocalVideo(File(video.path), video.name);
-    }
-  }
+  Future<void> _pickVideoFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.video,
+    );
 
-  // Record Video with Camera
-  Future<void> _recordWithCamera() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
-    if (video != null) {
-      _loadLocalVideo(File(video.path), "Recorded Video");
+    if (result != null && result.files.single.path != null) {
+      File file = File(result.files.single.path!);
+      _loadLocalVideo(file, result.files.single.name);
     }
   }
 
@@ -70,49 +64,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  void _showMediaPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1E1E2C),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Select Media for Watch Party",
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 15),
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.pinkAccent),
-                title: const Text("Choose from Gallery", style: TextStyle(color: Colors.white)),
-                subtitle: const Text("Select local video from storage", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.videocam, color: Colors.pinkAccent),
-                title: const Text("Record with Camera", style: TextStyle(color: Colors.white)),
-                subtitle: const Text("Record a video now", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _recordWithCamera();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -122,22 +73,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         title: const Text("Watch Party"),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_to_photos, color: Colors.pinkAccent),
-            onPressed: _showMediaPicker,
+            icon: const Icon(Icons.video_library, color: Colors.pinkAccent),
+            onPressed: _pickVideoFile,
           ),
         ],
       ),
       body: Column(
         children: [
-          // Screen Viewer Container
           Container(
             height: 250,
             width: double.infinity,
             color: Colors.black,
             child: _buildScreenContent(),
           ),
-
-          // Live Sync Bar
           Container(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
             color: const Color(0xFF1E1E2C),
@@ -151,12 +99,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     Text("LIVE SYNC ACTIVE", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
                   ],
                 ),
-                Text("2 Users Connected", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                Text("Connected", style: TextStyle(color: Colors.grey, fontSize: 12)),
               ],
             ),
           ),
-
-          // Chat Section
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
@@ -181,8 +127,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               },
             ),
           ),
-
-          // Message Input Bar
           Container(
             padding: const EdgeInsets.all(8.0),
             color: const Color(0xFF1E1E2C),
@@ -249,9 +193,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             Text(_selectedFileName, style: const TextStyle(color: Colors.white)),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: _showMediaPicker,
+              onPressed: _pickVideoFile,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
-              child: const Text("Select Video from Device"),
+              child: const Text("Select Video File"),
             )
           ],
         ),
