@@ -27,6 +27,9 @@ jobs:
           echo "flutter.compileSdkVersion=34" >> android/gradle.properties
           echo "flutter.targetSdkVersion=34" >> android/gradle.properties
 
+      - name: Restore original code
+        run: git checkout HEAD -- lib/
+
       - run: flutter pub get
 
       - run: flutter build apk --debug
