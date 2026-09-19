@@ -12,6 +12,10 @@ jobs:
         with:
           flutter-version: '3.x'
 
+      - name: Add missing dependencies to pubspec.yaml
+        run: |
+          flutter pub add video_player dio path_provider shared_preferences
+
       - name: Recreate Android directory safely
         run: |
           rm -rf android
