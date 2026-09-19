@@ -35,13 +35,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _ghostMode = false;
 
   final String _roomId = "SEC-7069";
-  String _roomPasscode = "1234"; // Default passcode, changeably by user
+  String _roomPasscode = "1234";
 
   // Expanded Emoji List
   final List<String> _emojiList = [
     '🤫', '🔒', '🔥', '😂', '👏', '🎉', '👻', '❤️',
     '🥳', '👍', '💯', '😎', '👀', '🚀', '✨', '🍿',
-    '🙌', '😍', '🤔', '🤝', '🤡', '🙈', '💀', '💩', '🎉'
+    '🙌', '😍', '🤔', '🤝', '🤡', '🙈', '💀', '💩'
   ];
 
   @override
@@ -143,7 +143,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Manage / Change Passcode Dialog
+  // Set & Change Passcode Dialog
   void _showSetPasscodeDialog() {
     _setPasscodeController.text = _roomPasscode;
     showDialog(
@@ -151,13 +151,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF181824),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Manage Room Passcode", style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: const Text("Change Room Passcode", style: TextStyle(color: Colors.white, fontSize: 18)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Set your custom room passcode:", style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const Text("Enter a new passcode for this private room:", style: TextStyle(color: Colors.grey, fontSize: 13)),
               const SizedBox(height: 15),
               TextField(
                 controller: _setPasscodeController,
@@ -191,13 +191,30 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 });
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Passcode updated to: $_roomPasscode")),
+                  SnackBar(content: Text("Passcode changed to: $_roomPasscode")),
                 );
               }
             },
             child: const Text("Save Passcode"),
           ),
         ],
+      ),
+    );
+  }
+
+  // Toggles Room Lock / Public status AND communicates with bottom text
+  void _toggleRoomLock() {
+    setState(() {
+      _isLocked = !_isLocked;
+      if (!_isLocked) {
+        _isAuthenticated = true;
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isLocked ? "Room Locked 🔒 (PIN: $_roomPasscode)" : "Room Unlocked 🔓 Public Party"),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -320,20 +337,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ],
       ),
     );
-  }
-
-  void _toggleRoomLock() {
-    if (_isLocked) {
-      setState(() {
-        _isLocked = false;
-        _isAuthenticated = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Room Unlocked 🔓 Anyone with link can join")),
-      );
-    } else {
-      _showSetPasscodeDialog();
-    }
   }
 
   void _showMediaPicker() {
@@ -482,13 +485,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     );
                   },
                 ),
+                // Lock Icon: Toggles Lock status & syncs with status bar below
                 IconButton(
                   constraints: const BoxConstraints(),
                   padding: const EdgeInsets.symmetric(horizontal: 6),
-                  icon: Icon(_isLocked ? Icons.lock : Icons.lock_open, color: _isLocked ? Colors.redAccent : Colors.greenAccent, size: 20),
-                  onPressed: _showSetPasscodeDialog,
+                  icon: Icon(
+                    _isLocked ? Icons.lock : Icons.lock_open,
+                    color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                    size: 20,
+                  ),
+                  onPressed: _toggleRoomLock,
+                  onLongPress: _showSetPasscodeDialog, // Long press allows changing passcode!
                 ),
-                // Dynamic Eye Icon: Toggles between open and closed state
+                // Dynamic Eye Icon
                 IconButton(
                   constraints: const BoxConstraints(),
                   padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -519,64 +528,83 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
       body: Column(
         children: [
-          // Full Screen Cover Video Container
+          // Fixed Video Player Container (Clips bounds to prevent chat overlap)
           GestureDetector(
             onTap: () {
               setState(() {
                 _showControls = !_showControls;
               });
             },
-            child: Container(
-              height: _isFullScreen ? MediaQuery.of(context).size.height : 250,
-              width: double.infinity,
-              color: Colors.black,
-              child: _buildScreenContent(),
+            child: ClipRect(
+              child: Container(
+                height: _isFullScreen ? MediaQuery.of(context).size.height : 230,
+                width: double.infinity,
+                color: Colors.black,
+                child: _buildScreenContent(),
+              ),
             ),
           ),
 
           if (!_isFullScreen) ...[
-            // Room Status Bar
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              color: const Color(0xFF181824),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(width: 8, height: 8, decoration: BoxDecoration(color: _isLocked ? Colors.redAccent : Colors.greenAccent, shape: BoxShape.circle)),
-                      const SizedBox(width: 8),
-                      Text(
-                        _isLocked ? "LOCKED (PIN: $_roomPasscode)" : "PUBLIC PARTY",
-                        style: TextStyle(color: _isLocked ? Colors.redAccent : Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      if (_ghostMode)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 8.0),
-                          child: Text("👻 Ghost", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+            // Room Status Bar (Directly synced with Lock Icon)
+            GestureDetector(
+              onTap: _showSetPasscodeDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                color: const Color(0xFF181824),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                        decoration: BoxDecoration(color: Colors.purpleAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.shield_outlined, size: 12, color: Colors.purpleAccent),
-                            SizedBox(width: 4),
-                            Text("Encrypted", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.w600)),
-                          ],
+                        const SizedBox(width: 8),
+                        Text(
+                          _isLocked ? "LOCKED (PIN: $_roomPasscode)" : "PUBLIC PARTY",
+                          style: TextStyle(
+                            color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            letterSpacing: 1,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 4),
+                        const Icon(Icons.edit, size: 12, color: Colors.grey),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (_ghostMode)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 8.0),
+                            child: Text("👻 Ghost", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(color: Colors.purpleAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.shield_outlined, size: 12, color: Colors.purpleAccent),
+                              SizedBox(width: 4),
+                              Text("Encrypted", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
 
-            // Expanded Quick Emoji Bar
+            // Emoji Bar
             Container(
               height: 48,
               color: const Color(0xFF12121D),
@@ -602,7 +630,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Chat Messages List
+            // Chat Messages Area
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(12),
@@ -681,7 +709,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Message Input Field
+            // Message Input
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
@@ -732,10 +760,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       return Stack(
         alignment: Alignment.center,
         children: [
-          // Fullscreen Covered Video View
           SizedBox.expand(
             child: FittedBox(
-              fit: BoxFit.cover,
+              fit: BoxFit.contain, // Keeps video ratio clean without overflowing into chat
               child: SizedBox(
                 width: _videoController!.value.size.width,
                 height: _videoController!.value.size.height,
