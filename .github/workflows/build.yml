@@ -19,7 +19,7 @@ jobs:
 
       - name: Add missing dependencies
         run: |
-          flutter pub add video_player image_picker file_picker dio path_provider shared_preferences
+          flutter pub add video_player image_picker file_picker dio path_provider shared_preferences supabase_flutter share_plus url_launcher
 
       - name: Restore original code
         run: git checkout HEAD -- lib/
