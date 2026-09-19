@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
+
+// እነዚህ 4 ኢምፖርቶች መኖራቸውን እርግጠኛ ሁን
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
@@ -49,7 +51,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _obscurePasscode = true;
 
   final String _roomId = "SEC-7069";
-  String _roomPasscode = "1234"; // Default Passcode
+  String _roomPasscode = "1234";
 
   final List<String> _emojiList = [
     '🤫', '🔒', '🔥', '😂', '👏', '🎉', '👻', '❤️',
@@ -64,14 +66,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       setState(() {});
     });
 
-    // Audio player listener for when audio finishes playing
     _audioPlayer.onPlayerComplete.listen((event) {
       setState(() {
         _currentlyPlayingAudioId = null;
       });
     });
 
-    // Prompt passcode dialog when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isLocked && !_isAuthenticated) {
         _showPasscodePromptDialog();
@@ -92,7 +92,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     super.dispose();
   }
 
-  // Passcode Verification Dialog on Launch with Hint System
   void _showPasscodePromptDialog() {
     _passcodeController.clear();
     showDialog(
@@ -125,7 +124,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       style: TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                     const SizedBox(height: 10),
-                    // Hint container for room passcode
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
@@ -209,7 +207,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Real Audio Recording Toggle
   Future<void> _toggleAudioRecording() async {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
@@ -217,7 +214,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
 
     if (_isRecordingAudio) {
-      // Stop Recording
       _audioTimer?.cancel();
       final path = await _audioRecorder.stop();
       
@@ -231,15 +227,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       }
       _audioRecordDuration = 0;
     } else {
-      // Check Permissions
       var status = await Permission.microphone.request();
       if (status.isGranted) {
         if (await _audioRecorder.hasPermission()) {
           final dir = await getApplicationDocumentsDirectory();
           _currentRecordingPath = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
+          // const የሚለው እዚህ ጋር ተወግዷል
           await _audioRecorder.start(
-            const RecordConfig(encoder: AudioEncoder.aacLc),
+            RecordConfig(encoder: AudioEncoder.aacLc),
             path: _currentRecordingPath!,
           );
 
@@ -290,7 +286,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Real Play / Pause Voice Message
   Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
     if (audioPath.isEmpty || !File(audioPath).existsSync()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -313,7 +308,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Set & Change Passcode Dialog
   void _showSetPasscodeDialog() {
     _setPasscodeController.text = _roomPasscode;
     showDialog(
@@ -694,7 +688,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
       body: Column(
         children: [
-          // Video Player Container
           GestureDetector(
             onTap: () {
               setState(() {
@@ -712,7 +705,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
 
           if (!_isFullScreen) ...[
-            // Status Bar
             GestureDetector(
               onTap: _showSetPasscodeDialog,
               child: Container(
@@ -770,7 +762,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Emoji Bar
             Container(
               height: 48,
               color: const Color(0xFF12121D),
@@ -796,7 +787,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Messages Area
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(12),
@@ -902,7 +892,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Message Input Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
