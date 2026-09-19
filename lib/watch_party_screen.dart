@@ -5,12 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
-// እነዚህ 4 ኢምፖርቶች መኖራቸውን እርግጠኛ ሁን
-import 'package:record/record.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
 
@@ -25,7 +19,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _setPasscodeController = TextEditingController();
 
   final List<Map<String, String>> _messages = [
-    {'id': '1', 'sender': 'System', 'text': '🔒 End-to-End Encrypted Private Room Created', 'time': '12:00 PM', 'isGhost': 'false', 'isAudio': 'false', 'audioPath': ''},
+    {'id': '1', 'sender': 'System', 'text': '🔒 End-to-End Encrypted Private Room Created', 'time': '12:00 PM', 'isGhost': 'false', 'isAudio': 'false'},
   ];
 
   final ImagePicker _picker = ImagePicker();
@@ -34,21 +28,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _isInitialized = false;
   bool _showControls = true;
   bool _isFullScreen = false;
-
-  // Real Audio Recording & Playback
-  final AudioRecorder _audioRecorder = AudioRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  
+  // Audio Recording & Playback States
   bool _isRecordingAudio = false;
   int _audioRecordDuration = 0;
   Timer? _audioTimer;
   String? _currentlyPlayingAudioId;
-  String? _currentRecordingPath;
 
   // Security & Authentication States
-  bool _isLocked = true;
+  bool _isLocked = true; // Default locked to prompt passcode on launch
   bool _isAuthenticated = false;
   bool _ghostMode = false;
-  bool _obscurePasscode = true;
 
   final String _roomId = "SEC-7069";
   String _roomPasscode = "1234";
@@ -63,15 +53,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   void initState() {
     super.initState();
     _messageController.addListener(() {
-      setState(() {});
+      setState(() {}); 
     });
 
-    _audioPlayer.onPlayerComplete.listen((event) {
-      setState(() {
-        _currentlyPlayingAudioId = null;
-      });
-    });
-
+    // Automatically prompt passcode dialog when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isLocked && !_isAuthenticated) {
         _showPasscodePromptDialog();
@@ -87,127 +72,93 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _passcodeController.dispose();
     _setPasscodeController.dispose();
     _audioTimer?.cancel();
-    _audioRecorder.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
+  // Passcode Verification Dialog on Launch
   void _showPasscodePromptDialog() {
     _passcodeController.clear();
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return WillPopScope(
-            onWillPop: () async => false,
-            child: AlertDialog(
-              backgroundColor: const Color(0xFF181824),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF181824),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.shield_rounded, color: Colors.purpleAccent, size: 28),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text("Private Room Locked", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      "Enter room passcode to access video stream and encrypted chat.",
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.purpleAccent.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.purpleAccent.withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.info_outline, size: 16, color: Colors.purpleAccent),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Passcode: $_roomPasscode",
-                            style: const TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    TextField(
-                      controller: _passcodeController,
-                      obscureText: _obscurePasscode,
-                      keyboardType: TextInputType.number,
-                      maxLength: 8,
-                      autofocus: true,
-                      style: const TextStyle(color: Colors.white, letterSpacing: 3, fontSize: 18),
-                      decoration: InputDecoration(
-                        counterText: "",
-                        hintText: "Enter Passcode",
-                        hintStyle: const TextStyle(color: Colors.grey, letterSpacing: 1, fontSize: 14),
-                        fillColor: const Color(0xFF0F0F17),
-                        filled: true,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePasscode ? Icons.visibility_off : Icons.visibility,
-                            color: Colors.grey,
-                          ),
-                          onPressed: () {
-                            setDialogState(() {
-                              _obscurePasscode = !_obscurePasscode;
-                            });
-                          },
-                        ),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent, width: 2)),
-                      ),
+                    Icon(Icons.shield_rounded, color: Colors.purpleAccent, size: 28),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text("Private Room Locked", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
-              ),
-              actions: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purpleAccent,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                const SizedBox(height: 12),
+                const Text(
+                  "Enter room passcode to access video stream and encrypted chat.",
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: _passcodeController,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 8,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 18),
+                  decoration: InputDecoration(
+                    counterText: "",
+                    hintText: "Enter Passcode",
+                    hintStyle: const TextStyle(color: Colors.grey, letterSpacing: 1, fontSize: 14),
+                    fillColor: const Color(0xFF0F0F17),
+                    filled: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent, width: 2)),
                   ),
-                  onPressed: () {
-                    if (_passcodeController.text.trim() == _roomPasscode) {
-                      setState(() {
-                        _isAuthenticated = true;
-                      });
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Access Granted 🔓 Welcome to Secret Watch Party!")),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Incorrect Passcode! Please try again."), backgroundColor: Colors.redAccent),
-                      );
-                    }
-                  },
-                  child: const Text("Unlock Access", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
-          );
-        },
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purpleAccent,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                if (_passcodeController.text.trim() == _roomPasscode) {
+                  setState(() {
+                    _isAuthenticated = true;
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Access Granted 🔓 Welcome to Secret Watch Party!")),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Incorrect Passcode! Please try again."), backgroundColor: Colors.redAccent),
+                  );
+                }
+              },
+              child: const Text("Unlock Access", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _toggleAudioRecording() async {
+  // Audio Recording Toggle
+  void _toggleAudioRecording() {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
       return;
@@ -215,50 +166,26 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
     if (_isRecordingAudio) {
       _audioTimer?.cancel();
-      final path = await _audioRecorder.stop();
-      
+      final durationStr = "${_audioRecordDuration}s";
+      _sendVoiceMessage(durationStr);
       setState(() {
         _isRecordingAudio = false;
+        _audioRecordDuration = 0;
       });
-
-      if (path != null) {
-        final durationStr = "${_audioRecordDuration}s";
-        _sendVoiceMessage(durationStr, path);
-      }
-      _audioRecordDuration = 0;
     } else {
-      var status = await Permission.microphone.request();
-      if (status.isGranted) {
-        if (await _audioRecorder.hasPermission()) {
-          final dir = await getApplicationDocumentsDirectory();
-          _currentRecordingPath = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-          // const የሚለው እዚህ ጋር ተወግዷል
-          await _audioRecorder.start(
-            RecordConfig(encoder: AudioEncoder.aacLc),
-            path: _currentRecordingPath!,
-          );
-
-          setState(() {
-            _isRecordingAudio = true;
-            _audioRecordDuration = 0;
-          });
-
-          _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-            setState(() {
-              _audioRecordDuration++;
-            });
-          });
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Microphone permission is required to record voice notes.")),
-        );
-      }
+      setState(() {
+        _isRecordingAudio = true;
+        _audioRecordDuration = 0;
+      });
+      _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        setState(() {
+          _audioRecordDuration++;
+        });
+      });
     }
   }
 
-  void _sendVoiceMessage(String duration, String filePath) {
+  void _sendVoiceMessage(String duration) {
     final now = DateTime.now();
     final timeStr = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
     final msgMap = {
@@ -268,7 +195,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       'time': timeStr,
       'isGhost': _ghostMode ? 'true' : 'false',
       'isAudio': 'true',
-      'audioPath': filePath,
     };
 
     setState(() {
@@ -286,28 +212,29 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
-    if (audioPath.isEmpty || !File(audioPath).existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Audio file not found or corrupted.")),
-      );
-      return;
-    }
+  // Play / Pause Voice Message Simulation
+  void _togglePlayVoiceNote(String id) {
+    setState(() {
+      if (_currentlyPlayingAudioId == id) {
+        _currentlyPlayingAudioId = null; // Pause if already playing
+      } else {
+        _currentlyPlayingAudioId = id; // Play this audio
+      }
+    });
 
-    if (_currentlyPlayingAudioId == id) {
-      await _audioPlayer.pause();
-      setState(() {
-        _currentlyPlayingAudioId = null;
-      });
-    } else {
-      await _audioPlayer.stop();
-      await _audioPlayer.play(UrlSource(audioPath));
-      setState(() {
-        _currentlyPlayingAudioId = id;
+    // Auto stop playing after 3 seconds for UI feel
+    if (_currentlyPlayingAudioId != null) {
+      Timer(const Duration(seconds: 4), () {
+        if (mounted && _currentlyPlayingAudioId == id) {
+          setState(() {
+            _currentlyPlayingAudioId = null;
+          });
+        }
       });
     }
   }
 
+  // Set & Change Passcode Dialog
   void _showSetPasscodeDialog() {
     _setPasscodeController.text = _roomPasscode;
     showDialog(
@@ -366,6 +293,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
+  // Toggles Room Lock / Public status
   void _toggleRoomLock() {
     setState(() {
       _isLocked = !_isLocked;
@@ -373,7 +301,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         _isAuthenticated = true;
       }
     });
-
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_isLocked ? "Room Locked 🔒 (PIN: $_roomPasscode)" : "Room Unlocked 🔓 Public Party"),
@@ -450,7 +378,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         'time': timeStr,
         'isGhost': _ghostMode ? 'true' : 'false',
         'isAudio': 'false',
-        'audioPath': '',
       };
 
       setState(() {
@@ -688,6 +615,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
       body: Column(
         children: [
+          // Video Player Container
           GestureDetector(
             onTap: () {
               setState(() {
@@ -705,6 +633,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
 
           if (!_isFullScreen) ...[
+            // Status Bar
             GestureDetector(
               onTap: _showSetPasscodeDialog,
               child: Container(
@@ -762,6 +691,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
+            // Emoji Bar
             Container(
               height: 48,
               color: const Color(0xFF12121D),
@@ -787,6 +717,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
+            // Messages Area
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.all(12),
@@ -845,14 +776,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                   ),
                                   child: isAudio
                                       ? InkWell(
-                                          onTap: () => _togglePlayVoiceNote(msg['id']!, msg['audioPath'] ?? ''),
+                                          onTap: () => _togglePlayVoiceNote(msg['id']!),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Icon(
                                                 isPlayingThisAudio ? Icons.pause_circle_filled : Icons.play_circle_fill,
                                                 color: Colors.white,
-                                                size: 28,
+                                                size: 26,
                                               ),
                                               const SizedBox(width: 8),
                                               Icon(
@@ -892,6 +823,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
+            // Message Input Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
