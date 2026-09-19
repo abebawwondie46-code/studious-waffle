@@ -306,7 +306,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
     } else {
       await _audioPlayer.stop();
-      await _audioPlayer.play(DeviceFileSource(audioPath));
+      await _audioPlayer.play(UrlSource(audioPath));
       setState(() {
         _currentlyPlayingAudioId = id;
       });
