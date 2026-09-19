@@ -12,8 +12,23 @@ jobs:
         with:
           flutter-version: '3.x'
 
-      - name: Generate Android project files
-        run: flutter create --platforms=android .
+      - name: Add missing dependencies
+        run: |
+          flutter pub add video_player image_picker file_picker dio path_provider shared_preferences
+
+      - name: Recreate Android directory safely
+        run: |
+          rm -rf android
+          flutter create --project-name kuanyngne --platforms=android --overwrite .
+
+      - name: Configure Android SDK 34 Settings
+        run: |
+          echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
+          echo "flutter.compileSdkVersion=34" >> android/gradle.properties
+          echo "flutter.targetSdkVersion=34" >> android/gradle.properties
+
+      - name: Restore original code
+        run: git checkout HEAD -- lib/
 
       - run: flutter pub get
 
@@ -22,4 +37,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: build/app/outputs/flutter-apk/*.apk
