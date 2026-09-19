@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
@@ -13,6 +13,7 @@ class WatchPartyScreen extends StatefulWidget {
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = [];
+  final ImagePicker _picker = ImagePicker();
 
   VideoPlayerController? _videoController;
   String _selectedFileName = "No Content Loaded";
@@ -25,14 +26,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     super.dispose();
   }
 
-  Future<void> _pickVideoFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-    );
+  Future<void> _pickFromGallery() async {
+    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video != null) {
+      _loadLocalVideo(File(video.path), video.name);
+    }
+  }
 
-    if (result != null && result.files.single.path != null) {
-      File file = File(result.files.single.path!);
-      _loadLocalVideo(file, result.files.single.name);
+  Future<void> _recordWithCamera() async {
+    final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+    if (video != null) {
+      _loadLocalVideo(File(video.path), "Recorded Video");
     }
   }
 
@@ -64,6 +68,47 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
+  void _showMediaPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E2C),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Select Media for Watch Party",
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 15),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.pinkAccent),
+                title: const Text("Choose from Gallery", style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.videocam, color: Colors.pinkAccent),
+                title: const Text("Record with Camera", style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _recordWithCamera();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,8 +118,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         title: const Text("Watch Party"),
         actions: [
           IconButton(
-            icon: const Icon(Icons.video_library, color: Colors.pinkAccent),
-            onPressed: _pickVideoFile,
+            icon: const Icon(Icons.add_to_photos, color: Colors.pinkAccent),
+            onPressed: _showMediaPicker,
           ),
         ],
       ),
@@ -193,9 +238,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             Text(_selectedFileName, style: const TextStyle(color: Colors.white)),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: _pickVideoFile,
+              onPressed: _showMediaPicker,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
-              child: const Text("Select Video File"),
+              child: const Text("Select Video from Device"),
             )
           ],
         ),
