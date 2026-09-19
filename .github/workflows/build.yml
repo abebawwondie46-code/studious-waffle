@@ -5,21 +5,68 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CI: true
+      FLUTTER_SUPPRESS_ANALYTICS: "true"
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.22.0'
 
-      - name: Generate Android project files
-        run: flutter create --platforms=android .
+      - name: Recreate Valid Android Directory
+        run: |
+          rm -rf android
+          flutter create --project-name studious_waffle --platforms=android --suppress-analytics --overwrite .
+          
+          # Fix ProGuard & R8 compatibility for flutter_inappwebview
+          echo "android.enableR8.fullMode=false" >> android/gradle.properties
+          echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
+          echo "android.enableR8=false" >> android/gradle.properties
+          
+          mkdir -p android/app/src/main
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:label="studius"
+                  android:name="${applicationName}"
+                  android:icon="@mipmap/ic_launcher">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                      android:hardwareAccelerated="true"
+                      android:windowSoftInputMode="adjustResize">
+                      <meta-data
+                          android:name="io.flutter.embedding.android.NormalTheme"
+                          android:resource="@style/NormalTheme" />
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <meta-data
+                      android:name="flutterEmbedding"
+                      android:value="2" />
+              </application>
+          </manifest>
+          EOF
 
-      - run: flutter pub get
+      - name: Restore original lib folder
+        run: git checkout HEAD -- lib/
 
-      - run: flutter build apk --debug
+      - name: Install Dependencies
+        run: flutter pub get
 
-      - uses: actions/upload-artifact@v4
+      - name: Build APK
+        run: flutter build apk --debug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: app-debug-apk
+          path: build/app/outputs/flutter-apk/*.apk
