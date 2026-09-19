@@ -30,16 +30,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   
   // Security & Authentication States
   bool _isLocked = true;
-  bool _isAuthenticated = false; // Controls access to locked room
+  bool _isAuthenticated = false;
   bool _ghostMode = false;
 
   final String _roomId = "SEC-7069";
-  String _roomPasscode = "1234"; // Default Passcode
+  String _roomPasscode = "1234";
 
   @override
   void initState() {
     super.initState();
-    // Prompt passcode if room is locked on start
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isLocked && !_isAuthenticated) {
         _showPasscodePromptDialog();
@@ -57,50 +56,55 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     super.dispose();
   }
 
-  // Passcode Verification Dialog for Entry
+  // Passcode Verification Dialog (Fixed Keyboard Overflow)
   void _showPasscodePromptDialog() {
     _passcodeController.clear();
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => WillPopScope(
-        onWillPop: () async => false, // Prevent closing without correct code
+        onWillPop: () async => false,
         child: AlertDialog(
           backgroundColor: const Color(0xFF181824),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.security, color: Colors.purpleAccent),
-              SizedBox(width: 10),
-              Text("Private Room Locked", style: TextStyle(color: Colors.white, fontSize: 18)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Enter room passcode to access video stream and encrypted chat.",
-                style: TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                controller: _passcodeController,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 18),
-                decoration: InputDecoration(
-                  counterText: "",
-                  hintText: "Enter Passcode",
-                  hintStyle: const TextStyle(color: Colors.grey, letterSpacing: 1, fontSize: 14),
-                  fillColor: const Color(0xFF0F0F17),
-                  filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.security, color: Colors.purpleAccent),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text("Private Room Locked", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                const Text(
+                  "Enter room passcode to access video stream and encrypted chat.",
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: _passcodeController,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 18),
+                  decoration: InputDecoration(
+                    counterText: "",
+                    hintText: "Enter Passcode",
+                    hintStyle: const TextStyle(color: Colors.grey, letterSpacing: 1, fontSize: 14),
+                    fillColor: const Color(0xFF0F0F17),
+                    filled: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             ElevatedButton(
@@ -140,26 +144,28 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         backgroundColor: const Color(0xFF181824),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("Manage Room Passcode", style: TextStyle(color: Colors.white, fontSize: 18)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Set a custom passcode to share with your friends:", style: TextStyle(color: Colors.grey, fontSize: 13)),
-            const SizedBox(height: 15),
-            TextField(
-              controller: _setPasscodeController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              decoration: InputDecoration(
-                hintText: "New Passcode",
-                hintStyle: const TextStyle(color: Colors.grey),
-                fillColor: const Color(0xFF0F0F17),
-                filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Set a custom passcode to share with your friends:", style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const SizedBox(height: 15),
+              TextField(
+                controller: _setPasscodeController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                decoration: InputDecoration(
+                  hintText: "New Passcode",
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  fillColor: const Color(0xFF0F0F17),
+                  filled: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -264,7 +270,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         if (customText == null) _messageController.clear();
       });
 
-      // Auto-delete ghost messages
       if (_ghostMode) {
         Timer(const Duration(seconds: 15), () {
           if (mounted) {
@@ -277,7 +282,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Delete message dialog on Long Press
   void _deleteMessageDialog(String messageId) {
     showDialog(
       context: context,
@@ -416,23 +420,37 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF181824),
         elevation: 0,
+        titleSpacing: 0,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.vpn_key_rounded, color: Colors.purpleAccent, size: 22),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Secret Watch Party", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text("Room: $_roomId", style: const TextStyle(fontSize: 11, color: Colors.purpleAccent)),
-              ],
+            const SizedBox(width: 10),
+            const Icon(Icons.vpn_key_rounded, color: Colors.purpleAccent, size: 20),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Secret Party",
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  Text(
+                    _roomId,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, color: Colors.purpleAccent),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
-          // Share Room Code & Passcode
           IconButton(
-            icon: const Icon(Icons.share, color: Colors.white70),
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            icon: const Icon(Icons.share, color: Colors.white70, size: 20),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: "Join Secret Watch Party!\nRoom ID: $_roomId\nPasscode: $_roomPasscode"));
               ScaffoldMessenger.of(context).showSnackBar(
@@ -441,11 +459,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             },
           ),
           IconButton(
-            icon: Icon(_isLocked ? Icons.lock : Icons.lock_open, color: _isLocked ? Colors.redAccent : Colors.greenAccent),
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            icon: Icon(_isLocked ? Icons.lock : Icons.lock_open, color: _isLocked ? Colors.redAccent : Colors.greenAccent, size: 20),
             onPressed: _toggleRoomLock,
           ),
           IconButton(
-            icon: Icon(Icons.visibility_off, color: _ghostMode ? Colors.purpleAccent : Colors.white54),
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            icon: Icon(Icons.visibility_off, color: _ghostMode ? Colors.purpleAccent : Colors.white54, size: 20),
             onPressed: () {
               setState(() {
                 _ghostMode = !_ghostMode;
@@ -459,7 +481,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.add_to_photos, color: Colors.purpleAccent),
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.only(left: 6, right: 12),
+            icon: const Icon(Icons.add_to_photos, color: Colors.purpleAccent, size: 20),
             onPressed: _showMediaPicker,
           ),
         ],
@@ -546,7 +570,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Chat Messages List (With Long Press Delete)
+          // Chat Messages List
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
@@ -569,7 +593,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 }
 
                 return GestureDetector(
-                  onLongPress: () => _deleteMessageDialog(msg['id']!), // Long press to delete!
+                  onLongPress: () => _deleteMessageDialog(msg['id']!),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
