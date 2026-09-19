@@ -27,6 +27,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   String _selectedFileName = "No Content Loaded";
   bool _isInitialized = false;
   bool _showControls = true;
+  bool _isFullScreen = false;
   
   // Security & Authentication States
   bool _isLocked = true;
@@ -34,7 +35,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _ghostMode = false;
 
   final String _roomId = "SEC-7069";
-  String _roomPasscode = "1234";
+  String _roomPasscode = "1234"; // Default passcode, changeably by user
+
+  // Expanded Emoji List
+  final List<String> _emojiList = [
+    '🤫', '🔒', '🔥', '😂', '👏', '🎉', '👻', '❤️',
+    '🥳', '👍', '💯', '😎', '👀', '🚀', '✨', '🍿',
+    '🙌', '😍', '🤔', '🤝', '🤡', '🙈', '💀', '💩', '🎉'
+  ];
 
   @override
   void initState() {
@@ -56,7 +64,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     super.dispose();
   }
 
-  // Passcode Verification Dialog (Fixed Keyboard Overflow)
+  // Passcode Verification Dialog
   void _showPasscodePromptDialog() {
     _passcodeController.clear();
     showDialog(
@@ -91,7 +99,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   controller: _passcodeController,
                   obscureText: true,
                   keyboardType: TextInputType.number,
-                  maxLength: 6,
+                  maxLength: 8,
                   style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 18),
                   decoration: InputDecoration(
                     counterText: "",
@@ -135,7 +143,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Set / Update Passcode Dialog
+  // Manage / Change Passcode Dialog
   void _showSetPasscodeDialog() {
     _setPasscodeController.text = _roomPasscode;
     showDialog(
@@ -149,7 +157,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Set a custom passcode to share with your friends:", style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const Text("Set your custom room passcode:", style: TextStyle(color: Colors.grey, fontSize: 13)),
               const SizedBox(height: 15),
               TextField(
                 controller: _setPasscodeController,
@@ -175,9 +183,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
             onPressed: () {
-              if (_setPasscodeController.text.trim().isNotEmpty) {
+              final newPin = _setPasscodeController.text.trim();
+              if (newPin.isNotEmpty) {
                 setState(() {
-                  _roomPasscode = _setPasscodeController.text.trim();
+                  _roomPasscode = newPin;
                   _isLocked = true;
                 });
                 Navigator.pop(context);
@@ -413,84 +422,104 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
+  void _toggleFullScreen() {
+    setState(() {
+      _isFullScreen = !_isFullScreen;
+    });
+    if (_isFullScreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F17),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF181824),
-        elevation: 0,
-        titleSpacing: 0,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(width: 10),
-            const Icon(Icons.vpn_key_rounded, color: Colors.purpleAccent, size: 20),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: _isFullScreen
+          ? null
+          : AppBar(
+              backgroundColor: const Color(0xFF181824),
+              elevation: 0,
+              titleSpacing: 0,
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    "Secret Party",
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  Text(
-                    _roomId,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10, color: Colors.purpleAccent),
+                  const SizedBox(width: 10),
+                  const Icon(Icons.vpn_key_rounded, color: Colors.purpleAccent, size: 20),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Secret Party",
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        Text(
+                          _roomId,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 10, color: Colors.purpleAccent),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            constraints: const BoxConstraints(),
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            icon: const Icon(Icons.share, color: Colors.white70, size: 20),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: "Join Secret Watch Party!\nRoom ID: $_roomId\nPasscode: $_roomPasscode"));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Room Code & Passcode copied to clipboard!")),
-              );
-            },
-          ),
-          IconButton(
-            constraints: const BoxConstraints(),
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            icon: Icon(_isLocked ? Icons.lock : Icons.lock_open, color: _isLocked ? Colors.redAccent : Colors.greenAccent, size: 20),
-            onPressed: _toggleRoomLock,
-          ),
-          IconButton(
-            constraints: const BoxConstraints(),
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            icon: Icon(Icons.visibility_off, color: _ghostMode ? Colors.purpleAccent : Colors.white54, size: 20),
-            onPressed: () {
-              setState(() {
-                _ghostMode = !_ghostMode;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_ghostMode ? "Ghost Mode ON 👻 Messages disappear in 15s" : "Ghost Mode OFF"),
-                  duration: const Duration(seconds: 2),
+              actions: [
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  icon: const Icon(Icons.share, color: Colors.white70, size: 20),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: "Join Secret Watch Party!\nRoom ID: $_roomId\nPasscode: $_roomPasscode"));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Room Code & Passcode copied to clipboard!")),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-          IconButton(
-            constraints: const BoxConstraints(),
-            padding: const EdgeInsets.only(left: 6, right: 12),
-            icon: const Icon(Icons.add_to_photos, color: Colors.purpleAccent, size: 20),
-            onPressed: _showMediaPicker,
-          ),
-        ],
-      ),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  icon: Icon(_isLocked ? Icons.lock : Icons.lock_open, color: _isLocked ? Colors.redAccent : Colors.greenAccent, size: 20),
+                  onPressed: _showSetPasscodeDialog,
+                ),
+                // Dynamic Eye Icon: Toggles between open and closed state
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  icon: Icon(
+                    _ghostMode ? Icons.visibility : Icons.visibility_off,
+                    color: _ghostMode ? Colors.purpleAccent : Colors.white54,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _ghostMode = !_ghostMode;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_ghostMode ? "Ghost Mode ON 👻 Messages disappear in 15s" : "Ghost Mode OFF"),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.only(left: 6, right: 12),
+                  icon: const Icon(Icons.add_to_photos, color: Colors.purpleAccent, size: 20),
+                  onPressed: _showMediaPicker,
+                ),
+              ],
+            ),
       body: Column(
         children: [
-          // Video Player Box
+          // Full Screen Cover Video Container
           GestureDetector(
             onTap: () {
               setState(() {
@@ -498,197 +527,201 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               });
             },
             child: Container(
-              height: 230,
+              height: _isFullScreen ? MediaQuery.of(context).size.height : 250,
               width: double.infinity,
               color: Colors.black,
               child: _buildScreenContent(),
             ),
           ),
 
-          // Room Status Bar
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: const Color(0xFF181824),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(width: 8, height: 8, decoration: BoxDecoration(color: _isLocked ? Colors.redAccent : Colors.greenAccent, shape: BoxShape.circle)),
-                    const SizedBox(width: 8),
-                    Text(
-                      _isLocked ? "LOCKED (PIN: $_roomPasscode)" : "PUBLIC PARTY",
-                      style: TextStyle(color: _isLocked ? Colors.redAccent : Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    if (_ghostMode)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 8.0),
-                        child: Text("👻 Ghost", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+          if (!_isFullScreen) ...[
+            // Room Status Bar
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              color: const Color(0xFF181824),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(width: 8, height: 8, decoration: BoxDecoration(color: _isLocked ? Colors.redAccent : Colors.greenAccent, shape: BoxShape.circle)),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isLocked ? "LOCKED (PIN: $_roomPasscode)" : "PUBLIC PARTY",
+                        style: TextStyle(color: _isLocked ? Colors.redAccent : Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1),
                       ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(color: Colors.purpleAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                      child: const Row(
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      if (_ghostMode)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 8.0),
+                          child: Text("👻 Ghost", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(color: Colors.purpleAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.shield_outlined, size: 12, color: Colors.purpleAccent),
+                            SizedBox(width: 4),
+                            Text("Encrypted", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Expanded Quick Emoji Bar
+            Container(
+              height: 48,
+              color: const Color(0xFF12121D),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                itemCount: _emojiList.length,
+                itemBuilder: (context, index) {
+                  final emoji = _emojiList[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => _sendMessage(customText: emoji),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFF222233), borderRadius: BorderRadius.circular(20)),
+                        child: Text(emoji, style: const TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Chat Messages List
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final msg = _messages[index];
+                  final isMe = msg['sender'] == 'You';
+                  final isSystem = msg['sender'] == 'System';
+                  final isGhost = msg['isGhost'] == 'true';
+
+                  if (isSystem) {
+                    return Center(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFF181824), borderRadius: BorderRadius.circular(10)),
+                        child: Text(msg['text'] ?? '', style: const TextStyle(color: Colors.purpleAccent, fontSize: 11)),
+                      ),
+                    );
+                  }
+
+                  return GestureDetector(
+                    onLongPress: () => _deleteMessageDialog(msg['id']!),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.shield_outlined, size: 12, color: Colors.purpleAccent),
-                          SizedBox(width: 4),
-                          Text("Encrypted", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.w600)),
+                          if (!isMe)
+                            const CircleAvatar(
+                              radius: 14,
+                              backgroundColor: Colors.purpleAccent,
+                              child: Icon(Icons.person, size: 16, color: Colors.white),
+                            ),
+                          if (!isMe) const SizedBox(width: 8),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isMe
+                                        ? (isGhost ? Colors.purple.shade900 : Colors.purpleAccent)
+                                        : const Color(0xFF222233),
+                                    border: isGhost ? Border.all(color: Colors.purpleAccent, width: 1) : null,
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: const Radius.circular(16),
+                                      topRight: const Radius.circular(16),
+                                      bottomLeft: Radius.circular(isMe ? 16 : 2),
+                                      bottomRight: Radius.circular(isMe ? 2 : 16),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isGhost) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.timer, size: 14, color: Colors.white70)),
+                                      Text(
+                                        msg['text'] ?? '',
+                                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(msg['time'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Quick Emoji Bar
-          Container(
-            height: 44,
-            color: const Color(0xFF12121D),
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              children: ['🤫', '🔒', '🔥', '😂', '👏', '🎉', '👻', '❤️'].map((emoji) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () => _sendMessage(customText: emoji),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(color: const Color(0xFF222233), borderRadius: BorderRadius.circular(20)),
-                      child: Text(emoji, style: const TextStyle(fontSize: 15)),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Chat Messages List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isMe = msg['sender'] == 'You';
-                final isSystem = msg['sender'] == 'System';
-                final isGhost = msg['isGhost'] == 'true';
-
-                if (isSystem) {
-                  return Center(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(color: const Color(0xFF181824), borderRadius: BorderRadius.circular(10)),
-                      child: Text(msg['text'] ?? '', style: const TextStyle(color: Colors.purpleAccent, fontSize: 11)),
-                    ),
                   );
-                }
-
-                return GestureDetector(
-                  onLongPress: () => _deleteMessageDialog(msg['id']!),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (!isMe)
-                          const CircleAvatar(
-                            radius: 14,
-                            backgroundColor: Colors.purpleAccent,
-                            child: Icon(Icons.person, size: 16, color: Colors.white),
-                          ),
-                        if (!isMe) const SizedBox(width: 8),
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: isMe
-                                      ? (isGhost ? Colors.purple.shade900 : Colors.purpleAccent)
-                                      : const Color(0xFF222233),
-                                  border: isGhost ? Border.all(color: Colors.purpleAccent, width: 1) : null,
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: const Radius.circular(16),
-                                    topRight: const Radius.circular(16),
-                                    bottomLeft: Radius.circular(isMe ? 16 : 2),
-                                    bottomRight: Radius.circular(isMe ? 2 : 16),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (isGhost) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.timer, size: 14, color: Colors.white70)),
-                                    Text(
-                                      msg['text'] ?? '',
-                                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(msg['time'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 10)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
 
-          // Message Input Field
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: const BoxDecoration(
-              color: Color(0xFF181824),
-              boxShadow: [BoxShadow(color: Colors.black38, blurRadius: 4)],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F0F17),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: _ghostMode ? Colors.purpleAccent : Colors.transparent),
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: _ghostMode ? "Ghost message (disappears)..." : "Type secret message...",
-                        hintStyle: TextStyle(color: _ghostMode ? Colors.purpleAccent.withOpacity(0.7) : Colors.grey, fontSize: 13),
-                        border: InputBorder.none,
+            // Message Input Field
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: const BoxDecoration(
+                color: Color(0xFF181824),
+                boxShadow: [BoxShadow(color: Colors.black38, blurRadius: 4)],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F0F17),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: _ghostMode ? Colors.purpleAccent : Colors.transparent),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
+                      child: TextField(
+                        controller: _messageController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: _ghostMode ? "Ghost message (disappears)..." : "Type secret message...",
+                          hintStyle: TextStyle(color: _ghostMode ? Colors.purpleAccent.withOpacity(0.7) : Colors.grey, fontSize: 13),
+                          border: InputBorder.none,
+                        ),
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                CircleAvatar(
-                  backgroundColor: Colors.purpleAccent,
-                  child: IconButton(
-                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                    onPressed: () => _sendMessage(),
+                  const SizedBox(width: 8),
+                  CircleAvatar(
+                    backgroundColor: Colors.purpleAccent,
+                    child: IconButton(
+                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                      onPressed: () => _sendMessage(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -699,9 +732,16 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       return Stack(
         alignment: Alignment.center,
         children: [
-          AspectRatio(
-            aspectRatio: _videoController!.value.aspectRatio,
-            child: VideoPlayer(_videoController!),
+          // Fullscreen Covered Video View
+          SizedBox.expand(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: _videoController!.value.size.width,
+                height: _videoController!.value.size.height,
+                child: VideoPlayer(_videoController!),
+              ),
+            ),
           ),
           if (_showControls)
             AnimatedContainer(
@@ -710,15 +750,21 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(8)),
-                        child: Text(_selectedFileName, style: const TextStyle(color: Colors.purpleAccent, fontSize: 11)),
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(8)),
+                          child: Text(_selectedFileName, style: const TextStyle(color: Colors.purpleAccent, fontSize: 11)),
+                        ),
+                        IconButton(
+                          icon: Icon(_isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen, color: Colors.white),
+                          onPressed: _toggleFullScreen,
+                        ),
+                      ],
                     ),
                   ),
                   Row(
