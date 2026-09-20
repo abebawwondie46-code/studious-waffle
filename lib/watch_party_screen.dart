@@ -5,11 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
-import 'package:record_mp3/record_mp3.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart'; // ይህ በመቅረቱ ነው getApplicationDocumentsDirectory ያላወቀው
-import 'package:permission_handler/permission_handler.dart';
-
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
 
@@ -35,9 +30,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _isFullScreen = false;
   
   // Audio Recording & Playback States
-  // Audio Recording & Playback States
-  final AudioRecorder _audioRecorder = AudioRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isRecordingAudio = false;
   int _audioRecordDuration = 0;
   Timer? _audioTimer;
@@ -74,14 +66,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   @override
   void dispose() {
-    _audioTimer?.cancel();
-    _audioRecorder.dispose();
-    _audioPlayer.dispose();
     _videoController?.dispose();
     _messageController.dispose();
     _urlController.dispose();
     _passcodeController.dispose();
     _setPasscodeController.dispose();
+    _audioTimer?.cancel();
     super.dispose();
   }
 
@@ -91,8 +81,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => PopScope(
-      canPop: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
         child: AlertDialog(
           backgroundColor: const Color(0xFF181824),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -168,7 +158,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // Audio Recording Toggle
-  void _toggleAudioRecording() async {
+  void _toggleAudioRecording() {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
       return;
@@ -176,46 +166,26 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
     if (_isRecordingAudio) {
       _audioTimer?.cancel();
-      final path = await _audioRecorder.stop();
       final durationStr = "${_audioRecordDuration}s";
-
-      if (path != null) {
-        _sendVoiceMessage(durationStr, path);
-      }
-
+      _sendVoiceMessage(durationStr);
       setState(() {
         _isRecordingAudio = false;
         _audioRecordDuration = 0;
       });
     } else {
-      if (await _audioRecorder.hasPermission()) {
-        final dir = await getApplicationDocumentsDirectory();
-        final filePath = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-        await _audioRecorder.start(
-          const RecordConfig(
-            encoder: AudioEncoder.aacLc,
-            bitRate: 128000,
-            sampleRate: 44100,
-          ),
-          path: filePath,
-        );
-
+      setState(() {
+        _isRecordingAudio = true;
+        _audioRecordDuration = 0;
+      });
+      _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         setState(() {
-          _isRecordingAudio = true;
-          _audioRecordDuration = 0;
+          _audioRecordDuration++;
         });
-
-        _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          setState(() {
-            _audioRecordDuration++;
-          });
-        });
-      }
+      });
     }
   }
 
-  void _sendVoiceMessage(String duration, String audioPath) {
+  void _sendVoiceMessage(String duration) {
     final now = DateTime.now();
     final timeStr = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
     final msgMap = {
@@ -225,7 +195,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       'time': timeStr,
       'isGhost': _ghostMode ? 'true' : 'false',
       'isAudio': 'true',
-      'audioPath': audioPath, // የድምፅ ፋይሉ የተቀመጠበት መንገድ
     };
 
     setState(() {
@@ -605,39 +574,37 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     );
                   },
                 ),
-             GestureDetector(
-          onLongPress: _showSetPasscodeDialog,
-          child: IconButton(
-            constraints: const BoxConstraints(),
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            icon: Icon(
-              _isLocked ? Icons.lock : Icons.lock_open,
-              color: _isLocked ? Colors.redAccent : null,
-              size: 20,
-            ),
-            onPressed: _toggleRoomLock,
-          ),
-        ),
-        IconButton(
-          constraints: const BoxConstraints(),
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          icon: Icon(
-            _ghostMode ? Icons.visibility : Icons.visibility_off,
-            color: _ghostMode ? Colors.purpleAccent : null,
-            size: 20,
-          ),
-          onPressed: () {
-            setState(() {
-              _ghostMode = !_ghostMode;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_ghostMode ? "Ghost mode enabled" : "Ghost mode disabled"),
-                duration: const Duration(seconds: 1),
-              ),
-            );
-          },
-        ),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  icon: Icon(
+                    _isLocked ? Icons.lock : Icons.lock_open,
+                    color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                    size: 20,
+                  ),
+                  onPressed: _toggleRoomLock,
+                  onLongPress: _showSetPasscodeDialog,
+                ),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  icon: Icon(
+                    _ghostMode ? Icons.visibility : Icons.visibility_off,
+                    color: _ghostMode ? Colors.purpleAccent : Colors.white54,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _ghostMode = !_ghostMode;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_ghostMode ? "Ghost Mode ON 👻 Messages disappear in 15s" : "Ghost Mode OFF"),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
                 IconButton(
                   constraints: const BoxConstraints(),
                   padding: const EdgeInsets.only(left: 6, right: 12),
