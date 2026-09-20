@@ -227,11 +227,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
       await _audioPlayer.stop();
 
-      if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
-        await _audioPlayer.play(UrlSource(audioPath));
-      } else {
-        await _audioPlayer.play(DeviceFileSource(audioPath));
-      }
+      await _audioPlayer.play(
+  audioPath.startsWith('http') 
+    ? UrlSource(audioPath) 
+    : DeviceFileSource(audioPath)
+  );
 
       setState(() {
         _currentlyPlayingAudioId = id;
