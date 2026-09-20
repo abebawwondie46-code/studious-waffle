@@ -212,24 +212,40 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Play / Pause Voice Message Simulation
-  void _togglePlayVoiceNote(String id) {
-    setState(() {
+  // Play / Pause Voice Message
+  Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
+    try {
       if (_currentlyPlayingAudioId == id) {
-        _currentlyPlayingAudioId = null; // Pause if already playing
-      } else {
-        _currentlyPlayingAudioId = id; // Play this audio
+        await _audioPlayer.stop();
+        setState(() {
+          _currentlyPlayingAudioId = null;
+        });
+        return;
       }
-    });
 
-    // Auto stop playing after 3 seconds for UI feel
-    if (_currentlyPlayingAudioId != null) {
-      Timer(const Duration(seconds: 4), () {
-        if (mounted && _currentlyPlayingAudioId == id) {
+      await _audioPlayer.stop();
+
+      if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
+        await _audioPlayer.play(UrlSource(audioPath));
+      } else {
+        await _audioPlayer.play(DeviceFileSource(audioPath));
+      }
+
+      setState(() {
+        _currentlyPlayingAudioId = id;
+      });
+
+      _audioPlayer.onPlayerComplete.listen((event) {
+        if (mounted) {
           setState(() {
             _currentlyPlayingAudioId = null;
           });
         }
+      });
+    } catch (e) {
+      debugPrint("Error playing audio: $e");
+      setState(() {
+        _currentlyPlayingAudioId = null;
       });
     }
   }
