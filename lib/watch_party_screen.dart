@@ -5,6 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart'; // ይህ በመቅረቱ ነው getApplicationDocumentsDirectory ያላወቀው
+import 'package:permission_handler/permission_handler.dart';
+
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
 
@@ -30,6 +35,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _isFullScreen = false;
   
   // Audio Recording & Playback States
+  // Audio Recording & Playback States
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isRecordingAudio = false;
   int _audioRecordDuration = 0;
   Timer? _audioTimer;
@@ -66,12 +74,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   @override
   void dispose() {
+    _audioTimer?.cancel();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
     _videoController?.dispose();
     _messageController.dispose();
     _urlController.dispose();
     _passcodeController.dispose();
     _setPasscodeController.dispose();
-    _audioTimer?.cancel();
     super.dispose();
   }
 
@@ -81,8 +91,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
+      builder: (context) => PopScope(
+      canPop: false,
         child: AlertDialog(
           backgroundColor: const Color(0xFF181824),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
