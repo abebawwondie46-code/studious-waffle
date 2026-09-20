@@ -11,9 +11,9 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.24.x'
 
-      - name: Re-generate Android folder
+      - name: Clean and Setup Android Only
         run: |
           rm -rf android
           rm -f pubspec.lock
