@@ -9,18 +9,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.x'
+          channel: 'stable'
 
-      - name: Clean and Setup Android Only
-        run: |
-          rm -rf android
-          rm -f pubspec.lock
-          flutter create --platforms=android --project-name=kuanyngne .
-          git checkout HEAD -- lib/
-
-      - name: Install Dependencies
+      - name: Get Dependencies
         run: flutter pub get
 
       - name: Build APK
