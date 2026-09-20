@@ -27,8 +27,6 @@ jobs:
           rm -f pubspec.lock
           flutter create --platforms=android --project-name=kuanyngne .
           git checkout HEAD -- lib/
-          sed -i 's/compileSdk = .*/compileSdk = 35/' android/app/build.gradle || true
-          sed -i 's/compileSdkVersion .*/compileSdkVersion 35/' android/app/build.gradle || true
 
       - name: Get Dependencies
         run: flutter pub get
