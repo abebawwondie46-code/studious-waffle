@@ -74,6 +74,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _passcodeController.dispose();
     _setPasscodeController.dispose();
     _audioTimer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -83,40 +84,40 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
+      builder: (context) => PopScope(
+        canPop: () async => false,
         child: AlertDialog(
           backgroundColor: const Color(0xFF181824),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.shield_rounded, color: Colors.purpleAccent, size: 28),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text("Private Room Locked", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "Enter room passcode to access video stream and encrypted chat.",
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-                const SizedBox(height: 15),
-                TextField(
-                  controller: _passcodeController,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  maxLength: 8,
-                  autofocus: true,
-                  style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 18),
-                  decoration: InputDecoration(
-                    counterText: "",
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Row(
+        children: [
+          Icon(Icons.shield_rounded, color: Colors.purpleAccent),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text("Private Room Locked", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      const Text(
+        "Enter room passcode to access video stream.",
+        style: TextStyle(color: Colors.grey, fontSize: 14),
+      ),
+      const SizedBox(height: 15),
+      TextField(
+        controller: _passcodeController,
+        obscureText: true,
+        keyboardType: TextInputType.number,
+        maxLength: 8,
+        autofocus: true,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          counterText: "",
                     hintText: "Enter Passcode",
                     hintStyle: const TextStyle(color: Colors.grey, letterSpacing: 1, fontSize: 14),
                     fillColor: const Color(0xFF0F0F17),
@@ -160,188 +161,206 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // Audio Recording Toggle
-  void _toggleAudioRecording() {
-    if (_isLocked && !_isAuthenticated) {
-      _showPasscodePromptDialog();
+void _toggleAudioRecording() async {
+  if (_isLocked && !_isAuthenticated) {
+    _showPasscodePromptDialog();
+    return;
+  }
+
+  if (_isRecordingAudio) {
+    _audioTimer?.cancel();
+    final durationStr = "${_audioRecordDuration}s";
+    
+    // ድምፅ መቅረጹን ማቆም እና መልእክቱን መላክ
+    _sendVoiceMessage(durationStr);
+
+    setState(() {
+      _isRecordingAudio = false;
+      _audioRecordDuration = 0;
+    });
+  } else {
+    setState(() {
+      _isRecordingAudio = true;
+      _audioRecordDuration = 0;
+    });
+
+    // በየሰከንዱ ታይመሩን እንዲቆጥር ማድረግ
+    _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _audioRecordDuration++;
+      });
+    });
+  }
+}
+
+  void _sendVoiceMessage(String duration) {
+  void _sendVoiceMessage(String duration) {
+  final now = DateTime.now();
+  final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+  final msgMap = {
+    'id': DateTime.now().millisecondsSinceEpoch.toString(),
+    'sender': 'You',
+    'text': 'Voice Note ($duration)',
+    'time': timeStr,
+    'isGhost': _ghostMode ? 'true' : 'false',
+    'isAudio': 'true',
+  };
+
+  setState(() {
+    _messages.add(msgMap);
+  });
+
+  if (_ghostMode) {
+    Timer(const Duration(seconds: 15), () {
+      if (mounted) {
+        setState(() {
+          _messages.removeWhere((m) => m['id'] == msgMap['id']);
+        });
+      }
+    });
+  }
+}
+
+// Play / Pause Voice Message
+Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
+  try {
+    // አሁን እየተጫወተ ያለው ድምፅ ከሆነ ያቆመዋል
+    if (_currentlyPlayingAudioId == id) {
+      await _audioPlayer.stop();
+      setState(() {
+        _currentlyPlayingAudioId = null;
+      });
       return;
     }
 
-    if (_isRecordingAudio) {
-      _audioTimer?.cancel();
-      final durationStr = "${_audioRecordDuration}s";
-      _sendVoiceMessage(durationStr);
-      setState(() {
-        _isRecordingAudio = false;
-        _audioRecordDuration = 0;
-      });
-    } else {
-      setState(() {
-        _isRecordingAudio = true;
-        _audioRecordDuration = 0;
-      });
-      _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        setState(() {
-          _audioRecordDuration++;
-        });
-      });
-    }
-  }
+    // ሌላ ድምፅ እየተጫወተ ከሆነ አስቀድሞ ማቆም
+    await _audioPlayer.stop();
 
-  void _sendVoiceMessage(String duration) {
-    final now = DateTime.now();
-    final timeStr = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
-    final msgMap = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'sender': 'You',
-      'text': 'Voice Note ($duration)',
-      'time': timeStr,
-      'isGhost': _ghostMode ? 'true' : 'false',
-      'isAudio': 'true',
-    };
-
+    // አዲሱን ድምፅ ከርዕስ/ፋይል መንገድ መጫን እና ማጫወት
+    await _audioPlayer.setUrl(audioPath);
+    
     setState(() {
-      _messages.add(msgMap);
+      _currentlyPlayingAudioId = id;
     });
 
-    if (_ghostMode) {
-      Timer(const Duration(seconds: 15), () {
-        if (mounted) {
-          setState(() {
-            _messages.removeWhere((m) => m['id'] == msgMap['id']);
-          });
-        }
-      });
-    }
-  }
+    await _audioPlayer.play();
 
-// Play / Pause Voice Message
-  Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
-    try {
-      if (_currentlyPlayingAudioId == id) {
-        await _audioPlayer.stop();
-        setState(() {
-          _currentlyPlayingAudioId = null;
-        });
-        return;
-      }
-
-      await _audioPlayer.stop();
-
-      try {
-  await _audioPlayer.setUrl(audioPath);
-  await _audioPlayer.play();
-} catch (e) {
-  print('Audio play error: $e');
-}
-
-      setState(() {
-        _currentlyPlayingAudioId = id;
-      });
-
-      _audioPlayer.onPlayerComplete.listen((event) {
+    // ድምፁ ሲያበቃ Status-ን ወደ null መመለስ (just_audio stream አጠቃቀም)
+    _audioPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
         if (mounted) {
           setState(() {
             _currentlyPlayingAudioId = null;
           });
         }
-      });
-    } catch (e) {
-      debugPrint("Error playing audio: $e");
+      }
+    });
+  } catch (e) {
+    debugPrint("Error playing audio: $e");
+    if (mounted) {
       setState(() {
         _currentlyPlayingAudioId = null;
       });
     }
   }
+}
 
   // Set & Change Passcode Dialog
-  void _showSetPasscodeDialog() {
-    _setPasscodeController.text = _roomPasscode;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF181824),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Change Room Passcode", style: TextStyle(color: Colors.white, fontSize: 18)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Enter a new passcode for this private room:", style: TextStyle(color: Colors.grey, fontSize: 13)),
-              const SizedBox(height: 15),
-              TextField(
-                controller: _setPasscodeController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-                decoration: InputDecoration(
-                  hintText: "New Passcode",
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  fillColor: const Color(0xFF0F0F17),
-                  filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
-                ),
+ // Set & Change Passcode Dialog
+void _showSetPasscodeDialog() {
+  _setPasscodeController.text = _roomPasscode;
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFF181824),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text("Change Room Passcode", style: TextStyle(color: Colors.white)),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Enter a new passcode",
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _setPasscodeController,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "New Passcode",
+                hintStyle: const TextStyle(color: Colors.grey),
+                fillColor: const Color(0xFF0F0F17),
+                filled: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
-            onPressed: () {
-              final newPin = _setPasscodeController.text.trim();
-              if (newPin.isNotEmpty) {
-                setState(() {
-                  _roomPasscode = newPin;
-                  _isLocked = true;
-                });
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Passcode changed to: $_roomPasscode")),
-                );
-              }
-            },
-            child: const Text("Save Passcode"),
-          ),
-        ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.purpleAccent,
+          ),
+          onPressed: () {
+            final newPin = _setPasscodeController.text.trim();
+            if (newPin.isNotEmpty) {
+              setState(() {
+                _roomPasscode = newPin;
+                _isLocked = true;
+              });
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Passcode Updated Successfully")),
+              );
+              Navigator.pop(context);
+            }
+          },
+          child: const Text("Save Passcode", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
 
   // Toggles Room Lock / Public status
   void _toggleRoomLock() {
-    setState(() {
-      _isLocked = !_isLocked;
-      if (!_isLocked) {
-        _isAuthenticated = true;
-      }
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isLocked ? "Room Locked 🔒 (PIN: $_roomPasscode)" : "Room Unlocked 🔓 Public Party"),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+  setState(() {
+    _isLocked = !_isLocked;
+    if (!_isLocked) {
+      _isAuthenticated = true;
+    }
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(_isLocked ? "Room Locked" : "Room Unlocked"),
+      duration: const Duration(seconds: 2),
+    ),
+  );
+}
 
   Future<void> _pickFromGallery() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-    if (video != null) {
-      _loadLocalVideo(File(video.path), video.name);
-    }
+  final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+  if (video != null) {
+    _loadLocalVideo(File(video.path), video.name);
   }
+}
 
-  Future<void> _recordWithCamera() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
-    if (video != null) {
-      _loadLocalVideo(File(video.path), "Camera Stream");
-    }
+Future<void> _recordWithCamera() async {
+  final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+  if (video != null) {
+    _loadLocalVideo(File(video.path), "Camera Recording");
   }
+}
 
   void _playNetworkUrl(String url) {
     if (url.trim().isEmpty) return;
@@ -351,17 +370,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       _selectedFileName = "Encrypted Stream";
     });
 
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(url.trim()))
-      ..initialize().then((_) {
-        setState(() {
-          _isInitialized = true;
-          _videoController!.play();
-        });
-      }).catchError((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to load stream link")),
-        );
-      });
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
+  ..initialize().then((_) {
+    setState(() {
+      _isInitialized = true;
+      _videoController!.play();
+    });
+  }).catchError((e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to load video stream")),
+      );
+    }
+  });
   }
 
   void _loadLocalVideo(File file, String name) {
