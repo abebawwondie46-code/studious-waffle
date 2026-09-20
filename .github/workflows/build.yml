@@ -21,13 +21,6 @@ jobs:
           flutter-version: '3.22.x'
           channel: 'stable'
 
-      - name: Upgrade Android Project to V2 Embedding
-        run: |
-          rm -rf android
-          rm -f pubspec.lock
-          flutter create --platforms=android --project-name=kuanyngne .
-          git checkout HEAD -- lib/
-
       - name: Get Dependencies
         run: flutter pub get
 
