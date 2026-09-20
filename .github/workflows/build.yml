@@ -13,9 +13,10 @@ jobs:
         with:
           flutter-version: '3.x'
 
-      - name: Re-generate Android folder with v2 embedding
+      - name: Re-generate Android folder & Clean locks
         run: |
           rm -rf android
+          rm -f pubspec.lock
           flutter create --platforms=android .
           git checkout HEAD -- lib/
 
