@@ -28,7 +28,7 @@ jobs:
           flutter create --platforms=android --project-name=kuanyngne .
           git checkout HEAD -- lib/
 
-      - name: Get Dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
       - name: Build APK
