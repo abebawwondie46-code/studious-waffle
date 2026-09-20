@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
@@ -23,6 +24,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   ];
 
   final ImagePicker _picker = ImagePicker();
+  import 'package:audioplayers/audioplayers.dart';
   VideoPlayerController? _videoController;
   String _selectedFileName = "No Content Loaded";
   bool _isInitialized = false;
@@ -212,7 +214,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Play / Pause Voice Message
+ // Play / Pause Voice Message
   Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
     try {
       if (_currentlyPlayingAudioId == id) {
@@ -792,8 +794,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                   ),
                                   child: isAudio
                                       ? InkWell(
-                                          onTap: () => _togglePlayVoiceNote(msg['id']!),
-                                          child: Row(
+                                    onTap: () => _togglePlayVoiceNote(
+                                    msg['id'].toString(), 
+                                    msg['audioPath'] ?? msg['text'] ?? '',
+                                   ),
+                                   child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Icon(
