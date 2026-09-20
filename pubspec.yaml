@@ -23,7 +23,7 @@ dependencies:
   record: ^5.1.2
   audioplayers: ^6.0.0
   permission_handler: ^11.3.1
-  app_links: ^6.3.2
+  app_links: 6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -31,6 +31,7 @@ dev_dependencies:
   flutter_lints: ^3.0.0
 
 dependency_overrides:
+  app_links: 6.3.2
   record_linux: 0.7.2
   record_platform_interface: 1.6.0
 
