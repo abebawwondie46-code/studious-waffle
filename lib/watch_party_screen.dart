@@ -1,6 +1,6 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'dart:async';
 import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -227,11 +227,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
       await _audioPlayer.stop();
 
-      await _audioPlayer.play(
-  audioPath.startsWith('http') 
-    ? UrlSource(audioPath) 
-    : DeviceFileSource(audioPath)
-  );
+      if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
+  await _audioPlayer.play(UrlSource(audioPath));
+} else {
+  await _audioPlayer.play(DeviceFileSource(audioPath));
+}
 
       setState(() {
         _currentlyPlayingAudioId = id;
