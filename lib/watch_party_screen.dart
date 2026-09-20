@@ -193,7 +193,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         final filePath = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
         await _audioRecorder.start(
-          const RecordConfig(encoder: AudioEncoder.aacLc),
+          RecordConfig(encoder: AudioEncoder.aacLc),
           path: filePath,
         );
 
