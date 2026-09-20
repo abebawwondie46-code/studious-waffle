@@ -158,7 +158,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // Audio Recording Toggle
-  void _toggleAudioRecording() {
+  void _toggleAudioRecording() async {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
       return;
@@ -166,26 +166,42 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
     if (_isRecordingAudio) {
       _audioTimer?.cancel();
+      final path = await _audioRecorder.stop();
       final durationStr = "${_audioRecordDuration}s";
-      _sendVoiceMessage(durationStr);
+      
+      if (path != null) {
+        _sendVoiceMessage(durationStr, path);
+      }
+
       setState(() {
         _isRecordingAudio = false;
         _audioRecordDuration = 0;
       });
     } else {
-      setState(() {
-        _isRecordingAudio = true;
-        _audioRecordDuration = 0;
-      });
-      _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (await _audioRecorder.hasPermission()) {
+        final dir = await getApplicationDocumentsDirectory();
+        final filePath = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        await _audioRecorder.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: filePath,
+        );
+
         setState(() {
-          _audioRecordDuration++;
+          _isRecordingAudio = true;
+          _audioRecordDuration = 0;
         });
-      });
+
+        _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          setState(() {
+            _audioRecordDuration++;
+          });
+        });
+      }
     }
   }
 
-  void _sendVoiceMessage(String duration) {
+  void _sendVoiceMessage(String duration, String audioPath) {
     final now = DateTime.now();
     final timeStr = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
     final msgMap = {
@@ -195,6 +211,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       'time': timeStr,
       'isGhost': _ghostMode ? 'true' : 'false',
       'isAudio': 'true',
+      'audioPath': audioPath, // የድምፅ ፋይሉ የተቀመጠበት መንገድ
     };
 
     setState(() {
