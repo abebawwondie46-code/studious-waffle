@@ -214,7 +214,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
- // Play / Pause Voice Message
+// Play / Pause Voice Message
   Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
     try {
       if (_currentlyPlayingAudioId == id) {
