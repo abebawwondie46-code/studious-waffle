@@ -21,11 +21,11 @@ jobs:
           flutter-version: '3.24.x'
           channel: 'stable'
 
-      - name: Re-generate Android Folder to Fix Deprecated Embedding
+      - name: Re-generate Clean Android Project
         run: |
           rm -rf android
           rm -f pubspec.lock
-          flutter create --platforms=android --project-name kuanyngne .
+          flutter create --platforms=android --project-name=kuanyngne .
           git checkout HEAD -- lib/
 
       - name: Get Dependencies
