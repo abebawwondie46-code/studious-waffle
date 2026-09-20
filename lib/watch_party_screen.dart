@@ -601,37 +601,39 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     );
                   },
                 ),
-                IconButton(
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  icon: Icon(
-                    _isLocked ? Icons.lock : Icons.lock_open,
-                    color: _isLocked ? Colors.redAccent : Colors.greenAccent,
-                    size: 20,
-                  ),
-                  onPressed: _toggleRoomLock,
-                  onLongPress: _showSetPasscodeDialog,
-                ),
-                IconButton(
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  icon: Icon(
-                    _ghostMode ? Icons.visibility : Icons.visibility_off,
-                    color: _ghostMode ? Colors.purpleAccent : Colors.white54,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _ghostMode = !_ghostMode;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_ghostMode ? "Ghost Mode ON 👻 Messages disappear in 15s" : "Ghost Mode OFF"),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
+             GestureDetector(
+          onLongPress: _showSetPasscodeDialog,
+          child: IconButton(
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            icon: Icon(
+              _isLocked ? Icons.lock : Icons.lock_open,
+              color: _isLocked ? Colors.redAccent : null,
+              size: 20,
+            ),
+            onPressed: _toggleRoomLock,
+          ),
+        ),
+        IconButton(
+          constraints: const BoxConstraints(),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          icon: Icon(
+            _ghostMode ? Icons.visibility : Icons.visibility_off,
+            color: _ghostMode ? Colors.purpleAccent : null,
+            size: 20,
+          ),
+          onPressed: () {
+            setState(() {
+              _ghostMode = !_ghostMode;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_ghostMode ? "Ghost mode enabled" : "Ghost mode disabled"),
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          },
+        ),
                 IconButton(
                   constraints: const BoxConstraints(),
                   padding: const EdgeInsets.only(left: 6, right: 12),
