@@ -21,6 +21,13 @@ jobs:
           flutter-version: '3.24.x'
           channel: 'stable'
 
+      - name: Re-create Android folder with v2 embedding
+        run: |
+          rm -rf android
+          rm -f pubspec.lock
+          flutter create --platforms=android --project-name=kuanyngne .
+          git checkout HEAD -- lib/
+
       - name: Get Dependencies
         run: flutter pub get
 
