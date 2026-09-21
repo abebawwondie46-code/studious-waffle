@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
@@ -43,15 +42,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   final String _roomId = "SEC-7069";
   String _roomPasscode = "1234";
-// የ Supabase Realtime Channel መያዣ
-final _supabase = Supabase.instance.client;
-RealtimeChannel? _partyChannel;
-  
+
   final List<String> _emojiList = [
     '🤫', '🔒', '🔥', '😂', '👏', '🎉', '👻', '❤️',
     '🥳', '👍', '💯', '😎', '👀', '🚀', '✨', '🍿',
     '🙌', '😍', '🤔', '🤝', '🤡', '🙈', '💀', '💩'
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _messageController.addListener(() {
+      setState(() {}); 
+    });
 void _setupRealtimeSync() {
     _partyChannel = Supabase.instance.client.channel('room_$_roomId');
 
@@ -85,21 +88,12 @@ void _setupRealtimeSync() {
       },
     ).subscribe();
   }
-  
-  @override
-  void initState() {
-    super.initState();
-    _messageController.addListener(() {
-      setState(() {}); 
-    });
-
     // Automatically prompt passcode dialog when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isLocked && !_isAuthenticated) {
         _showPasscodePromptDialog();
       }
     });
-    _setupRealtimeSync();
   }
 
   @override
@@ -110,28 +104,9 @@ void _setupRealtimeSync() {
     _passcodeController.dispose();
     _setPasscodeController.dispose();
     _audioTimer?.cancel();
-    
-    _partyChannel?.unsubscribe();
-    
     super.dispose();
   }
-void _setupRealtimeSync() {
-  // በ _roomId (SEC-7069) መሰረት የኢንተርኔት ቻነሉን መክፈት
-  _partyChannel = Supabase.instance.client.channel('room_$_roomId');
 
-  // ከሌላ ስልክ መልእክት ሲላክ በኢንተርኔት መቀበል
-  _partyChannel!.onBroadcast(
-    event: 'chat_message',
-    callback: (payload) {
-      if (mounted) {
-        setState(() {
-          _messages.add(Map<String, String>.from(payload['data']));
-        });
-      }
-    },
-  ).subscribe();
-}
-  
   // Passcode Verification Dialog on Launch
   void _showPasscodePromptDialog() {
     _passcodeController.clear();
@@ -290,40 +265,7 @@ void _setupRealtimeSync() {
       });
     }
   }
-void _setupRealtimeSync() {
-    _partyChannel = Supabase.instance.client.channel('room_$_roomId');
 
-    // 1. የቻት መልእክት መቀበያ
-    _partyChannel!.onBroadcast(
-      event: 'chat_message',
-      callback: (payload) {
-        if (mounted) {
-          setState(() {
-            _messages.add(Map<String, String>.from(payload['data']));
-          });
-        }
-      },
-    );
-
-    // 2. የቪዲዮ እንቅስቃሴ መቀበያ (Play/Pause/Seek)
-    _partyChannel!.onBroadcast(
-      event: 'video_control',
-      callback: (payload) {
-        final action = payload['action'];
-        final position = Duration(milliseconds: payload['position']);
-
-        if (action == 'play') {
-          _videoController?.seekTo(position);
-          _videoController?.play();
-        } else if (action == 'pause') {
-          _videoController?.pause();
-        } else if (action == 'seek') {
-          _videoController?.seekTo(position);
-        }
-      },
-    ).subscribe();
-  }
-  
   // Set & Change Passcode Dialog
   void _showSetPasscodeDialog() {
     _setPasscodeController.text = _roomPasscode;
@@ -382,40 +324,7 @@ void _setupRealtimeSync() {
       ),
     );
   }
-void _setupRealtimeSync() {
-    _partyChannel = Supabase.instance.client.channel('room_$_roomId');
 
-    // 1. የቻት መልእክት መቀበያ
-    _partyChannel!.onBroadcast(
-      event: 'chat_message',
-      callback: (payload) {
-        if (mounted) {
-          setState(() {
-            _messages.add(Map<String, String>.from(payload['data']));
-          });
-        }
-      },
-    );
-
-    // 2. የቪዲዮ እንቅስቃሴ መቀበያ (Play/Pause/Seek)
-    _partyChannel!.onBroadcast(
-      event: 'video_control',
-      callback: (payload) {
-        final action = payload['action'];
-        final position = Duration(milliseconds: payload['position']);
-
-        if (action == 'play') {
-          _videoController?.seekTo(position);
-          _videoController?.play();
-        } else if (action == 'pause') {
-          _videoController?.pause();
-        } else if (action == 'seek') {
-          _videoController?.seekTo(position);
-        }
-      },
-    ).subscribe();
-  }
-  
   // Toggles Room Lock / Public status
   void _toggleRoomLock() {
     setState(() {
@@ -446,40 +355,7 @@ void _setupRealtimeSync() {
       _loadLocalVideo(File(video.path), "Camera Stream");
     }
   }
-void _setupRealtimeSync() {
-    _partyChannel = Supabase.instance.client.channel('room_$_roomId');
 
-    // 1. የቻት መልእክት መቀበያ
-    _partyChannel!.onBroadcast(
-      event: 'chat_message',
-      callback: (payload) {
-        if (mounted) {
-          setState(() {
-            _messages.add(Map<String, String>.from(payload['data']));
-          });
-        }
-      },
-    );
-
-    // 2. የቪዲዮ እንቅስቃሴ መቀበያ (Play/Pause/Seek)
-    _partyChannel!.onBroadcast(
-      event: 'video_control',
-      callback: (payload) {
-        final action = payload['action'];
-        final position = Duration(milliseconds: payload['position']);
-
-        if (action == 'play') {
-          _videoController?.seekTo(position);
-          _videoController?.play();
-        } else if (action == 'pause') {
-          _videoController?.pause();
-        } else if (action == 'seek') {
-          _videoController?.seekTo(position);
-        }
-      },
-    ).subscribe();
-  }
-  
   void _playNetworkUrl(String url) {
     if (url.trim().isEmpty) return;
     _videoController?.dispose();
@@ -517,20 +393,6 @@ void _setupRealtimeSync() {
       });
   }
 
-  void _setupRealtimeSync() {
-    _partyChannel = Supabase.instance.client.channel('room_$_roomId');
-
-    _partyChannel!.onBroadcast(
-      event: 'chat_message',
-      callback: (payload) {
-        if (mounted) {
-          setState(() {
-            _messages.add(Map<String, String>.from(payload['data']));
-          });
-        }
-      },
-    ).subscribe();
-  }
   void _sendMessage({String? customText}) {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
