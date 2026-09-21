@@ -435,9 +435,8 @@ void _setupRealtimeSync() {
       };
 
       try {
-        // sendBroadcast የነበረው እዚህ ጋር ወደ send ተቀይሯል
-        await _partyChannel?.send(
-          type: 'broadcast',
+        // የ Supabase Broadcast መልእክት መላኪያ ትክክለኛ Method
+        await _partyChannel?.sendBroadcastMessage(
           event: 'chat_message',
           payload: msgMap,
         );
