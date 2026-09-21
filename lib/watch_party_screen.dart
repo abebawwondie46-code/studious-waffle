@@ -88,7 +88,27 @@ void _setupRealtimeSync() {
           _videoController?.seekTo(position);
         }
       },
-    ).subscribe();
+    ).subscribe((status, error) {
+      if (mounted) {
+        if (status == RealtimeSubscribeStatus.subscribed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🟢 ከኢንተርኔት/Realtime ጋር ተገናኝቷል!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else if (status == RealtimeSubscribeStatus.disconnected || error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🔴 የኢንተርኔት ግንኙነት ተቋርጧል!'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    });
   }
     // Automatically prompt passcode dialog when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
