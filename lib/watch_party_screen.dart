@@ -35,13 +35,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   int _audioRecordDuration = 0;
   Timer? _audioTimer;
   String? _currentlyPlayingAudioId;
-  
-  // Audio Recording & Playback States
-  bool _isRecordingAudio = false;
-  int _audioRecordDuration = 0;
-  Timer? _audioTimer;
-  String? _currentlyPlayingAudioId;
-  final AudioPlayer _audioPlayer = AudioPlayer(); // <-- እዚህ ጋር ጨምረው
+
 
   // Security & Authentication States
   bool _isLocked = true; // Default locked to prompt passcode on launch
