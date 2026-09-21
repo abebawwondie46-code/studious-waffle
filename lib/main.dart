@@ -33,19 +33,21 @@ class _NativeVoiceRecorderAppState extends State<NativeVoiceRecorderApp> {
           _filePath = path;
         });
       } else {
-        // አስቀድሞ ፈቃድ አለ ወይ ብሎ ማረጋገጥ/መጠየቅ
-        final bool hasPermission = await platform.invokeMethod('checkAndRequestPermission');
+        // ፈቃድ ማረጋገጥ
+        final bool hasPermission = await platform.invokeMethod('checkPermission');
 
         if (!hasPermission) {
+          // ፈቃድ ከሌለ መጠየቅ
+          await platform.invokeMethod('requestPermission');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('እባክዎን የማይክራፎን ፈቃዱን "Allow" በለውና እንደገና ይጫኑት')),
+              const SnackBar(content: Text('እባክዎን የማይክራፎን ፈቃዱን Allow በለውና እንደገና ይጫኑት')),
             );
           }
           return;
         }
 
-        // ፈቃድ ከተሰጠ መቅረፅ መጀመር
+        // ፈቃድ ካለ መቅረፅ መጀመር
         final String? path = await platform.invokeMethod('startRecording');
         setState(() {
           _isRecording = true;
@@ -53,7 +55,6 @@ class _NativeVoiceRecorderAppState extends State<NativeVoiceRecorderApp> {
         });
       }
     } on PlatformException catch (e) {
-      debugPrint("Record Error: ${e.message}");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.message}')),
@@ -77,7 +78,11 @@ class _NativeVoiceRecorderAppState extends State<NativeVoiceRecorderApp> {
         });
       }
     } on PlatformException catch (e) {
-      debugPrint("Play Error: ${e.message}");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Play Error: ${e.message}')),
+        );
+      }
     }
   }
 
