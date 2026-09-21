@@ -98,7 +98,7 @@ void _setupRealtimeSync() {
               duration: Duration(seconds: 2),
             ),
           );
-        } else if (status == RealtimeSubscribeStatus.disconnected || error != null) {
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('🔴 የኢንተርኔት ግንኙነት ተቋርጧል!'),
