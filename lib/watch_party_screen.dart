@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -213,27 +212,57 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Play / Pause Voice Message Simulation
-  void _togglePlayVoiceNote(String id) {
-    setState(() {
-      if (_currentlyPlayingAudioId == id) {
-        _currentlyPlayingAudioId = null; // Pause if already playing
+  // Play / Pause Voice Message (ከእውነተኛ ድምፅ ጋር)
+Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
+  try {
+    // አሁን እየተጫወተ ያለው ድምፅ ከሆነ ያቆመዋል (Pause/Stop)
+    if (_currentlyPlayingAudioId == id) {
+      await _audioPlayer.stop();
+      setState(() {
+        _currentlyPlayingAudioId = null;
+      });
+      return;
+    }
+
+    // ሌላ የሚጫወት ድምፅ ካለ አስቀድሞ ማቆም
+    await _audioPlayer.stop();
+
+    // የድምፁን ፋይል (URL ወይም Local Path) መጫን
+    if (audioPath.isNotEmpty) {
+      if (audioPath.startsWith('http')) {
+        await _audioPlayer.setUrl(audioPath);
       } else {
-        _currentlyPlayingAudioId = id; // Play this audio
+        await _audioPlayer.setFilePath(audioPath);
       }
+    }
+
+    // የሚጫወተውን ድምፅ ID መያዝ
+    setState(() {
+      _currentlyPlayingAudioId = id;
     });
 
-    // Auto stop playing after 3 seconds for UI feel
-    if (_currentlyPlayingAudioId != null) {
-      Timer(const Duration(seconds: 4), () {
-        if (mounted && _currentlyPlayingAudioId == id) {
+    // ድምፁን ማጫወት መጀመር
+    await _audioPlayer.play();
+
+    // ድምፁ ተጫውቶ ሲያበቃ አውቶማቲክ እንዲቆም ማድረግ
+    _audioPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        if (mounted) {
           setState(() {
             _currentlyPlayingAudioId = null;
           });
         }
+      }
+    });
+  } catch (e) {
+    debugPrint("Error playing audio: $e");
+    if (mounted) {
+      setState(() {
+        _currentlyPlayingAudioId = null;
       });
     }
   }
+}
 
   // Set & Change Passcode Dialog
   void _showSetPasscodeDialog() {
