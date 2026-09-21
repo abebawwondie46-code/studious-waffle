@@ -211,7 +211,7 @@ void _setupRealtimeSync() {
     );
   }
 
-  // Audio Recording Toggle
+  // Audio Recording 
   void _toggleAudioRecording() {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
