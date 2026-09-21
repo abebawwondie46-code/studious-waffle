@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
+  RealtimeChannel? _partyChannel;
   const WatchPartyScreen({super.key});
 
   @override
