@@ -437,7 +437,7 @@ void _setupRealtimeSync() {
       try {
         // sendBroadcast የነበረው እዚህ ጋር ወደ send ተቀይሯል
         await _partyChannel?.send(
-          type: RealtimeListenTypes.broadcast,
+          type: 'broadcast',
           event: 'chat_message',
           payload: msgMap,
         );
