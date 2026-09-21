@@ -7,14 +7,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
-  RealtimeChannel? _partyChannel;
-  const WatchPartyScreen({super.key});
+   const WatchPartyScreen({super.key});
 
   @override
   State<WatchPartyScreen> createState() => _WatchPartyScreenState();
 }
 
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
+  RealtimeChannel? _partyChannel;
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _passcodeController = TextEditingController();
