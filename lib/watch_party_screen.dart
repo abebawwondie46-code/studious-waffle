@@ -434,19 +434,42 @@ void _setupRealtimeSync() {
         'isAudio': 'false',
       };
 
-      setState(() {
-        _messages.add(msgMap);
-        if (customText == null) _messageController.clear();
-      });
+      try {
+        // 1. መጀመሪያ ለ Supabase Realtime መላክ (ኢንተርኔት ከሌለ እዚሁ error ይሰጣል)
+        await _partyChannel?.sendBroadcastEvent(
+          event: 'chat_message',
+          payload: msgMap,
+        );
 
-      if (_ghostMode) {
-        Timer(const Duration(seconds: 15), () {
-          if (mounted) {
-            setState(() {
-              _messages.removeWhere((m) => m['id'] == msgMap['id']);
+        // 2. በስኬት ከተላከ ብቻ በራስህ ስልክ UI ላይ መጨመር
+        if (mounted) {
+          setState(() {
+            _messages.add(msgMap);
+            if (customText == null) _messageController.clear();
+          });
+
+          // Ghost Mode ከሆነ ከ15 ሰከንድ በኋላ ከስክሪን እንዲጠፋ
+          if (_ghostMode) {
+            Timer(const Duration(seconds: 15), () {
+              if (mounted) {
+                setState(() {
+                  _messages.removeWhere((m) => m['id'] == msgMap['id']);
+                });
+              }
             });
           }
-        });
+        }
+      } catch (e) {
+        // 3. ኢንተርኔት ከተቋረጠ መልእክቱ ሳይላክ ለተጠቃሚው ማስጠንቀቂያ ማሳየት
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ ኢንተርኔት የለም! መልእክት መላክ አይቻልም።'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     }
   }
