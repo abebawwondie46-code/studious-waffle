@@ -436,7 +436,7 @@ void _setupRealtimeSync() {
 
       try {
         // 1. መጀመሪያ ለ Supabase Realtime መላክ (ኢንተርኔት ከሌለ እዚሁ error ይሰጣል)
-        await _partyChannel?.sendBroadcastEvent(
+        await _partyChannel?.sendBroadcast(
           event: 'chat_message',
           payload: msgMap,
         );
