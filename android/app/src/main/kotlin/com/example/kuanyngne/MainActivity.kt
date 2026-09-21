@@ -4,10 +4,13 @@ import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import android.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.media.MediaPlayer
 import android.Manifest
+import android.os.Build
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.example.voice/native"
@@ -19,18 +22,34 @@ class MainActivity: FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartEntrypoint.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-                "requestPermission" -> {
-                    ActivityCompat.requestPermissions(
+                "checkAndRequestPermission" -> {
+                    val hasPermission = ContextCompat.checkSelfPermission(
                         this,
-                        arrayOf(Manifest.permission.RECORD_AUDIO),
-                        101
-                    )
-                    result.success(true)
+                        Manifest.permission.RECORD_AUDIO
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (!hasPermission) {
+                        ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(Manifest.permission.RECORD_AUDIO),
+                            101
+                        )
+                        result.success(false)
+                    } else {
+                        result.success(true)
+                    }
                 }
                 "startRecording" -> {
                     try {
                         audioFilePath = "${externalCacheDir?.absolutePath}/native_voice.m4a"
-                        mediaRecorder = MediaRecorder().apply {
+                        
+                        mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            MediaRecorder(this)
+                        } else {
+                            MediaRecorder()
+                        }
+
+                        mediaRecorder?.apply {
                             setAudioSource(MediaRecorder.AudioSource.MIC)
                             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
