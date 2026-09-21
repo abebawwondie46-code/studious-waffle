@@ -22,26 +22,30 @@ class _NativeVoiceRecorderAppState extends State<NativeVoiceRecorderApp> {
   bool _isPlaying = false;
   String? _filePath;
 
-  // 1. የማይክራፎን ፈቃድ መጠየቅ
-  Future<void> _requestPermission() async {
-    try {
-      await platform.invokeMethod('requestPermission');
-    } on PlatformException catch (e) {
-      debugPrint("Permission Error: ${e.message}");
-    }
-  }
-
-  // 2. ድምፅ መቅረፅ መጀመር እና ማቆም
+  // 1. የማይክራፎን በተኑ ሲነካ
   Future<void> _toggleRecord() async {
     try {
       if (_isRecording) {
+        // መቅረፅ ማቆም
         final String? path = await platform.invokeMethod('stopRecording');
         setState(() {
           _isRecording = false;
           _filePath = path;
         });
       } else {
-        await _requestPermission(); // ፈቃድ በስክሪኑ ላይ እንዲመጣ ይጠይቃል
+        // አስቀድሞ ፈቃድ አለ ወይ ብሎ ማረጋገጥ/መጠየቅ
+        final bool hasPermission = await platform.invokeMethod('checkAndRequestPermission');
+
+        if (!hasPermission) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('እባክዎን የማይክራፎን ፈቃዱን "Allow" በለውና እንደገና ይጫኑት')),
+            );
+          }
+          return;
+        }
+
+        // ፈቃድ ከተሰጠ መቅረፅ መጀመር
         final String? path = await platform.invokeMethod('startRecording');
         setState(() {
           _isRecording = true;
@@ -50,10 +54,15 @@ class _NativeVoiceRecorderAppState extends State<NativeVoiceRecorderApp> {
       }
     } on PlatformException catch (e) {
       debugPrint("Record Error: ${e.message}");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.message}')),
+        );
+      }
     }
   }
 
-  // 3. ድምፁን ማጫወት እና ማቆም
+  // 2. የተቀረፀውን ማጫወት
   Future<void> _togglePlay() async {
     try {
       if (_isPlaying) {
