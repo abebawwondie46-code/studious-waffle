@@ -415,7 +415,7 @@ void _setupRealtimeSync() {
       });
   }
 
-  void _sendMessage({String? customText}) {
+  void _sendMessage({String? customText}) async {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
       return;
