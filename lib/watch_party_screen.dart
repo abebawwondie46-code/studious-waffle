@@ -1,135 +1,158 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:just_audio/just_audio.dart';
 
-class SecretPartyScreen extends StatefulWidget {
-  const SecretPartyScreen({Key? key}) : super(key: key);
+class WatchPartyScreen extends StatefulWidget {
+  const WatchPartyScreen({super.key});
 
   @override
-  State<SecretPartyScreen> createState() => _SecretPartyScreenState();
+  State<WatchPartyScreen> createState() => _WatchPartyScreenState();
 }
 
-class _SecretPartyScreenState extends State<SecretPartyScreen> {
-  // State Variables
-  bool _isLocked = true;
-  bool _isAuthenticated = false;
-  String _roomPasscode = "1234";
-  bool _ghostMode = false;
+class _WatchPartyScreenState extends State<WatchPartyScreen> {
+  final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _urlController = TextEditingController();
+  final TextEditingController _passcodeController = TextEditingController();
+  final TextEditingController _setPasscodeController = TextEditingController();
+
+  final List<Map<String, String>> _messages = [
+    {'id': '1', 'sender': 'System', 'text': '🔒 End-to-End Encrypted Private Room Created', 'time': '12:00 PM', 'isGhost': 'false', 'isAudio': 'false'},
+  ];
+
+  final ImagePicker _picker = ImagePicker();
+  VideoPlayerController? _videoController;
+  String _selectedFileName = "No Content Loaded";
+  bool _isInitialized = false;
+  bool _showControls = true;
+  bool _isFullScreen = false;
+  
+  // Audio Recording & Playback States
   bool _isRecordingAudio = false;
   int _audioRecordDuration = 0;
   Timer? _audioTimer;
   String? _currentlyPlayingAudioId;
 
-  VideoPlayerController? _videoController;
-  bool _isInitialized = false;
-  String _selectedFileName = "No Content Loaded";
+  // Security & Authentication States
+  bool _isLocked = true; // Default locked to prompt passcode on launch
+  bool _isAuthenticated = false;
+  bool _ghostMode = false;
 
-  final ImagePicker _picker = ImagePicker();
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final String _roomId = "SEC-7069";
+  String _roomPasscode = "1234";
 
-  final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _passcodeController = TextEditingController();
-  final TextEditingController _setPasscodeController = TextEditingController();
-
-  final List<Map<String, String>> _messages = [
-    {
-      'id': '1',
-      'sender': 'System',
-      'text': 'End-to-End Encrypted Private Room Created',
-      'time': '17:48',
-      'isGhost': 'false',
-      'isAudio': 'false',
-    }
+  final List<String> _emojiList = [
+    '🤫', '🔒', '🔥', '😂', '👏', '🎉', '👻', '❤️',
+    '🥳', '👍', '💯', '😎', '👀', '🚀', '✨', '🍿',
+    '🙌', '😍', '🤔', '🤝', '🤡', '🙈', '💀', '💩'
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _messageController.addListener(() {
+      setState(() {}); 
+    });
+
+    // Automatically prompt passcode dialog when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isLocked && !_isAuthenticated) {
+        _showPasscodePromptDialog();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _videoController?.dispose();
-    _audioPlayer.dispose();
-    _audioTimer?.cancel();
     _messageController.dispose();
+    _urlController.dispose();
     _passcodeController.dispose();
     _setPasscodeController.dispose();
+    _audioTimer?.cancel();
     super.dispose();
   }
 
-  // Passcode Dialog
+  // Passcode Verification Dialog on Launch
   void _showPasscodePromptDialog() {
     _passcodeController.clear();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF181824),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.shield_rounded, color: Colors.purpleAccent),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text("Private Room Locked", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                "Enter room passcode to access video stream.",
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                controller: _passcodeController,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 8,
-                autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  counterText: "",
-                  hintText: "Enter Passcode",
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  fillColor: const Color(0xFF0F0F17),
-                  filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF181824),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.shield_rounded, color: Colors.purpleAccent, size: 28),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text("Private Room Locked", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purpleAccent,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                const SizedBox(height: 12),
+                const Text(
+                  "Enter room passcode to access video stream and encrypted chat.",
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: _passcodeController,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 8,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 18),
+                  decoration: InputDecoration(
+                    counterText: "",
+                    hintText: "Enter Passcode",
+                    hintStyle: const TextStyle(color: Colors.grey, letterSpacing: 1, fontSize: 14),
+                    fillColor: const Color(0xFF0F0F17),
+                    filled: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent, width: 2)),
+                  ),
+                ),
+              ],
             ),
-            onPressed: () {
-              if (_passcodeController.text.trim() == _roomPasscode) {
-                setState(() {
-                  _isAuthenticated = true;
-                });
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Access Granted")),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Incorrect Passcode")),
-                );
-              }
-            },
-            child: const Text("Unlock Access", style: TextStyle(color: Colors.white)),
           ),
-        ],
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purpleAccent,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                if (_passcodeController.text.trim() == _roomPasscode) {
+                  setState(() {
+                    _isAuthenticated = true;
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Access Granted 🔓 Welcome to Secret Watch Party!")),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Incorrect Passcode! Please try again."), backgroundColor: Colors.redAccent),
+                  );
+                }
+              },
+              child: const Text("Unlock Access", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -145,7 +168,6 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
       _audioTimer?.cancel();
       final durationStr = "${_audioRecordDuration}s";
       _sendVoiceMessage(durationStr);
-
       setState(() {
         _isRecordingAudio = false;
         _audioRecordDuration = 0;
@@ -155,7 +177,6 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
         _isRecordingAudio = true;
         _audioRecordDuration = 0;
       });
-
       _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         setState(() {
           _audioRecordDuration++;
@@ -166,7 +187,7 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
 
   void _sendVoiceMessage(String duration) {
     final now = DateTime.now();
-    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+    final timeStr = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
     final msgMap = {
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'sender': 'You',
@@ -191,44 +212,25 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
     }
   }
 
-  // Play / Pause Voice Message
-  Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
-    try {
+  // Play / Pause Voice Message Simulation
+  void _togglePlayVoiceNote(String id) {
+    setState(() {
       if (_currentlyPlayingAudioId == id) {
-        await _audioPlayer.stop();
-        setState(() {
-          _currentlyPlayingAudioId = null;
-        });
-        return;
+        _currentlyPlayingAudioId = null; // Pause if already playing
+      } else {
+        _currentlyPlayingAudioId = id; // Play this audio
       }
+    });
 
-      await _audioPlayer.stop();
-      if (audioPath.isNotEmpty) {
-        await _audioPlayer.setUrl(audioPath);
-      }
-
-      setState(() {
-        _currentlyPlayingAudioId = id;
-      });
-
-      await _audioPlayer.play();
-
-      _audioPlayer.playerStateStream.listen((state) {
-        if (state.processingState == ProcessingState.completed) {
-          if (mounted) {
-            setState(() {
-              _currentlyPlayingAudioId = null;
-            });
-          }
+    // Auto stop playing after 3 seconds for UI feel
+    if (_currentlyPlayingAudioId != null) {
+      Timer(const Duration(seconds: 4), () {
+        if (mounted && _currentlyPlayingAudioId == id) {
+          setState(() {
+            _currentlyPlayingAudioId = null;
+          });
         }
       });
-    } catch (e) {
-      debugPrint("Error playing audio: $e");
-      if (mounted) {
-        setState(() {
-          _currentlyPlayingAudioId = null;
-        });
-      }
     }
   }
 
@@ -239,29 +241,26 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF181824),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Change Room Passcode", style: TextStyle(color: Colors.white)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Change Room Passcode", style: TextStyle(color: Colors.white, fontSize: 18)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Enter a new passcode",
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
+              const Text("Enter a new passcode for this private room:", style: TextStyle(color: Colors.grey, fontSize: 13)),
               const SizedBox(height: 15),
               TextField(
                 controller: _setPasscodeController,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
                 decoration: InputDecoration(
                   hintText: "New Passcode",
                   hintStyle: const TextStyle(color: Colors.grey),
                   fillColor: const Color(0xFF0F0F17),
                   filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
                 ),
               ),
             ],
@@ -281,19 +280,20 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
                   _roomPasscode = newPin;
                   _isLocked = true;
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Passcode Updated Successfully")),
-                );
                 Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Passcode changed to: $_roomPasscode")),
+                );
               }
             },
-            child: const Text("Save Passcode", style: TextStyle(color: Colors.white)),
+            child: const Text("Save Passcode"),
           ),
         ],
       ),
     );
   }
 
+  // Toggles Room Lock / Public status
   void _toggleRoomLock() {
     setState(() {
       _isLocked = !_isLocked;
@@ -301,10 +301,10 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
         _isAuthenticated = true;
       }
     });
-
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isLocked ? "Room Locked" : "Room Unlocked"),
+        content: Text(_isLocked ? "Room Locked 🔒 (PIN: $_roomPasscode)" : "Room Unlocked 🔓 Public Party"),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -320,7 +320,7 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
   Future<void> _recordWithCamera() async {
     final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
     if (video != null) {
-      _loadLocalVideo(File(video.path), "Camera Recording");
+      _loadLocalVideo(File(video.path), "Camera Stream");
     }
   }
 
@@ -332,18 +332,16 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
       _selectedFileName = "Encrypted Stream";
     });
 
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(url.trim()))
       ..initialize().then((_) {
         setState(() {
           _isInitialized = true;
           _videoController!.play();
         });
       }).catchError((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Failed to load video stream")),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to load stream link")),
+        );
       });
   }
 
@@ -372,7 +370,7 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
     final textToSend = customText ?? _messageController.text.trim();
     if (textToSend.isNotEmpty) {
       final now = DateTime.now();
-      final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+      final timeStr = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
       final msgMap = {
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
         'sender': 'You',
@@ -384,7 +382,7 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
 
       setState(() {
         _messages.add(msgMap);
-        _messageController.clear();
+        if (customText == null) _messageController.clear();
       });
 
       if (_ghostMode) {
@@ -399,362 +397,612 @@ class _SecretPartyScreenState extends State<SecretPartyScreen> {
     }
   }
 
+  void _deleteMessageDialog(String messageId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF181824),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Delete Message?", style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: const Text("This message will be removed for everyone in this room.", style: TextStyle(color: Colors.grey, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              setState(() {
+                _messages.removeWhere((m) => m['id'] == messageId);
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Message deleted")),
+              );
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMediaPicker() {
+    if (_isLocked && !_isAuthenticated) {
+      _showPasscodePromptDialog();
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF181824),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[700], borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 15),
+              const Text("Secret Media Source", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 15),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFF2A2A3D), child: Icon(Icons.folder_special, color: Colors.purpleAccent)),
+                title: const Text("Private Gallery Video", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                subtitle: const Text("Play video from phone storage", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFF2A2A3D), child: Icon(Icons.videocam, color: Colors.purpleAccent)),
+                title: const Text("Live Camera Stream", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                subtitle: const Text("Record & broadcast instantly", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _recordWithCamera();
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFF2A2A3D), child: Icon(Icons.security, color: Colors.purpleAccent)),
+                title: const Text("Encrypted Web Link", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                subtitle: const Text("Stream direct HTTPS video URL", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showUrlInputDialog();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showUrlInputDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF181824),
+        title: const Text("Enter Video Stream URL", style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: _urlController,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: "https://site.com/video.mp4",
+            hintStyle: TextStyle(color: Colors.grey),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel", style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+            onPressed: () {
+              Navigator.pop(context);
+              _playNetworkUrl(_urlController.text);
+            },
+            child: const Text("Play Stream"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleFullScreen() {
+    setState(() {
+      _isFullScreen = !_isFullScreen;
+    });
+    if (_isFullScreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F17),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F17),
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text("Secret Party", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            Text("SEC-7069", style: TextStyle(color: Colors.purpleAccent, fontSize: 12)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share, color: Colors.grey),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(
-              _isLocked ? Icons.lock : Icons.lock_open,
-              color: _isLocked ? Colors.redAccent : Colors.green,
-            ),
-            onPressed: _toggleRoomLock,
-          ),
-          IconButton(
-            icon: Icon(
-              _ghostMode ? Icons.visibility_off : Icons.visibility,
-              color: _ghostMode ? Colors.purpleAccent : Colors.grey,
-            ),
-            onPressed: () {
-              setState(() {
-                _ghostMode = !_ghostMode;
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_box_rounded, color: Colors.purpleAccent),
-            onPressed: () {
-              _showPickerMenu(context);
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Video Player / Lock Screen Area
-          Container(
-            height: 220,
-            width: double.infinity,
-            margin: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF181824),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: (_isLocked && !_isAuthenticated)
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF281834),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.shield, color: Colors.purpleAccent, size: 40),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(_selectedFileName, style: const TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purpleAccent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        ),
-                        onPressed: _showPasscodePromptDialog,
-                        icon: const Icon(Icons.lock_outline, color: Colors.white),
-                        label: const Text("Load Private Content", style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  )
-                : (_isInitialized && _videoController != null)
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: AspectRatio(
-                          aspectRatio: _videoController!.value.aspectRatio,
-                          child: VideoPlayer(_videoController!),
-                        ),
-                      )
-                    : const Center(
-                        child: Text("No Video Loaded", style: TextStyle(color: Colors.grey)),
-                      ),
-          ),
-
-          // Passcode Status Banner
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: _showSetPasscodeDialog,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _isLocked ? Colors.redAccent : Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _isLocked ? "LOCKED (PIN: $_roomPasscode)" : "UNLOCKED",
-                        style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.edit, color: Colors.grey, size: 14),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF241830),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.shield_outlined, color: Colors.purpleAccent, size: 14),
-                      SizedBox(width: 4),
-                      Text("Encrypted", style: TextStyle(color: Colors.purpleAccent, fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Emoji Quick Reactions Bar
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                _buildEmojiBtn("😳"),
-                _buildEmojiBtn("🔒"),
-                _buildEmojiBtn("🔥"),
-                _buildEmojiBtn("😂"),
-                _buildEmojiBtn("👏"),
-                _buildEmojiBtn("🎉"),
-                _buildEmojiBtn("👻"),
-                _buildEmojiBtn("❤️"),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // Chat Messages List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isSystem = msg['sender'] == 'System';
-                final isAudio = msg['isAudio'] == 'true';
-
-                if (isSystem) {
-                  return Center(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1B1B26),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.lock, color: Colors.amber, size: 14),
-                          const SizedBox(width: 6),
-                          Text(msg['text']!, style: const TextStyle(color: Colors.purpleAccent, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD633E6),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+      appBar: _isFullScreen
+          ? null
+          : AppBar(
+              backgroundColor: const Color(0xFF181824),
+              elevation: 0,
+              titleSpacing: 0,
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(width: 10),
+                  const Icon(Icons.vpn_key_rounded, color: Colors.purpleAccent, size: 20),
+                  const SizedBox(width: 6),
+                  Flexible(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (isAudio)
-                          GestureDetector(
-                            onTap: () => _togglePlayVoiceNote(msg['id']!, ""),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _currentlyPlayingAudioId == msg['id']
-                                      ? Icons.pause_circle_filled
-                                      : Icons.play_circle_fill,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.graphic_eq, color: Colors.white70, size: 18),
-                                const SizedBox(width: 6),
-                                Text(
-                                  msg['text']!,
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Text(
-                            msg['text']!,
-                            style: const TextStyle(color: Colors.white, fontSize: 15),
-                          ),
-                        const SizedBox(height: 2),
+                        const Text(
+                          "Secret Party",
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                         Text(
-                          msg['time']!,
-                          style: const TextStyle(color: Colors.white70, fontSize: 10),
+                          _roomId,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 10, color: Colors.purpleAccent),
                         ),
                       ],
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-
-          // Message Input Field
-          Container(
-            padding: const EdgeInsets.all(12),
-            color: const Color(0xFF0F0F17),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: _isRecordingAudio
-                          ? "Recording... (${_audioRecordDuration}s)"
-                          : "Type secret message...",
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      fillColor: const Color(0xFF181824),
-                      filled: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () {
-                    if (_messageController.text.trim().isNotEmpty) {
-                      _sendMessage();
-                    } else {
-                      _toggleAudioRecording();
-                    }
+                ],
+              ),
+              actions: [
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  icon: const Icon(Icons.share, color: Colors.white70, size: 20),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: "Join Secret Watch Party!\nRoom ID: $_roomId\nPasscode: $_roomPasscode"));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Room Code & Passcode copied to clipboard!")),
+                    );
                   },
-                  child: CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.purpleAccent,
-                    child: Icon(
-                      _messageController.text.trim().isNotEmpty
-                          ? Icons.send
-                          : (_isRecordingAudio ? Icons.stop : Icons.mic),
-                      color: Colors.white,
-                    ),
+                ),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  icon: Icon(
+                    _isLocked ? Icons.lock : Icons.lock_open,
+                    color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                    size: 20,
                   ),
+                  onPressed: _toggleRoomLock,
+                  onLongPress: _showSetPasscodeDialog,
+                ),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  icon: Icon(
+                    _ghostMode ? Icons.visibility : Icons.visibility_off,
+                    color: _ghostMode ? Colors.purpleAccent : Colors.white54,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _ghostMode = !_ghostMode;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_ghostMode ? "Ghost Mode ON 👻 Messages disappear in 15s" : "Ghost Mode OFF"),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.only(left: 6, right: 12),
+                  icon: const Icon(Icons.add_to_photos, color: Colors.purpleAccent, size: 20),
+                  onPressed: _showMediaPicker,
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF0F0F17),
-        selectedItemColor: Colors.amber,
-        unselectedItemColor: Colors.grey,
-        currentIndex: 2,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.style), label: "Feed"),
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: "Upload"),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: "Party"),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: "Analytics"),
-          BottomNavigationBarItem(icon: Icon(Icons.lock), label: "Vault"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmojiBtn(String emoji) {
-    return GestureDetector(
-      onTap: () => _sendMessage(customText: emoji),
-      child: Container(
-        margin: const EdgeInsets.horizontal(4),
-        padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(
-          color: Color(0xFF181824),
-          shape: BoxShape.circle,
-        ),
-        child: Text(emoji, style: const TextStyle(fontSize: 16)),
-      ),
-    );
-  }
-
-  void _showPickerMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF181824),
-      builder: (context) => Wrap(
+      body: Column(
         children: [
-          ListTile(
-            leading: const Icon(Icons.photo_library, color: Colors.purpleAccent),
-            title: const Text('Pick from Gallery', style: TextStyle(color: Colors.white)),
+          // Video Player Container
+          GestureDetector(
             onTap: () {
-              Navigator.pop(context);
-              _pickFromGallery();
+              setState(() {
+                _showControls = !_showControls;
+              });
             },
+            child: ClipRect(
+              child: Container(
+                height: _isFullScreen ? MediaQuery.of(context).size.height : 230,
+                width: double.infinity,
+                color: Colors.black,
+                child: _buildScreenContent(),
+              ),
+            ),
           ),
-          ListTile(
-            leading: const Icon(Icons.videocam, color: Colors.purpleAccent),
-            title: const Text('Record with Camera', style: TextStyle(color: Colors.white)),
-            onTap: () {
-              Navigator.pop(context);
-              _recordWithCamera();
-            },
-          ),
+
+          if (!_isFullScreen) ...[
+            // Status Bar
+            GestureDetector(
+              onTap: _showSetPasscodeDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                color: const Color(0xFF181824),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isLocked ? "LOCKED (PIN: $_roomPasscode)" : "PUBLIC PARTY",
+                          style: TextStyle(
+                            color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.edit, size: 12, color: Colors.grey),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (_ghostMode)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 8.0),
+                            child: Text("👻 Ghost", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(color: Colors.purpleAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.shield_outlined, size: 12, color: Colors.purpleAccent),
+                              SizedBox(width: 4),
+                              Text("Encrypted", style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Emoji Bar
+            Container(
+              height: 48,
+              color: const Color(0xFF12121D),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                itemCount: _emojiList.length,
+                itemBuilder: (context, index) {
+                  final emoji = _emojiList[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => _sendMessage(customText: emoji),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFF222233), borderRadius: BorderRadius.circular(20)),
+                        child: Text(emoji, style: const TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Messages Area
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final msg = _messages[index];
+                  final isMe = msg['sender'] == 'You';
+                  final isSystem = msg['sender'] == 'System';
+                  final isGhost = msg['isGhost'] == 'true';
+                  final isAudio = msg['isAudio'] == 'true';
+                  final isPlayingThisAudio = _currentlyPlayingAudioId == msg['id'];
+
+                  if (isSystem) {
+                    return Center(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFF181824), borderRadius: BorderRadius.circular(10)),
+                        child: Text(msg['text'] ?? '', style: const TextStyle(color: Colors.purpleAccent, fontSize: 11)),
+                      ),
+                    );
+                  }
+
+                  return GestureDetector(
+                    onLongPress: () => _deleteMessageDialog(msg['id']!),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (!isMe)
+                            const CircleAvatar(
+                              radius: 14,
+                              backgroundColor: Colors.purpleAccent,
+                              child: Icon(Icons.person, size: 16, color: Colors.white),
+                            ),
+                          if (!isMe) const SizedBox(width: 8),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isMe
+                                        ? (isGhost ? Colors.purple.shade900 : Colors.purpleAccent)
+                                        : const Color(0xFF222233),
+                                    border: isGhost ? Border.all(color: Colors.purpleAccent, width: 1) : null,
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: const Radius.circular(16),
+                                      topRight: const Radius.circular(16),
+                                      bottomLeft: Radius.circular(isMe ? 16 : 2),
+                                      bottomRight: Radius.circular(isMe ? 2 : 16),
+                                    ),
+                                  ),
+                                  child: isAudio
+                                      ? InkWell(
+                                          onTap: () => _togglePlayVoiceNote(msg['id']!),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                isPlayingThisAudio ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                                                color: Colors.white,
+                                                size: 26,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Icon(
+                                                Icons.graphic_eq,
+                                                size: 20,
+                                                color: isPlayingThisAudio ? Colors.greenAccent : Colors.white70,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                msg['text'] ?? '',
+                                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (isGhost) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.timer, size: 14, color: Colors.white70)),
+                                            Text(
+                                              msg['text'] ?? '',
+                                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(msg['time'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Message Input Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: const BoxDecoration(
+                color: Color(0xFF181824),
+                boxShadow: [BoxShadow(color: Colors.black38, blurRadius: 4)],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F0F17),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: _isRecordingAudio ? Colors.redAccent : (_ghostMode ? Colors.purpleAccent : Colors.transparent)),
+                      ),
+                      child: _isRecordingAudio
+                          ? Row(
+                              children: [
+                                const Icon(Icons.fiber_manual_record, color: Colors.redAccent, size: 16),
+                                const SizedBox(width: 8),
+                                Text("Recording... ${_audioRecordDuration}s", style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                              ],
+                            )
+                          : TextField(
+                              controller: _messageController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                hintText: _ghostMode ? "Ghost message (disappears)..." : "Type secret message...",
+                                hintStyle: TextStyle(color: _ghostMode ? Colors.purpleAccent.withOpacity(0.7) : Colors.grey, fontSize: 13),
+                                border: InputBorder.none,
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  CircleAvatar(
+                    backgroundColor: _isRecordingAudio ? Colors.redAccent : Colors.purpleAccent,
+                    child: IconButton(
+                      icon: Icon(
+                        _messageController.text.trim().isNotEmpty
+                            ? Icons.send_rounded
+                            : (_isRecordingAudio ? Icons.stop_rounded : Icons.mic_rounded),
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      onPressed: () {
+                        if (_messageController.text.trim().isNotEmpty) {
+                          _sendMessage();
+                        } else {
+                          _toggleAudioRecording();
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildScreenContent() {
+    if (_isInitialized && _videoController != null) {
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox.expand(
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: SizedBox(
+                width: _videoController!.value.size.width,
+                height: _videoController!.value.size.height,
+                child: VideoPlayer(_videoController!),
+              ),
+            ),
+          ),
+          if (_showControls)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              color: Colors.black54,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(8)),
+                          child: Text(_selectedFileName, style: const TextStyle(color: Colors.purpleAccent, fontSize: 11)),
+                        ),
+                        IconButton(
+                          icon: Icon(_isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen, color: Colors.white),
+                          onPressed: _toggleFullScreen,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        iconSize: 36,
+                        icon: const Icon(Icons.replay_10, color: Colors.white),
+                        onPressed: () {
+                          final current = _videoController!.value.position;
+                          _videoController!.seekTo(current - const Duration(seconds: 10));
+                        },
+                      ),
+                      const SizedBox(width: 20),
+                      IconButton(
+                        iconSize: 56,
+                        icon: Icon(
+                          _videoController!.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                          color: Colors.purpleAccent,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _videoController!.value.isPlaying ? _videoController!.pause() : _videoController!.play();
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 20),
+                      IconButton(
+                        iconSize: 36,
+                        icon: const Icon(Icons.forward_10, color: Colors.white),
+                        onPressed: () {
+                          final current = _videoController!.value.position;
+                          _videoController!.seekTo(current + const Duration(seconds: 10));
+                        },
+                      ),
+                    ],
+                  ),
+                  VideoProgressIndicator(
+                    _videoController!,
+                    allowScrubbing: true,
+                    colors: const VideoProgressColors(
+                      playedColor: Colors.purpleAccent,
+                      bufferedColor: Colors.white24,
+                      backgroundColor: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    } else {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.purpleAccent.withOpacity(0.15), shape: BoxShape.circle),
+              child: const Icon(Icons.security, size: 48, color: Colors.purpleAccent),
+            ),
+            const SizedBox(height: 12),
+            Text(_selectedFileName, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _showMediaPicker,
+              icon: const Icon(Icons.lock_open, size: 18),
+              label: const Text("Load Private Content"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purpleAccent,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+            )
+          ],
+        ),
+      );
+    }
   }
 }
