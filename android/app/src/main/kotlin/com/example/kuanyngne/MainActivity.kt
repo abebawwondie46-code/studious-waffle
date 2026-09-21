@@ -22,22 +22,20 @@ class MainActivity: FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartEntrypoint.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-                "checkAndRequestPermission" -> {
+                "checkPermission" -> {
                     val hasPermission = ContextCompat.checkSelfPermission(
                         this,
                         Manifest.permission.RECORD_AUDIO
                     ) == PackageManager.PERMISSION_GRANTED
-
-                    if (!hasPermission) {
-                        ActivityCompat.requestPermissions(
-                            this,
-                            arrayOf(Manifest.permission.RECORD_AUDIO),
-                            101
-                        )
-                        result.success(false)
-                    } else {
-                        result.success(true)
-                    }
+                    result.success(hasPermission)
+                }
+                "requestPermission" -> {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.RECORD_AUDIO),
+                        101
+                    )
+                    result.success(true)
                 }
                 "startRecording" -> {
                     try {
