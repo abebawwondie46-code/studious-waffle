@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -34,6 +35,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   int _audioRecordDuration = 0;
   Timer? _audioTimer;
   String? _currentlyPlayingAudioId;
+  
+  // Audio Recording & Playback States
+  bool _isRecordingAudio = false;
+  int _audioRecordDuration = 0;
+  Timer? _audioTimer;
+  String? _currentlyPlayingAudioId;
+  final AudioPlayer _audioPlayer = AudioPlayer(); // <-- እዚህ ጋር ጨምረው
 
   // Security & Authentication States
   bool _isLocked = true; // Default locked to prompt passcode on launch
@@ -806,7 +814,7 @@ Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
                                   ),
                                   child: isAudio
                                       ? InkWell(
-                                          onTap: () => _togglePlayVoiceNote(msg['id']!),
+                                          onTap: () => _togglePlayVoiceNote(msg['id']!, msg['audioPath'] ?? ''),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
