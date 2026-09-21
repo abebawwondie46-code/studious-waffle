@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({Key? key}) : super(key: key);
@@ -10,13 +13,14 @@ class WatchPartyScreen extends StatefulWidget {
 }
 
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
-  // Voice Recording & Playback States
+  late final AudioRecorder _audioRecorder;
+  late final AudioPlayer _audioPlayer;
+
   bool _isRecordingAudio = false;
   int _audioRecordDuration = 0;
   Timer? _audioTimer;
   String? _currentlyPlayingAudioId;
 
-  // Messages List
   final List<Map<String, String>> _messages = [
     {
       'id': '1',
@@ -24,78 +28,126 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       'text': 'Voice Recorder Demo Ready',
       'time': '12:00',
       'isAudio': 'false',
+      'audioPath': '',
     }
   ];
 
   @override
-  void dispose() {
-    _audioTimer?.cancel();
-    super.dispose();
-  }
+  void initState() {
+    super.initState();
+    _audioRecorder = AudioRecorder();
+    _audioPlayer = AudioPlayer();
 
-  // 1. ድምፅ መቅረፅ መጀመር እና ማቆም (Toggle Record)
-  void _toggleAudioRecording() {
-    if (_isRecordingAudio) {
-      // መቅረፅ ማቆም እና መልእክቱን መላክ
-      _audioTimer?.cancel();
-      final durationStr = "${_audioRecordDuration}s";
-      _sendVoiceMessage(durationStr);
-
-      setState(() {
-        _isRecordingAudio = false;
-        _audioRecordDuration = 0;
-      });
-    } else {
-      // መቅረፅ መጀመር
-      setState(() {
-        _isRecordingAudio = true;
-        _audioRecordDuration = 0;
-      });
-
-      _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        setState(() {
-          _audioRecordDuration++;
-        });
-      });
-    }
-  }
-
-  // 2. የድምፅ መልእክት ወደ ቻት መላክ
-  void _sendVoiceMessage(String duration) {
-    final now = DateTime.now();
-    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-    final msgMap = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'sender': 'You',
-      'text': 'Voice Note ($duration)',
-      'time': timeStr,
-      'isAudio': 'true',
-    };
-
-    setState(() {
-      _messages.add(msgMap);
-    });
-  }
-
-  // 3. የድምፅ መልእክቱን ማጫወት / ማቆም (Play/Pause Audio)
-  void _togglePlayVoiceNote(String id) {
-    setState(() {
-      if (_currentlyPlayingAudioId == id) {
-        _currentlyPlayingAudioId = null;
-      } else {
-        _currentlyPlayingAudioId = id;
-      }
-    });
-
-    // ድምፁ ለ4 ሰከንድ ተጫውቶ አውቶማቲክ እንዲቆም ማድረግ
-    if (_currentlyPlayingAudioId != null) {
-      Timer(const Duration(seconds: 4), () {
-        if (mounted && _currentlyPlayingAudioId == id) {
+    _audioPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        if (mounted) {
           setState(() {
             _currentlyPlayingAudioId = null;
           });
         }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _audioTimer?.cancel();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  // 1. የስልኩን ፈቃድ መጠየቅ እና ድምፅ መቅረፅ
+  Future<void> _toggleAudioRecording() async {
+    try {
+      if (_isRecordingAudio) {
+        final path = await _audioRecorder.stop();
+        _audioTimer?.cancel();
+
+        if (path != null) {
+          _sendVoiceMessage("${_audioRecordDuration}s", path);
+        }
+
+        setState(() {
+          _isRecordingAudio = false;
+          _audioRecordDuration = 0;
+        });
+      } else {
+        // የስልኩን የማይክራፎን ፈቃድ በስክሪኑ ላይ እንዲመጣ መጠየቅ
+        var status = await Permission.microphone.request();
+
+        if (status.isGranted) {
+          final directory = await getApplicationDocumentsDirectory();
+          final filePath = '${directory.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+          await _audioRecorder.start(
+            RecordConfig(encoder: AudioEncoder.aacLc),
+            path: filePath,
+          );
+
+          setState(() {
+            _isRecordingAudio = true;
+            _audioRecordDuration = 0;
+          });
+
+          _audioTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+            setState(() {
+              _audioRecordDuration++;
+            });
+          });
+        } else if (status.isPermanentlyDenied) {
+          openAppSettings();
+        }
+      }
+    } catch (e) {
+      debugPrint("Error recording audio: $e");
+    }
+  }
+
+  // 2. መልእክት መላክ
+  void _sendVoiceMessage(String duration, String filePath) {
+    final now = DateTime.now();
+    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
+    setState(() {
+      _messages.add({
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'sender': 'You',
+        'text': 'Voice Note ($duration)',
+        'time': timeStr,
+        'isAudio': 'true',
+        'audioPath': filePath,
       });
+    });
+  }
+
+  // 3. የተቃረፀውን ድምፅ ማጫወት
+  Future<void> _togglePlayVoiceNote(String id, String audioPath) async {
+    try {
+      if (_currentlyPlayingAudioId == id) {
+        await _audioPlayer.stop();
+        setState(() {
+          _currentlyPlayingAudioId = null;
+        });
+        return;
+      }
+
+      await _audioPlayer.stop();
+
+      if (audioPath.isNotEmpty) {
+        await _audioPlayer.setFilePath(audioPath);
+        setState(() {
+          _currentlyPlayingAudioId = id;
+        });
+        await _audioPlayer.play();
+      }
+    } catch (e) {
+      debugPrint("Error playing audio: $e");
+      if (mounted) {
+        setState(() {
+          _currentlyPlayingAudioId = null;
+        });
+      }
     }
   }
 
@@ -109,7 +161,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       ),
       body: Column(
         children: [
-          // የቻት እና የድምፅ መልእክቶች ዝርዝር
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -132,7 +183,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       children: [
                         if (isAudio)
                           GestureDetector(
-                            onTap: () => _togglePlayVoiceNote(msg['id']!),
+                            onTap: () => _togglePlayVoiceNote(msg['id']!, msg['audioPath'] ?? ''),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -148,10 +199,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   msg['text']!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -173,8 +221,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               },
             ),
           ),
-
-          // ድምፅ መቅረጫ ታችኛው ክፍል (Bottom Recorder Control)
           Container(
             padding: const EdgeInsets.all(20),
             color: const Color(0xFF181824),
@@ -191,8 +237,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     "Press Mic to Record Voice",
                     style: TextStyle(color: Colors.grey, fontSize: 15),
                   ),
-
-                // የቀይ/ሐምራዊ ማይክራፎን በተን
                 GestureDetector(
                   onTap: _toggleAudioRecording,
                   child: CircleAvatar(
