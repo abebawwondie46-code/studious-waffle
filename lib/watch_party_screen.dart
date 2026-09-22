@@ -30,8 +30,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _ghostMode = false;
   int _activeViewers = 3;
 
-  final List<Map<String, dynamic>> _localMessages = [];
-
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   bool _isPlaying = true;
@@ -107,7 +105,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: Colors.purpleAccent,
+            backgroundColor: const Color(0xFF6A1B9A),
             content: Text('Video loaded from gallery: ${video.name}'),
           ),
         );
@@ -144,7 +142,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         backgroundColor: const Color(0xFF181824),
         title: const Row(
           children: [
-            Icon(Icons.edit, color: Colors.purpleAccent),
+            Icon(Icons.edit, color: Color(0xFF8E24AA)),
             SizedBox(width: 8),
             Text("Edit Room Code", style: TextStyle(color: Colors.white, fontSize: 16)),
           ],
@@ -154,8 +152,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
             labelText: "Enter Custom Room ID",
-            labelStyle: TextStyle(color: Colors.purpleAccent),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
+            labelStyle: TextStyle(color: Color(0xFFAB47BC)),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF8E24AA))),
           ),
         ),
         actions: [
@@ -164,7 +162,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6A1B9A)),
             onPressed: () {
               if (codeController.text.trim().isNotEmpty) {
                 setState(() {
@@ -186,7 +184,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: Colors.purpleAccent,
+        backgroundColor: const Color(0xFF6A1B9A),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Text('Room code ($_currentRoomId) copied to clipboard!'),
@@ -196,54 +194,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   void _toggleRoomLock() {
     setState(() => _isRoomLocked = !_isRoomLocked);
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 2),
-        backgroundColor: _isRoomLocked ? const Color(0xFFD32F2F) : const Color(0xFF388E3C),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            Icon(_isRoomLocked ? Icons.lock_rounded : Icons.lock_open_rounded, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _isRoomLocked
-                    ? '🔒 Private Mode: Password required to join'
-                    : '🔓 Public Mode: Anyone with code can join',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _toggleGhostMode() {
     setState(() => _ghostMode = !_ghostMode);
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 2),
-        backgroundColor: _ghostMode ? const Color(0xFF8E24AA) : const Color(0xFF333344),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            Icon(_ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _ghostMode ? '👻 Ghost Mode ON: Comments vanish in 12s' : '👁️ Ghost Mode OFF: Saved normally',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showUrlInputDialog() {
@@ -260,13 +214,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           decoration: const InputDecoration(
             hintText: "https://example.com/video.mp4",
             hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF8E24AA))),
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6A1B9A)),
             onPressed: () {
               if (urlController.text.trim().isNotEmpty) {
                 _initializeNetworkVideo(urlController.text.trim());
@@ -298,7 +252,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 const Text("Select Media Source", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: const Icon(Icons.video_library_rounded, color: Colors.purpleAccent),
+                  leading: const Icon(Icons.video_library_rounded, color: Color(0xFFAB47BC)),
                   title: const Text("Gallery Video", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   onTap: () {
                     Navigator.pop(context);
@@ -329,31 +283,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
+  // መልእክትን በኢንተርኔት ወደ Supabase የመላክ ዘዴ (ቋሚ እንዲሆን)
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
     _messageController.clear();
 
     final now = DateTime.now();
-    final msgId = now.millisecondsSinceEpoch.toString();
-    final newMsg = {
-      'id': msgId,
-      'video_id': _currentRoomId,
-      'username': 'You',
-      'text': text,
-      'created_at': now,
-      'is_ghost': _ghostMode,
-    };
-
-    setState(() => _localMessages.add(newMsg));
-
-    if (_ghostMode) {
-      Timer(const Duration(seconds: 12), () {
-        if (mounted) {
-          setState(() => _localMessages.removeWhere((m) => m['id'] == msgId));
-        }
-      });
-    }
 
     try {
       await _supabase.from('comments').insert({
@@ -364,7 +300,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         'is_ghost': _ghostMode,
       });
     } catch (e) {
-      debugPrint("Database sync warning: $e");
+      debugPrint("Database send error: $e");
     }
   }
 
@@ -375,7 +311,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     return "$minutes:$seconds";
   }
 
-  // intl ሳያስፈልግ ሰዓቱን በ 12-hour format ማዘጋጃ ዘዴ
   String _formatTimeString(DateTime dateTime) {
     int hour = dateTime.hour;
     final minute = dateTime.minute.toString().padLeft(2, '0');
@@ -427,11 +362,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
             Row(
               children: [
-                Text("ID: $_currentRoomId", style: const TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                Text("ID: $_currentRoomId", style: const TextStyle(color: Color(0xFFAB47BC), fontSize: 11, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 4),
                 InkWell(
                   onTap: _editRoomCodeDialog,
-                  child: const Icon(Icons.edit, color: Colors.purpleAccent, size: 13),
+                  child: const Icon(Icons.edit, color: Color(0xFFAB47BC), size: 13),
                 ),
               ],
             ),
@@ -444,10 +379,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             onPressed: _toggleRoomLock,
           ),
           IconButton(
-            icon: Icon(_ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: _ghostMode ? const Color(0xFFE040FB) : Colors.white70),
+            icon: Icon(_ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: _ghostMode ? const Color(0xFFAB47BC) : Colors.white70),
             onPressed: _toggleGhostMode,
           ),
-          IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.purpleAccent, size: 26), onPressed: _showMediaPicker),
+          IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFFAB47BC), size: 26), onPressed: _showMediaPicker),
         ],
       ),
       body: Column(
@@ -470,7 +405,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         ),
                       )
                     else
-                      const Center(child: CircularProgressIndicator(color: Colors.purpleAccent)),
+                      const Center(child: CircularProgressIndicator(color: Color(0xFF8E24AA))),
 
                     if (_isInitialized && _videoController != null && _showControls)
                       AnimatedOpacity(
@@ -496,7 +431,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                   _videoController!,
                                   allowScrubbing: true,
                                   colors: const VideoProgressColors(
-                                    playedColor: Colors.purpleAccent,
+                                    playedColor: Color(0xFFAB47BC),
                                     bufferedColor: Colors.white24,
                                     backgroundColor: Colors.white10,
                                   ),
@@ -545,7 +480,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Horizontal Status Badges
+          // Status Badges
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: const Color(0xFF12121D),
@@ -567,11 +502,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF8E24AA).withOpacity(0.3),
+                        color: const Color(0xFF4A148C).withOpacity(0.5),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE040FB)),
+                        border: Border.all(color: const Color(0xFFAB47BC)),
                       ),
-                      child: const Text("👻 GHOST MODE ACTIVE", style: TextStyle(color: Color(0xFFE040FB), fontSize: 9, fontWeight: FontWeight.bold)),
+                      child: const Text("👻 GHOST MODE ACTIVE", style: TextStyle(color: Color(0xFFE1BEE7), fontSize: 9, fontWeight: FontWeight.bold)),
                     ),
                   if (_ghostMode) const SizedBox(width: 8),
                   Container(
@@ -584,7 +519,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Emojis Row
+          // Emojis Bar
           Container(
             color: const Color(0xFF12121D),
             padding: const EdgeInsets.only(bottom: 6, left: 12, right: 12),
@@ -608,56 +543,90 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Messages
+          // Live Messages via Supabase (Internet Syncing)
           Expanded(
             flex: 5,
-            child: ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.purple.shade900.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
-                    child: const Text("🔒 End-to-End Encrypted Private Room Created", style: TextStyle(color: Colors.purpleAccent, fontSize: 11)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ..._localMessages.map((msg) {
-                  final isMe = msg['username'] == 'You';
-                  final DateTime msgTime = msg['created_at'] as DateTime;
-                  final timeFormatted = _formatTimeString(msgTime);
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _supabase
+                  .from('comments')
+                  .stream(primaryKey: ['id'])
+                  .eq('video_id', _currentRoomId)
+                  .order('created_at', ascending: true),
+              builder: (context, snapshot) {
+                final messages = snapshot.data ?? [];
 
-                  return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isMe ? const Color(0xFFE040FB) : const Color(0xFF222233),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(msg['text'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 14)),
-                          const SizedBox(height: 3),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(timeFormatted, style: const TextStyle(color: Colors.white70, fontSize: 9)),
-                              if (isMe) ...[
-                                const SizedBox(width: 4),
-                                const Icon(Icons.done_all, color: Colors.blueAccent, size: 12),
-                              ],
-                            ],
-                          ),
-                        ],
+                return ListView(
+                  padding: const EdgeInsets.all(12),
+                  children: [
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(color: const Color(0xFF4A148C).withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+                        child: const Text("🔒 End-to-End Encrypted Private Room Created", style: TextStyle(color: Color(0xFFCE93D8), fontSize: 11)),
                       ),
                     ),
-                  );
-                }).toList(),
-              ],
+                    const SizedBox(height: 12),
+                    ...messages.map((msg) {
+                      final isMe = msg['username'] == 'You';
+                      final isGhost = msg['is_ghost'] ?? false;
+                      final DateTime msgTime = DateTime.parse(msg['created_at']);
+                      final timeFormatted = _formatTimeString(msgTime);
+
+                      return Align(
+                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            // ጠቆር ያለ ሀምራዊ ቀለም (Dark Purple / Deep Magenta)
+                            color: isMe ? const Color(0xFF6A1B9A) : const Color(0xFF222233),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Ghost Mode ከሆነ የሰዓት/የታይመር ምልክት ከፊት ይደረጋል
+                                  if (isGhost) ...[
+                                    const Icon(Icons.access_time_filled, color: Colors.white70, size: 14),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    msg['text'] ?? '',
+                                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    isMe ? "You" : (msg['username'] ?? "User"),
+                                    style: const TextStyle(color: Colors.white60, fontSize: 9),
+                                  ),
+                                  if (!isGhost) ...[
+                                    const SizedBox(width: 6),
+                                    Text(timeFormatted, style: const TextStyle(color: Colors.white60, fontSize: 9)),
+                                  ],
+                                  if (isMe) ...[
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.done_all, color: Colors.blueAccent, size: 12),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                );
+              },
             ),
           ),
 
@@ -675,16 +644,16 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       color: const Color(0xFF0F0F17),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: _ghostMode ? const Color(0xFFE040FB) : Colors.white10,
+                        color: _ghostMode ? const Color(0xFFAB47BC) : Colors.white10,
                         width: _ghostMode ? 1.5 : 1.0,
                       ),
                     ),
                     child: TextField(
                       controller: _messageController,
-                      style: TextStyle(color: _ghostMode ? const Color(0xFFE040FB) : Colors.white),
+                      style: TextStyle(color: _ghostMode ? const Color(0xFFE1BEE7) : Colors.white),
                       decoration: InputDecoration(
-                        hintText: _ghostMode ? "Type ghost comment (vanishes in 12s)..." : "Type comment...",
-                        hintStyle: TextStyle(color: _ghostMode ? const Color(0xFFE040FB).withOpacity(0.6) : Colors.grey),
+                        hintText: _ghostMode ? "Type ghost comment..." : "Type comment...",
+                        hintStyle: TextStyle(color: _ghostMode ? const Color(0xFFE1BEE7).withOpacity(0.6) : Colors.grey),
                         border: InputBorder.none,
                       ),
                     ),
@@ -692,7 +661,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor: _ghostMode ? const Color(0xFFE040FB) : Colors.purpleAccent,
+                  backgroundColor: _ghostMode ? const Color(0xFF8E24AA) : const Color(0xFF6A1B9A),
                   child: IconButton(
                     icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                     onPressed: _sendMessage,
