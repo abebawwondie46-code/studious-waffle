@@ -61,7 +61,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     setState(() {});
 
     final now = DateTime.now();
-    final timeStr = "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
 
     try {
       await _supabase.from('comments').insert({
@@ -153,8 +152,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             style: const TextStyle(color: Colors.white, fontSize: 16)),
         actions: [
           IconButton(
-            icon: Icon(_ghostMode ? Icons.ghost_filled : Icons.ghost_outlined,
-                color: _ghostMode ? Colors.purpleAccent : Colors.white70),
+            icon: Icon(
+              _ghostMode ? Icons.visibility_off : Icons.visibility,
+              color: _ghostMode ? Colors.purpleAccent : Colors.white70,
+            ),
             onPressed: () {
               setState(() {
                 _ghostMode = !_ghostMode;
