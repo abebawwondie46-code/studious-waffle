@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   final String roomId;
@@ -55,7 +54,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // 1. Gallery Video Picker
+  // 1. ከጋለሪ ቪዲዮ መምረጫ (image_picker)
   Future<void> _pickVideoFromGallery() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
@@ -73,29 +72,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 2. Document File Picker
-  Future<void> _pickDocument() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'ppt'],
-      );
-
-      if (result != null && result.files.single.path != null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.blueAccent,
-            content: Text('ዶክመንት ተመረጠ፦ ${result.files.single.name}'),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint("Document Picker Error: $e");
-    }
-  }
-
-  // 3. Camera Recorder
+  // 2. ከካሜራ ቪዲዮ መቅረጫ (image_picker)
   Future<void> _recordVideoFromCamera() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
@@ -111,6 +88,49 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     } catch (e) {
       debugPrint("Camera Error: $e");
     }
+  }
+
+  // 3. የቪዲዮ ወይም ፋይል ሊንክ (URL) ማስገቢያ
+  void _showUrlInputDialog() {
+    final TextEditingController urlController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF181824),
+        title: const Text(
+          "የቪዲዮ ወይም ፋይል URL ያስገቡ",
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
+        content: TextField(
+          controller: urlController,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: "https://example.com/video.mp4",
+            hintStyle: TextStyle(color: Colors.grey),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.purpleAccent),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("ሰርዝ", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+            onPressed: () {
+              if (urlController.text.trim().isNotEmpty) {
+                _initializeVideoPlayer(urlController.text.trim());
+                Navigator.pop(context);
+              }
+            },
+            child: const Text("ክፈት (Play)"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _shareRoomCode() {
@@ -181,13 +201,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   leading: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.description_rounded, color: Colors.blueAccent),
+                    child: const Icon(Icons.link_rounded, color: Colors.blueAccent),
                   ),
-                  title: const Text("ጥናታዊ ጽሁፍ / ዶክመንት", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("PDF፣ Word ወይም የጥናት ሰነዶችን ያጋሩ", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  title: const Text("በሊንክ (URL) ክፈት", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("የኦንላይን ቪዲዮ ወይም ፋይል አድራሻ ያስገቡ", style: TextStyle(color: Colors.grey, fontSize: 11)),
                   onTap: () {
                     Navigator.pop(context);
-                    _pickDocument();
+                    _showUrlInputDialog();
                   },
                 ),
                 const Divider(color: Colors.white10),
@@ -198,7 +218,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     child: const Icon(Icons.camera_alt_rounded, color: Colors.orangeAccent),
                   ),
                   title: const Text("ካሜራ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("በቀጥታ ቪዲዮ ወይም ፎቶ ያንሱ", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  subtitle: const Text("በቀጥታ ቪዲዮ ይቅርጹ", style: TextStyle(color: Colors.grey, fontSize: 11)),
                   onTap: () {
                     Navigator.pop(context);
                     _recordVideoFromCamera();
