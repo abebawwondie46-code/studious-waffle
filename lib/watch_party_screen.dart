@@ -126,19 +126,29 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF1E1B26),
-          title: const Text('Edit Room Code', TextStyle(color: Colors.white)),
+          title: const Text(
+            'Edit Room Code',
+            style: TextStyle(color: Colors.white),
+          ),
           content: TextField(
             controller: controller,
             style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
-              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purple)),
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.purple),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.purpleAccent),
+              ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
@@ -499,18 +509,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         unselectedItemColor: Colors.grey,
         currentIndex: 2,
         items: const [
-          BottomNavigationBarViewItem(icon: Icon(Icons.style), label: 'Feed'),
-          BottomNavigationBarViewItem(icon: Icon(Icons.add_circle), label: 'Upload'),
-          BottomNavigationBarViewItem(icon: Icon(Icons.groups), label: 'Party'),
-          BottomNavigationBarViewItem(icon: Icon(Icons.bar_chart), label: 'Analytics'),
-          BottomNavigationBarViewItem(icon: Icon(Icons.lock), label: 'Vault'),
+          BottomNavigationBarItem(icon: Icon(Icons.style), label: 'Feed'),
+          BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: 'Upload'),
+          BottomNavigationBarItem(icon: Icon(Icons.groups), label: 'Party'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Analytics'),
+          BottomNavigationBarItem(icon: Icon(Icons.lock), label: 'Vault'),
         ],
       ),
     );
   }
-}
-
-class BottomNavigationBarViewItem extends BottomNavigationBarItem {
-  const BottomNavigationBarViewItem({required Widget icon, required String label})
-      : super(icon: icon, label: label);
 }
