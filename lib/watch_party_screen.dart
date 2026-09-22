@@ -30,6 +30,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _ghostMode = false;
   int _activeViewers = 3;
 
+  // የአካባቢ መልእክቶች ዝርዝር (ወዲያውኑ ስክሪን ላይ እንዲታዩ)
+  final List<Map<String, dynamic>> _messages = [];
+
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   bool _isPlaying = true;
@@ -43,6 +46,35 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _currentRoomId = widget.initialRoomId;
     _initializeNetworkVideo('https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4');
     _startControlsTimer();
+    _fetchInitialMessages();
+  }
+
+  // ከSupabase መልእክቶችን መጫን
+  Future<void> _fetchInitialMessages() async {
+    try {
+      final response = await _supabase
+          .from('comments')
+          .select()
+          .eq('video_id', _currentRoomId)
+          .order('created_at', ascending: true);
+
+      if (mounted) {
+        setState(() {
+          _messages.clear();
+          for (var item in response) {
+            _messages.add({
+              'id': item['id'].toString(),
+              'username': item['username'] ?? 'You',
+              'text': item['text'] ?? '',
+              'created_at': DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
+              'is_ghost': item['is_ghost'] ?? false,
+            });
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching messages: $e");
+    }
   }
 
   void _startControlsTimer() {
@@ -102,13 +134,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
       if (video != null) {
         _initializeFileVideo(File(video.path));
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF6A1B9A),
-            content: Text('Video loaded from gallery: ${video.name}'),
-          ),
-        );
       }
     } catch (e) {
       debugPrint("Gallery Picker Error: $e");
@@ -120,13 +145,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
       if (video != null) {
         _initializeFileVideo(File(video.path));
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.orangeAccent,
-            content: Text('Recorded video loaded: ${video.name}'),
-          ),
-        );
       }
     } catch (e) {
       debugPrint("Camera Error: $e");
@@ -283,13 +301,26 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // መልእክትን በኢንተርኔት ወደ Supabase የመላክ ዘዴ (ቋሚ እንዲሆን)
+  // መልእክት የመላክ ተግባር (ስክሪኑ ላይ ወዲያውኑ ይታያል + Supabase ውስጥ ይገባል)
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
     _messageController.clear();
 
     final now = DateTime.now();
+    final tempId = now.millisecondsSinceEpoch.toString();
+
+    final newMsg = {
+      'id': tempId,
+      'username': 'You',
+      'text': text,
+      'created_at': now,
+      'is_ghost': _ghostMode,
+    };
+
+    setState(() {
+      _messages.add(newMsg);
+    });
 
     try {
       await _supabase.from('comments').insert({
@@ -300,8 +331,47 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         'is_ghost': _ghostMode,
       });
     } catch (e) {
-      debugPrint("Database send error: $e");
+      debugPrint("Supabase insert note: $e");
     }
+  }
+
+  // መልእክቱን ጫን አድርገው ሲይዙት የሚመጣ የDelete ማረጋገጫ dialog
+  void _confirmDeleteMessage(Map<String, dynamic> msg) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF181824),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text("Delete Message", style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
+        ),
+        content: const Text("Do you want to delete this message?", style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(context);
+              setState(() {
+                _messages.removeWhere((element) => element['id'] == msg['id']);
+              });
+              try {
+                await _supabase.from('comments').delete().eq('id', msg['id']);
+              } catch (e) {
+                debugPrint("Delete error: $e");
+              }
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDuration(Duration duration) {
@@ -543,94 +613,84 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Live Messages via Supabase (Internet Syncing)
+          // Messages List View
           Expanded(
             flex: 5,
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _supabase
-                  .from('comments')
-                  .stream(primaryKey: ['id'])
-                  .eq('video_id', _currentRoomId)
-                  .order('created_at', ascending: true),
-              builder: (context, snapshot) {
-                final messages = snapshot.data ?? [];
+            child: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: const Color(0xFF4A148C).withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+                    child: const Text("🔒 End-to-End Encrypted Private Room Created", style: TextStyle(color: Color(0xFFCE93D8), fontSize: 11)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ..._messages.map((msg) {
+                  final isMe = msg['username'] == 'You';
+                  final isGhost = msg['is_ghost'] ?? false;
+                  final DateTime msgTime = msg['created_at'] is DateTime ? msg['created_at'] : DateTime.now();
+                  final timeFormatted = _formatTimeString(msgTime);
 
-                return ListView(
-                  padding: const EdgeInsets.all(12),
-                  children: [
-                    Center(
+                  return Align(
+                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: GestureDetector(
+                      // መልእክቱን ጫን አድርገው ሲይዙት (Long Press) Delete እንዲል
+                      onLongPress: () => _confirmDeleteMessage(msg),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: const Color(0xFF4A148C).withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
-                        child: const Text("🔒 End-to-End Encrypted Private Room Created", style: TextStyle(color: Color(0xFFCE93D8), fontSize: 11)),
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isMe ? const Color(0xFFC2185B) : const Color(0xFF222233), // deep pink/purple bubble
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isGhost) ...[
+                                  const Icon(Icons.access_time_filled, color: Colors.white70, size: 14),
+                                  const SizedBox(width: 4),
+                                ],
+                                Text(
+                                  msg['text'] ?? '',
+                                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  isMe ? "You" : (msg['username'] ?? "User"),
+                                  style: const TextStyle(color: Colors.white70, fontSize: 9),
+                                ),
+                                if (!isGhost) ...[
+                                  const SizedBox(width: 4),
+                                  Text(timeFormatted, style: const TextStyle(color: Colors.white70, fontSize: 9)),
+                                ],
+                                if (isMe) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.done_all, color: Colors.blueAccent, size: 12),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ...messages.map((msg) {
-                      final isMe = msg['username'] == 'You';
-                      final isGhost = msg['is_ghost'] ?? false;
-                      final DateTime msgTime = DateTime.parse(msg['created_at']);
-                      final timeFormatted = _formatTimeString(msgTime);
-
-                      return Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            // ጠቆር ያለ ሀምራዊ ቀለም (Dark Purple / Deep Magenta)
-                            color: isMe ? const Color(0xFF6A1B9A) : const Color(0xFF222233),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Ghost Mode ከሆነ የሰዓት/የታይመር ምልክት ከፊት ይደረጋል
-                                  if (isGhost) ...[
-                                    const Icon(Icons.access_time_filled, color: Colors.white70, size: 14),
-                                    const SizedBox(width: 4),
-                                  ],
-                                  Text(
-                                    msg['text'] ?? '',
-                                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    isMe ? "You" : (msg['username'] ?? "User"),
-                                    style: const TextStyle(color: Colors.white60, fontSize: 9),
-                                  ),
-                                  if (!isGhost) ...[
-                                    const SizedBox(width: 6),
-                                    Text(timeFormatted, style: const TextStyle(color: Colors.white60, fontSize: 9)),
-                                  ],
-                                  if (isMe) ...[
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.done_all, color: Colors.blueAccent, size: 12),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                );
-              },
+                  );
+                }).toList(),
+              ],
             ),
           ),
 
-          // Comment Bar
+          // Comment Input Field
           Container(
             padding: const EdgeInsets.all(12),
             color: const Color(0xFF181824),
@@ -661,7 +721,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor: _ghostMode ? const Color(0xFF8E24AA) : const Color(0xFF6A1B9A),
+                  backgroundColor: _ghostMode ? const Color(0xFF8E24AA) : const Color(0xFFC2185B),
                   child: IconButton(
                     icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                     onPressed: _sendMessage,
