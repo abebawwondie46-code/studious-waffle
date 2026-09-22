@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,12 +7,12 @@ import 'package:video_player/video_player.dart';
 import 'package:image_picker/image_picker.dart';
 
 class WatchPartyScreen extends StatefulWidget {
-  final String roomId;
+  final String initialRoomId;
   final String roomName;
 
   const WatchPartyScreen({
     Key? key,
-    this.roomId = 'SEC-7069',
+    this.initialRoomId = 'SEC-7069',
     this.roomName = 'Secret Party',
   }) : super(key: key);
 
@@ -25,6 +26,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
+  late String _currentRoomId;
   bool _isRoomLocked = true;
   bool _isUnlockedByPassword = true;
   bool _ghostMode = false;
@@ -34,124 +36,63 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
-  String _currentVideoUrl =
-      'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4';
+  bool _isPlaying = true;
+  bool _isMuted = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeVideoPlayer(_currentVideoUrl);
+    _currentRoomId = widget.initialRoomId;
+    _initializeNetworkVideo('https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4');
   }
 
-  void _initializeVideoPlayer(String url) {
+  // 1. የኦንላይን ቪዲዮ ማጫወቻ
+  void _initializeNetworkVideo(String url) {
     _videoController?.dispose();
+    setState(() => _isInitialized = false);
+
     _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
       ..initialize().then((_) {
         setState(() {
           _isInitialized = true;
+          _isPlaying = true;
         });
         _videoController!.play();
+        _videoController!.addListener(() {
+          if (mounted) setState(() {});
+        });
       });
   }
 
-  // 1. የሩም ቁልፍ On/Off ሲደረግ ግልጽ ማረጋገጫ የሚሰጥ አሰራር
-  void _toggleRoomLock() {
-    setState(() {
-      _isRoomLocked = !_isRoomLocked;
-    });
+  // 2. ከስልክ ጋለሪ/ካሜራ የመጣን ፋይል ስክሪኑ ላይ መጫኛ
+  void _initializeFileVideo(File file) {
+    _videoController?.dispose();
+    setState(() => _isInitialized = false);
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 2),
-        backgroundColor: _isRoomLocked ? const Color(0xFFD32F2F) : const Color(0xFF388E3C),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            Icon(
-              _isRoomLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _isRoomLocked
-                    ? '🔒 Private Mode: Only users with password can join'
-                    : '🔓 Public Mode: Anyone with room code can join',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    _videoController = VideoPlayerController.file(file)
+      ..initialize().then((_) {
+        setState(() {
+          _isInitialized = true;
+          _isPlaying = true;
+        });
+        _videoController!.play();
+        _videoController!.addListener(() {
+          if (mounted) setState(() {});
+        });
+      });
   }
 
-  // 2. Ghost Mode On/Off ሲደረግ ግልጽ ማረጋገጫ የሚሰጥ አሰራር
-  void _toggleGhostMode() {
-    setState(() {
-      _ghostMode = !_ghostMode;
-    });
-
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 2),
-        backgroundColor: _ghostMode ? const Color(0xFF8E24AA) : const Color(0xFF333344),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            Icon(
-              _ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _ghostMode
-                    ? '👻 Ghost Mode ON: Comments automatically disappear in 12s'
-                    : '👁️ Ghost Mode OFF: Comments stay saved in room history',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 3. ጓደኛ የመጋበዣ ኮድ እና ሊንክ ኮፒ ማድረጊያ
-  void _shareRoomCode() {
-    Clipboard.setData(ClipboardData(text: "${widget.roomName} Code: ${widget.roomId}"));
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.purpleAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white),
-            SizedBox(width: 10),
-            Text('የሩም መግቢያ ኮድ ተቀድቷል! ለጓደኛዎ ይላኩለት።'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ከጋለሪ ቪዲዮ መምረጫ
+  // 3. ከጋለሪ ቪዲዮ መምረጫ
   Future<void> _pickVideoFromGallery() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
       if (video != null) {
+        _initializeFileVideo(File(video.path));
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.purpleAccent,
-            content: Text('ቪዲዮ ተመረጠ፦ ${video.name}'),
+            content: Text('ቪዲዮ ተመርጦ በስክሪኑ ላይ ተጫኗል፦ ${video.name}'),
           ),
         );
       }
@@ -160,16 +101,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // ከካሜራ ቪዲዮ መቅረጫ
+  // 4. ከካሜራ ቪዲዮ መቅረጫ
   Future<void> _recordVideoFromCamera() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
       if (video != null) {
+        _initializeFileVideo(File(video.path));
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.orangeAccent,
-            content: Text('ቪዲዮ ተቀርጿል፦ ${video.name}'),
+            content: Text('የተቀረፀው ቪዲዮ በስክሪኑ ላይ ተጫኗል፦ ${video.name}'),
           ),
         );
       }
@@ -178,27 +120,28 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // የቪዲዮ/ፋይል URL ማስገቢያ
-  void _showUrlInputDialog() {
-    final TextEditingController urlController = TextEditingController();
+  // 5. የሩም ኮድ በባለእርሳስ ምልክት የመቀየሪያ Dialog
+  void _editRoomCodeDialog() {
+    final TextEditingController codeController = TextEditingController(text: _currentRoomId);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF181824),
-        title: const Text(
-          "የቪዲዮ ወይም ፋይል URL ያስገቡ",
-          style: TextStyle(color: Colors.white, fontSize: 16),
+        title: const Row(
+          children: [
+            Icon(Icons.edit, color: Colors.purpleAccent),
+            SizedBox(width: 8),
+            Text("የሩም ኮድ ይቀይሩ (Custom Code)", style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
         ),
         content: TextField(
-          controller: urlController,
+          controller: codeController,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            hintText: "https://example.com/video.mp4",
-            hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.purpleAccent),
-            ),
+            labelText: "አዲስ የሩም ኮድ ያስገቡ",
+            labelStyle: TextStyle(color: Colors.purpleAccent),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
           ),
         ),
         actions: [
@@ -209,8 +152,110 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
             onPressed: () {
+              if (codeController.text.trim().isNotEmpty) {
+                setState(() {
+                  _currentRoomId = codeController.text.trim();
+                });
+                Navigator.pop(context);
+                _shareRoomCode();
+              }
+            },
+            child: const Text("ቀይር እና ላክ (Save & Share)"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _shareRoomCode() {
+    Clipboard.setData(ClipboardData(text: "${widget.roomName} Code: $_currentRoomId"));
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.purpleAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Text('አዲሱ የሩም ኮድ ($_currentRoomId) ተቀድቷል! ለጓደኛዎ ይላኩለት።'),
+      ),
+    );
+  }
+
+  void _toggleRoomLock() {
+    setState(() => _isRoomLocked = !_isRoomLocked);
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 2),
+        backgroundColor: _isRoomLocked ? const Color(0xFFD32F2F) : const Color(0xFF388E3C),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Row(
+          children: [
+            Icon(_isRoomLocked ? Icons.lock_rounded : Icons.lock_open_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _isRoomLocked
+                    ? '🔒 Private Mode: Password required to join'
+                    : '🔓 Public Mode: Anyone with code can join',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _toggleGhostMode() {
+    setState(() => _ghostMode = !_ghostMode);
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 2),
+        backgroundColor: _ghostMode ? const Color(0xFF8E24AA) : const Color(0xFF333344),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Row(
+          children: [
+            Icon(_ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _ghostMode ? '👻 Ghost Mode ON: Comments vanish in 12s' : '👁️ Ghost Mode OFF: Saved normally',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUrlInputDialog() {
+    final TextEditingController urlController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF181824),
+        title: const Text("የቪዲዮ ወይም ፋይል URL ያስገቡ", style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: TextField(
+          controller: urlController,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: "https://example.com/video.mp4",
+            hintStyle: TextStyle(color: Colors.grey),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("ሰርዝ", style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+            onPressed: () {
               if (urlController.text.trim().isNotEmpty) {
-                _initializeVideoPlayer(urlController.text.trim());
+                _initializeNetworkVideo(urlController.text.trim());
                 Navigator.pop(context);
               }
             },
@@ -226,71 +271,37 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF181824),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 20,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            ),
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade600,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade600, borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 16),
-                const Text(
-                  "ሚዲያ ወይም ፋይል ይምረጡ",
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text("ሚዲያ ወይም ፋይል ይምረጡ", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.video_library_rounded, color: Colors.purpleAccent),
-                  ),
+                  leading: const Icon(Icons.video_library_rounded, color: Colors.purpleAccent),
                   title: const Text("ቪዲዮ ከጋለሪ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("ከስልክዎ ላይ ቪዲዮ ይምረጡ", style: TextStyle(color: Colors.grey, fontSize: 11)),
                   onTap: () {
                     Navigator.pop(context);
                     _pickVideoFromGallery();
                   },
                 ),
-                const Divider(color: Colors.white10),
                 ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.link_rounded, color: Colors.blueAccent),
-                  ),
+                  leading: const Icon(Icons.link_rounded, color: Colors.blueAccent),
                   title: const Text("በሊንክ (URL) ክፈት", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("የኦንላይን ቪዲዮ ወይም ፋይል አድራሻ ያስገቡ", style: TextStyle(color: Colors.grey, fontSize: 11)),
                   onTap: () {
                     Navigator.pop(context);
                     _showUrlInputDialog();
                   },
                 ),
-                const Divider(color: Colors.white10),
                 ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.orange.withOpacity(0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.camera_alt_rounded, color: Colors.orangeAccent),
-                  ),
+                  leading: const Icon(Icons.camera_alt_rounded, color: Colors.orangeAccent),
                   title: const Text("ካሜራ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("በቀጥታ ቪዲዮ ይቅርጹ", style: TextStyle(color: Colors.grey, fontSize: 11)),
                   onTap: () {
                     Navigator.pop(context);
                     _recordVideoFromCamera();
@@ -304,84 +315,35 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  void _confirmDeleteMessage(String msgId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF181824),
-        title: const Row(
-          children: [
-            Icon(Icons.delete_forever, color: Colors.redAccent),
-            SizedBox(width: 8),
-            Text("መልእክት አጥፋ", style: TextStyle(color: Colors.white, fontSize: 16)),
-          ],
-        ),
-        content: const Text("ይህንን መልእክት ማጥፋት እርግጠኛ ነዎት?", style: TextStyle(color: Colors.grey)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("ሰርዝ", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () async {
-              Navigator.pop(context);
-              setState(() {
-                _localMessages.removeWhere((m) => m['id'].toString() == msgId);
-              });
-              try {
-                await _supabase.from('comments').delete().eq('id', msgId);
-              } catch (e) {
-                debugPrint("Delete error: $e");
-              }
-            },
-            child: const Text("አጥፋ (Delete)"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _sendEmoji(String emoji) {
-    _sendRawMessage(emoji);
-  }
-
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
     _messageController.clear();
-    await _sendRawMessage(text);
-  }
 
-  Future<void> _sendRawMessage(String text) async {
     final now = DateTime.now();
     final msgId = DateTime.now().millisecondsSinceEpoch.toString();
     final newMsg = {
       'id': msgId,
-      'video_id': widget.roomId,
+      'video_id': _currentRoomId,
       'username': 'You',
       'text': text,
       'created_at': now.toIso8601String(),
       'is_ghost': _ghostMode,
     };
 
-    setState(() {
-      _localMessages.add(newMsg);
-    });
+    setState(() => _localMessages.add(newMsg));
 
     if (_ghostMode) {
       Timer(const Duration(seconds: 12), () {
         if (mounted) {
-          setState(() {
-            _localMessages.removeWhere((m) => m['id'] == msgId);
-          });
+          setState(() => _localMessages.removeWhere((m) => m['id'] == msgId));
         }
       });
     }
 
     try {
       await _supabase.from('comments').insert({
-        'video_id': widget.roomId,
+        'video_id': _currentRoomId,
         'username': 'You',
         'text': text,
         'created_at': now.toIso8601String(),
@@ -390,6 +352,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     } catch (e) {
       debugPrint("Database sync warning: $e");
     }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
   }
 
   @override
@@ -412,10 +381,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           children: [
             Row(
               children: [
-                Text(
-                  widget.roomName,
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                Text(widget.roomName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -434,53 +400,35 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ],
             ),
-            Text(
-              "ID: ${widget.roomId}",
-              style: const TextStyle(color: Colors.purpleAccent, fontSize: 11),
+            // *** የሩም ኮድ በባለእርሳስ አዝራር የመቀየሪያ ክፍለ-አካል ***
+            Row(
+              children: [
+                Text("ID: $_currentRoomId", style: const TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 4),
+                InkWell(
+                  onTap: _editRoomCodeDialog,
+                  child: const Icon(Icons.edit, color: Colors.purpleAccent, size: 13),
+                ),
+              ],
             ),
           ],
         ),
         actions: [
+          IconButton(icon: const Icon(Icons.share_rounded, color: Colors.white70), onPressed: _shareRoomCode),
           IconButton(
-            icon: const Icon(Icons.share_rounded, color: Colors.white70),
-            onPressed: _shareRoomCode,
-            tooltip: 'Share Room Code',
-          ),
-          IconButton(
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Icon(
-                _isRoomLocked ? Icons.lock : Icons.lock_open_rounded,
-                key: ValueKey<bool>(_isRoomLocked),
-                color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
-              ),
-            ),
+            icon: Icon(_isRoomLocked ? Icons.lock : Icons.lock_open_rounded, color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent),
             onPressed: _toggleRoomLock,
-            tooltip: 'Toggle Lock Status',
           ),
           IconButton(
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-              child: Icon(
-                _ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                key: ValueKey<bool>(_ghostMode),
-                color: _ghostMode ? const Color(0xFFE040FB) : Colors.white70,
-                size: 24,
-              ),
-            ),
+            icon: Icon(_ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: _ghostMode ? const Color(0xFFE040FB) : Colors.white70),
             onPressed: _toggleGhostMode,
-            tooltip: 'Toggle Ghost Mode',
           ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Colors.purpleAccent, size: 26),
-            onPressed: _showMediaPicker,
-            tooltip: 'Add Video/File',
-          ),
+          IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.purpleAccent, size: 26), onPressed: _showMediaPicker),
         ],
       ),
       body: Column(
         children: [
+          // *** የቪዲዮ ማጫወቻ እና የጊዜ መስመር (Video Player & Controls Timeline) ***
           Expanded(
             flex: 4,
             child: Container(
@@ -495,62 +443,67 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       ),
                     )
                   else
-                    const Center(
-                      child: CircularProgressIndicator(color: Colors.purpleAccent),
-                    ),
-                  if (!_isUnlockedByPassword)
-                    Container(
-                      color: Colors.black87,
-                      child: Center(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 24),
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF181824),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.purpleAccent),
+                    const Center(child: CircularProgressIndicator(color: Colors.purpleAccent)),
+
+                  // የቪዲዮ መቆጣጠሪያዎች እና የጊዜ መስመር (Timeline Track)
+                  if (_isInitialized && _videoController != null)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [Colors.black.withOpacity(0.8), Colors.transparent],
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.lock, size: 48, color: Colors.purpleAccent),
-                              const SizedBox(height: 12),
-                              const Text(
-                                "Private Room Locked",
-                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            VideoProgressIndicator(
+                              _videoController!,
+                              allowScrubbing: true,
+                              colors: const VideoProgressColors(
+                                playedColor: Colors.purpleAccent,
+                                bufferedColor: Colors.white24,
+                                backgroundColor: Colors.white10,
                               ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                "የሩሙን የደህንነት ፓስወርድ ያስገቡ",
-                                style: TextStyle(color: Colors.grey, fontSize: 12),
-                              ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _passwordController,
-                                obscureText: true,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: InputDecoration(
-                                  hintText: "Password",
-                                  hintStyle: const TextStyle(color: Colors.grey),
-                                  filled: true,
-                                  fillColor: const Color(0xFF0F0F17),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                                      onPressed: () {
+                                        setState(() {
+                                          _isPlaying = !_isPlaying;
+                                          _isPlaying ? _videoController!.play() : _videoController!.pause();
+                                        });
+                                      },
+                                    ),
+                                    Text(
+                                      "${_formatDuration(_videoController!.value.position)} / ${_formatDuration(_videoController!.value.duration)}",
+                                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
-                                onPressed: () {
-                                  if (_passwordController.text.isNotEmpty) {
+                                IconButton(
+                                  icon: Icon(_isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded, color: Colors.white, size: 18),
+                                  onPressed: () {
                                     setState(() {
-                                      _isUnlockedByPassword = true;
+                                      _isMuted = !_isMuted;
+                                      _videoController!.setVolume(_isMuted ? 0 : 1);
                                     });
-                                  }
-                                },
-                                child: const Text("ክፈት (Unlock)"),
-                              ),
-                            ],
-                          ),
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -558,293 +511,124 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
           ),
+
+          // *** የስክሪን መብለጥ (Overflow Bug Fix) መፍትሔ ***
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: const Color(0xFF12121D),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _isRoomLocked ? Colors.redAccent.withOpacity(0.2) : Colors.greenAccent.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent),
+                    ),
+                    child: Text(_isRoomLocked ? "LOCKED PARTY" : "PUBLIC PARTY", style: TextStyle(color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_ghostMode)
+                    Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _isRoomLocked ? Colors.redAccent.withOpacity(0.2) : Colors.greenAccent.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
-                          width: 1,
-                        ),
+                        color: const Color(0xFF8E24AA).withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE040FB)),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _isRoomLocked ? Icons.lock_outline : Icons.lock_open_outlined,
-                            size: 11,
-                            color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _isRoomLocked ? "LOCKED PARTY" : "PUBLIC PARTY",
-                            style: TextStyle(
-                              color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      child: const Text("👻 GHOST MODE ACTIVE", style: TextStyle(color: Color(0xFFE040FB), fontSize: 9, fontWeight: FontWeight.bold)),
+                    ),
+                  if (_ghostMode) const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(6)),
+                    child: const Text("✓ AES-256 ENCRYPTED", style: TextStyle(color: Colors.greenAccent, fontSize: 9, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // የምላሽ ኢሞጂዎች
+          Container(
+            color: const Color(0xFF12121D),
+            padding: const EdgeInsets.only(bottom: 6, left: 12, right: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: ["🔥", "❤️", "😂", "😮", "👏", "🎉", "💩"].map((emoji) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: InkWell(
+                      onTap: () => _messageController.text = emoji,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFF1E1E2E), borderRadius: BorderRadius.circular(16)),
+                        child: Text(emoji, style: const TextStyle(fontSize: 16)),
                       ),
                     ),
-                    Row(
-                      children: [
-                        if (_ghostMode)
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.only(right: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF8E24AA).withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFE040FB), width: 1),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x66E040FB),
-                                  blurRadius: 6,
-                                  spreadRadius: 1,
-                                )
-                              ],
-                            ),
-                            child: const Row(
-                              children: [
-                                Text("👻", style: TextStyle(fontSize: 12)),
-                                SizedBox(width: 4),
-                                Text(
-                                  "GHOST MODE ACTIVE",
-                                  style: TextStyle(
-                                    color: Color(0xFFE040FB),
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(4)),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.verified_user, size: 10, color: Colors.greenAccent),
-                              SizedBox(width: 3),
-                              Text("AES-256 ENCRYPTED", style: TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: ["🔥", "❤️", "😂", "😮", "👏", "🎉", "💩"].map((emoji) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: InkWell(
-                          onTap: () => _sendEmoji(emoji),
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E2E),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(emoji, style: const TextStyle(fontSize: 16)),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+
+          // የመልእክት ዝርዝር
+          Expanded(
+            flex: 5,
+            child: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.purple.shade900.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+                    child: const Text("🔒 End-to-End Encrypted Private Room Created", style: TextStyle(color: Colors.purpleAccent, fontSize: 11)),
                   ),
                 ),
+                const SizedBox(height: 12),
+                ..._localMessages.map((msg) {
+                  final isMe = msg['username'] == 'You';
+                  return Align(
+                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: isMe ? Colors.purpleAccent : const Color(0xFF222233),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(msg['text'] ?? '', style: const TextStyle(color: Colors.white)),
+                    ),
+                  );
+                }).toList(),
               ],
             ),
           ),
-          Expanded(
-            flex: 5,
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _supabase
-                  .from('comments')
-                  .stream(primaryKey: ['id'])
-                  .order('created_at', ascending: true),
-              builder: (context, snapshot) {
-                final dbComments = snapshot.data ?? [];
 
-                final allComments = [...dbComments];
-                for (var localMsg in _localMessages) {
-                  if (!allComments.any((m) => m['id'].toString() == localMsg['id'].toString())) {
-                    allComments.add(localMsg);
-                  }
-                }
-
-                return ListView(
-                  padding: const EdgeInsets.all(12),
-                  children: [
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.shade900.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.purpleAccent.withOpacity(0.3)),
-                        ),
-                        child: const Text(
-                          "🔒 End-to-End Encrypted Private Room Created",
-                          style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ),
-                    if (allComments.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 40),
-                        child: Center(
-                          child: Text(
-                            "No comments yet. Start typing...",
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                          ),
-                        ),
-                      ),
-                    ...allComments.map((msg) {
-                      final isMe = msg['username'] == 'You';
-                      final isGhostMsg = msg['is_ghost'] == true;
-                      final msgId = msg['id'].toString();
-
-                      return GestureDetector(
-                        onLongPress: () => _confirmDeleteMessage(msgId),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Align(
-                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                              decoration: BoxDecoration(
-                                color: isMe
-                                    ? (isGhostMsg ? const Color(0xFF6A1B9A) : Colors.purpleAccent)
-                                    : const Color(0xFF222233),
-                                border: isGhostMsg
-                                    ? Border.all(color: const Color(0xFFE040FB), width: 1.5)
-                                    : null,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft: Radius.circular(isMe ? 16 : 2),
-                                  bottomRight: Radius.circular(isMe ? 2 : 16),
-                                ),
-                                boxShadow: [
-                                  if (isGhostMsg)
-                                    const BoxShadow(
-                                      color: Color(0x44E040FB),
-                                      blurRadius: 8,
-                                      offset: Offset(0, 2),
-                                    )
-                                  else
-                                    const BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isGhostMsg)
-                                        const Padding(
-                                          padding: EdgeInsets.only(right: 6),
-                                          child: Text("⏱️", style: TextStyle(fontSize: 12)),
-                                        ),
-                                      Text(
-                                        msg['text'] ?? '',
-                                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w400),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        msg['username'] ?? 'User',
-                                        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 9),
-                                      ),
-                                      if (isMe) ...[
-                                        const SizedBox(width: 4),
-                                        const Icon(Icons.done_all, size: 12, color: Colors.white),
-                                      ],
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                );
-              },
-            ),
-          ),
+          // የመልእክት መፃፊያ ሳጥን
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.all(12),
             color: const Color(0xFF181824),
             child: Row(
               children: [
                 Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
+                  child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F0F17),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: _ghostMode ? const Color(0xFFE040FB) : const Color(0xFF2A2A3D),
-                        width: _ghostMode ? 2.0 : 1.5,
-                      ),
-                      boxShadow: _ghostMode
-                          ? [
-                              const BoxShadow(
-                                color: Color(0x33E040FB),
-                                blurRadius: 10,
-                                spreadRadius: 1,
-                              )
-                            ]
-                          : [],
-                    ),
+                    decoration: BoxDecoration(color: const Color(0xFF0F0F17), borderRadius: BorderRadius.circular(24)),
                     child: TextField(
                       controller: _messageController,
                       style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: _ghostMode ? "Type ghost comment (vanishes in 12s)..." : "Type comment...",
-                        hintStyle: TextStyle(
-                          color: _ghostMode ? const Color(0xFFCE93D8) : Colors.grey,
-                          fontSize: 13,
-                        ),
-                        border: InputBorder.none,
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
+                      decoration: const InputDecoration(hintText: "Type comment...", hintStyle: TextStyle(color: Colors.grey), border: InputBorder.none),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  radius: 22,
-                  backgroundColor: _ghostMode ? const Color(0xFFE040FB) : Colors.purpleAccent,
-                  child: IconButton(
-                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                    onPressed: _sendMessage,
-                  ),
+                  backgroundColor: Colors.purpleAccent,
+                  child: IconButton(icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18), onPressed: _sendMessage),
                 ),
               ],
             ),
