@@ -25,11 +25,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   // Security & Feature States
   bool _isRoomLocked = true;
-  bool _isUnlockedByPassword = true; 
+  bool _isUnlockedByPassword = true;
   bool _ghostMode = false;
   int _activeViewers = 3;
 
-  // Local Chat Cache for Instant UI Display
+  // Local Chat Cache for Instant Display & Auto-Delete
   final List<Map<String, dynamic>> _localMessages = [];
 
   // Video State
@@ -72,12 +72,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 2. Fixed Bottom Sheet Media Picker (ከተሸፈነው የታችኛው አሞሌ ነፃ የወጣ)
+  // 2. Updated Custom Media & File Picker (No Web Link, Added Educational/Camera options)
   void _showMediaPicker() {
-    final TextEditingController urlController = TextEditingController();
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // የታችኛው ክፍል ሙሉ በሙሉ እንዲታይ ያደርጋል
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF181824),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -106,40 +105,65 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.video_collection, color: Colors.purpleAccent),
+                    Icon(Icons.perm_media_rounded, color: Colors.purpleAccent),
                     SizedBox(width: 8),
                     Text(
-                      "ቪዲዮ ወይም ፋይል ይምረጡ",
+                      "ሚዲያ ወይም ፋይል ይምረጡ",
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
+
+                // Video from Gallery
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(color: Colors.purple.withOpacity(0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.link_rounded, color: Colors.purpleAccent),
+                    child: const Icon(Icons.video_library_rounded, color: Colors.purpleAccent),
                   ),
-                  title: const Text("ከ Web Link (URL)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("የቪዲዮ ሊንክ በማስገባት ይክፈቱ", style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showUrlInputDialog(urlController);
-                  },
+                  title: const Text("ቪዲዮ ከጋለሪ (Gallery Video)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("ከስልክዎ ጋለሪ ቪዲዮ ይምረጡ", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  onTap: () => Navigator.pop(context),
                 ),
                 const Divider(color: Colors.white10),
+
+                // Research Documents
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.folder_copy_rounded, color: Colors.purpleAccent),
+                    decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), shape: BoxShape.circle),
+                    child: const Icon(Icons.article_rounded, color: Colors.blueAccent),
                   ),
-                  title: const Text("ከስልክ ጋለሪ / Document", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("ከስልክዎ ላይ ቪዲዮ ይምረጡ", style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
+                  title: const Text("ጥናታዊ ጽሁፍ (Research Document)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("PDF፣ Word ወይም የጥናት ሰነዶችን ያጋሩ", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  onTap: () => Navigator.pop(context),
+                ),
+                const Divider(color: Colors.white10),
+
+                // Educational Materials
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), shape: BoxShape.circle),
+                    child: const Icon(Icons.school_rounded, color: Colors.greenAccent),
+                  ),
+                  title: const Text("የተማሪዎች መማሪያ (Educational Material)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("የትምህርት ሞጁሎችና ማስታወሻዎች", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  onTap: () => Navigator.pop(context),
+                ),
+                const Divider(color: Colors.white10),
+
+                // Camera
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.orange.withOpacity(0.2), shape: BoxShape.circle),
+                    child: const Icon(Icons.camera_alt_rounded, color: Colors.orangeAccent),
+                  ),
+                  title: const Text("ካሜራ (Camera)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("በቀጥታ ቪዲዮ ወይም ፎቶ ያንሱ", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  onTap: () => Navigator.pop(context),
                 ),
               ],
             ),
@@ -149,42 +173,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  void _showUrlInputDialog(TextEditingController controller) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF181824),
-        title: const Text("የቪዲዮ Link ያስገቡ", style: TextStyle(color: Colors.white)),
-        content: TextField(
-          controller: controller,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: "https://example.com/video.mp4",
-            hintStyle: TextStyle(color: Colors.grey),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("ሰርዝ"),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                _currentVideoUrl = controller.text.trim();
-                _initializeVideoPlayer(_currentVideoUrl);
-              }
-              Navigator.pop(context);
-            },
-            child: const Text("ክፈት"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 3. Delete Message Logic (ረዘም አድርገው ሲጫኑ ማጥፊያ)
+  // 3. Delete Message Logic
   void _confirmDeleteMessage(String msgId) {
     showDialog(
       context: context,
@@ -223,7 +212,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 4. Send Emoji & Message
+  // 4. Send Emojis & Messages (12s Ghost Mode)
   void _sendEmoji(String emoji) {
     _sendRawMessage(emoji);
   }
@@ -251,8 +240,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       _localMessages.add(newMsg);
     });
 
+    // Ghost messages disappear in 12 seconds
     if (_ghostMode) {
-      Timer(const Duration(seconds: 8), () {
+      Timer(const Duration(seconds: 12), () {
         if (mounted) {
           setState(() {
             _localMessages.removeWhere((m) => m['id'] == msgId);
@@ -356,14 +346,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: Colors.purpleAccent, size: 26),
             onPressed: _showMediaPicker,
-            tooltip: 'Add Video',
+            tooltip: 'Add Video/File',
           ),
         ],
       ),
 
       body: Column(
         children: [
-          // Video Display Area
+          // Video Player Section
           Expanded(
             flex: 4,
             child: Container(
@@ -443,7 +433,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Status & Quick Emojis
+          // Status & Emojis Bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: const Color(0xFF12121D),
@@ -469,12 +459,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     ),
                     Row(
                       children: [
+                        // Ghost Icon only (👻) as requested
                         if (_ghostMode)
                           Container(
                             margin: const EdgeInsets.only(right: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.purple.shade900, borderRadius: BorderRadius.circular(4)),
-                            child: const Text("👻 GHOST (8s)", style: TextStyle(color: Colors.purpleAccent, fontSize: 9, fontWeight: FontWeight.bold)),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.purple.shade900, borderRadius: BorderRadius.circular(6)),
+                            child: const Text("👻", style: TextStyle(fontSize: 12)),
                           ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -519,7 +510,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Chat Messages (Long Press to Delete)
+          // Real-time Chat Messages Stream
           Expanded(
             flex: 5,
             child: StreamBuilder<List<Map<String, dynamic>>>(
@@ -573,7 +564,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       final msgId = msg['id'].toString();
 
                       return GestureDetector(
-                        onLongPress: () => _confirmDeleteMessage(msgId), // ረዘም ሲጫኑ ማጥፊያ
+                        onLongPress: () => _confirmDeleteMessage(msgId),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Align(
@@ -659,10 +650,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     child: TextField(
                       controller: _messageController,
                       style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: _ghostMode ? "👻 Ghost message (disappears in 8s)..." : "Type comment...",
+                      decoration: const InputDecoration(
+                        hintText: "Type comment...",
                         hintStyle: TextStyle(
-                          color: _ghostMode ? Colors.purpleAccent.withOpacity(0.8) : Colors.grey,
+                          color: Colors.grey,
                           fontSize: 13,
                         ),
                         border: InputBorder.none,
