@@ -1,570 +1,488 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
-import 'package:image_picker/image_picker.dart';
 
-class WatchPartyMainScreen extends StatefulWidget {
-  final String initialRoomId;
-  final String roomName;
-
-  const WatchPartyMainScreen({
-    Key? key,
-    this.initialRoomId = 'SEC-7069',
-    this.roomName = 'Secret Party',
-  }) : super(key: key);
+class WatchPartyScreen extends StatefulWidget {
+  const WatchPartyScreen({super.key});
 
   @override
-  State<WatchPartyMainScreen> createState() => _WatchPartyMainScreenState();
+  State<WatchPartyScreen> createState() => _WatchPartyScreenState();
 }
 
-class _WatchPartyMainScreenState extends State<WatchPartyMainScreen> {
-  int _currentIndex = 2; // Default selected tab is "Party"
+class _WatchPartyScreenState extends State<WatchPartyScreen> {
+  final TextEditingController _commentController = TextEditingController();
+  final List<String> _quickEmojis = ['🔥', '❤️', '😂', '😮', '👏', '🎉', '💩'];
 
-  late final List<Widget> _pages;
+  String _roomCode = 'SEC-7069';
+  bool _isLocked = true;
+  bool _isGhostMode = true;
+
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+
+  bool _showControls = true;
+  Timer? _controlsTimer;
+
+  bool _isMuted = false;
+
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   @override
   void initState() {
     super.initState();
-    _pages = [
-      const Center(child: Text("Feed Page", style: TextStyle(color: Colors.white, fontSize: 18))),
-      const Center(child: Text("Upload Page", style: TextStyle(color: Colors.white, fontSize: 18))),
-      WatchPartyContentScreen(
-        initialRoomId: widget.initialRoomId,
-        roomName: widget.roomName,
-      ),
-      const Center(child: Text("Analytics Page", style: TextStyle(color: Colors.white, fontSize: 18))),
-      const Center(child: Text("Vault Page", style: TextStyle(color: Colors.white, fontSize: 18))),
-    ];
+    _initializeNetworkVideo(
+        'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4');
   }
 
-  void _showUploadOptions() {
-    final ImagePicker picker = ImagePicker();
+  void _initializeNetworkVideo(String url) {
+    _videoController?.dispose();
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
+      ..initialize().then((_) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+        _videoController?.play();
+        _startControlsTimer();
+      });
 
-    showModalBottomSheet(
+    _videoController?.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _pickVideoFromGallery() async {
+    final picker = ImagePicker();
+    final XFile? video = await picker.pickVideo(source: ImageSource.gallery);
+    if (video != null) {
+      _videoController?.dispose();
+      setState(() {
+        _isVideoInitialized = false;
+      });
+      _videoController = VideoPlayerController.file(File(video.path))
+        ..initialize().then((_) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          _videoController?.play();
+          _startControlsTimer();
+        });
+    }
+  }
+
+  Future<void> _recordVideoFromCamera() async {
+    final picker = ImagePicker();
+    final XFile? video = await picker.pickVideo(source: ImageSource.camera);
+    if (video != null) {
+      _videoController?.dispose();
+      setState(() {
+        _isVideoInitialized = false;
+      });
+      _videoController = VideoPlayerController.file(File(video.path))
+        ..initialize().then((_) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          _videoController?.play();
+          _startControlsTimer();
+        });
+    }
+  }
+
+  void _toggleControls() {
+    setState(() {
+      _showControls = !_showControls;
+    });
+    if (_showControls) {
+      _startControlsTimer();
+    }
+  }
+
+  void _startControlsTimer() {
+    _controlsTimer?.cancel();
+    _controlsTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && _videoController != null && _videoController!.value.isPlaying) {
+        setState(() {
+          _showControls = false;
+        });
+      }
+    });
+  }
+
+  void _shareRoomCode() {
+    Clipboard.setData(ClipboardData(text: _roomCode));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Room Code copied: $_roomCode')),
+    );
+  }
+
+  void _editRoomCodeDialog() {
+    final controller = TextEditingController(text: _roomCode);
+    showDialog(
       context: context,
-      backgroundColor: const Color(0xFF181824),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              const ListTile(
-                title: Text(
-                  "Select Video Source",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Color(0xFFE040FB)),
-                title: const Text("Choose from Gallery", style: TextStyle(color: Colors.white)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final XFile? video = await picker.pickVideo(source: ImageSource.gallery);
-                  if (video != null) {
-                    // ቪዲዮው ሲመረጥ የሚደረግ ተግባር
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.videocam, color: Color(0xFFE040FB)),
-                title: const Text("Record Video from Camera", style: TextStyle(color: Colors.white)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final XFile? video = await picker.pickVideo(source: ImageSource.camera);
-                  if (video != null) {
-                    // ቪዲዮው ሲቀረጽ የሚደረግ ተግባር
-                  }
-                },
-              ),
-            ],
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1B26),
+          title: const Text('Edit Room Code', TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: controller,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purple)),
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+              onPressed: () {
+                setState(() {
+                  _roomCode = controller.text.trim();
+                });
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
         );
       },
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D15),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          if (index == 1) {
-            _showUploadOptions();
-          } else {
-            setState(() {
-              _currentIndex = index;
-            });
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF12121C),
-        selectedItemColor: const Color(0xFFFFB74D), // Gold/Orange accent
-        unselectedItemColor: Colors.white54,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.style_outlined),
-            activeIcon: Icon(Icons.style),
-            label: 'Feed',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.add, size: 20),
-            ),
-            label: 'Upload',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.groups_outlined),
-            activeIcon: Icon(Icons.groups),
-            label: 'Party',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.insert_chart_outlined),
-            activeIcon: Icon(Icons.insert_chart),
-            label: 'Analytics',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.lock_outline),
-            activeIcon: Icon(Icons.lock),
-            label: 'Vault',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class WatchPartyContentScreen extends StatefulWidget {
-  final String initialRoomId;
-  final String roomName;
-
-  const WatchPartyContentScreen({
-    Key? key,
-    required this.initialRoomId,
-    required this.roomName,
-  }) : super(key: key);
-
-  @override
-  State<WatchPartyContentScreen> createState() => _WatchPartyContentScreenState();
-}
-
-class _WatchPartyContentScreenState extends State<WatchPartyContentScreen> {
-  final SupabaseClient _supabase = Supabase.instance.client;
-  final TextEditingController _messageController = TextEditingController();
-
-  late String _currentRoomId;
-  bool _isRoomLocked = true;
-  bool _ghostMode = true;
-  int _activeViewers = 3;
-
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'id': '1',
-      'username': 'You',
-      'text': 'ሰ',
-      'created_at': DateTime.now(),
-      'is_ghost': false,
-    },
-    {
-      'id': '2',
-      'username': 'You',
-      'text': 'ሰ',
-      'created_at': DateTime.now(),
-      'is_ghost': true,
-    }
-  ];
-
-  VideoPlayerController? _videoController;
-  bool _isInitialized = false;
-
-  final List<String> _emojis = ['🔥', '❤️', '😂', '😮', '👏', '🎉', '💩'];
-
-  @override
-  void initState() {
-    super.initState();
-    _currentRoomId = widget.initialRoomId;
-    _initializeNetworkVideo('https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4');
-  }
-
-  void _showToast(String message, {Color color = const Color(0xFFAB47BC)}) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: color,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
-  void _initializeNetworkVideo(String url) {
-    _videoController?.dispose();
-    setState(() => _isInitialized = false);
-
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
-      ..initialize().then((_) {
-        setState(() {
-          _isInitialized = true;
-        });
-        _videoController!.play();
-        _videoController!.setLooping(true);
-      });
-  }
-
-  void _toggleRoomLock() {
-    setState(() => _isRoomLocked = !_isRoomLocked);
-    if (_isRoomLocked) {
-      _showToast("🔒 Room Locked - Secure", color: const Color(0xFFE53935));
-    } else {
-      _showToast("🔓 Room Unlocked", color: const Color(0xFF43A047));
-    }
-  }
-
-  void _toggleGhostMode() {
-    setState(() => _ghostMode = !_ghostMode);
-    if (_ghostMode) {
-      _showToast("👻 Ghost Mode ON (12s Auto-Delete)", color: const Color(0xFFAB47BC));
-    } else {
-      _showToast("👁️ Ghost Mode OFF", color: Colors.blueAccent);
-    }
-  }
-
-  Future<void> _sendMessage([String? customText]) async {
-    final text = customText ?? _messageController.text.trim();
+  Future<void> _sendComment() async {
+    final text = _commentController.text.trim();
     if (text.isEmpty) return;
-    if (customText == null) _messageController.clear();
 
-    final now = DateTime.now();
-    final tempId = now.millisecondsSinceEpoch.toString();
+    _commentController.clear();
 
-    final newMsg = {
-      'id': tempId,
-      'username': 'You',
-      'text': text,
-      'created_at': now,
-      'is_ghost': _ghostMode,
-    };
-
-    setState(() {
-      _messages.add(newMsg);
+    await _supabase.from('comments').insert({
+      'content': text,
+      'is_user': true,
+      'created_at': DateTime.now().toIso8601String(),
     });
-
-    if (_ghostMode) {
-      Timer(const Duration(seconds: 12), () async {
-        if (mounted) {
-          setState(() {
-            _messages.removeWhere((item) => item['id'] == tempId);
-          });
-        }
-        try {
-          await _supabase.from('comments').delete().eq('id', tempId);
-        } catch (e) {
-          debugPrint("Auto delete error: $e");
-        }
-      });
-    }
-
-    try {
-      await _supabase.from('comments').insert({
-        'id': tempId,
-        'video_id': _currentRoomId,
-        'username': 'You',
-        'text': text,
-        'created_at': now.toIso8601String(),
-        'is_ghost': _ghostMode,
-      });
-    } catch (e) {
-      debugPrint("Supabase insert error: $e");
-    }
   }
 
   @override
   void dispose() {
-    _messageController.dispose();
+    _controlsTimer?.cancel();
     _videoController?.dispose();
+    _commentController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          // Top Header (AppBar)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: const Color(0xFF141420),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0C1B),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF191328),
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          widget.roomName,
-                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.tealAccent.withOpacity(0.4)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.circle, color: Colors.tealAccent, size: 6),
-                              const SizedBox(width: 4),
-                              Text("$_activeViewers", style: const TextStyle(color: Colors.tealAccent, fontSize: 10, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text("ID: $_currentRoomId", style: const TextStyle(color: Color(0xFFE040FB), fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.share_outlined, color: Colors.white70, size: 22),
-                      onPressed: () => _showToast("Room Link Copied!"),
-                    ),
-                    IconButton(
-                      icon: Icon(_isRoomLocked ? Icons.lock : Icons.lock_open, color: _isRoomLocked ? const Color(0xFFFF5252) : Colors.greenAccent, size: 22),
-                      onPressed: _toggleRoomLock,
-                    ),
-                    IconButton(
-                      icon: Icon(_ghostMode ? Icons.visibility_off : Icons.visibility, color: _ghostMode ? const Color(0xFFE040FB) : Colors.white70, size: 22),
-                      onPressed: _toggleGhostMode,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline, color: Color(0xFFE040FB), size: 24),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Video View
-          Expanded(
-            flex: 4,
-            child: Container(
-              width: double.infinity,
-              color: Colors.black,
-              child: _isInitialized && _videoController != null
-                  ? AspectRatio(
-                      aspectRatio: _videoController!.value.aspectRatio,
-                      child: VideoPlayer(_videoController!),
-                    )
-                  : const Center(child: CircularProgressIndicator(color: Color(0xFFE040FB))),
-            ),
-          ),
-
-          // Status & Encryption Badges Row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: const Color(0xFF0D0D15),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3E101D),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
-                  ),
-                  child: const Text("LOCKED PARTY", style: TextStyle(color: Color(0xFFFF5252), fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: Color(0xFF38006B), shape: BoxShape.circle),
-                  child: const Icon(Icons.ghost_mode, color: Colors.white, size: 14),
+                const Text(
+                  'Secret Party',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0A2E23),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.tealAccent.withOpacity(0.3)),
+                    color: Colors.green.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.check_circle, color: Colors.tealAccent, size: 12),
+                      CircleAvatar(radius: 3, backgroundColor: Colors.green),
                       SizedBox(width: 4),
-                      Text("AES-256 ENCRYPTED", style: TextStyle(color: Colors.tealAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                      Text('3', style: TextStyle(color: Colors.green, fontSize: 12)),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-
-          // Emoji Reactions Row
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            color: const Color(0xFF0D0D15),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: _emojis.map((emoji) {
-                  return GestureDetector(
-                    onTap: () => _sendMessage(emoji),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1E1E2C),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(emoji, style: const TextStyle(fontSize: 18)),
-                    ),
-                  );
-                }).toList(),
+            GestureDetector(
+              onTap: _editRoomCodeDialog,
+              child: Text(
+                'ID: $_roomCode',
+                style: const TextStyle(fontSize: 11, color: Colors.purpleAccent),
               ),
             ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: Colors.white),
+            onPressed: _shareRoomCode,
           ),
-
-          // Main Chat Area
-          Expanded(
-            flex: 5,
-            child: Container(
-              color: const Color(0xFF0D0D15),
-              child: ListView(
-                padding: const EdgeInsets.all(12),
-                children: [
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF231233),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF8E24AA).withOpacity(0.3)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.lock, color: Colors.amber, size: 13),
-                          SizedBox(width: 6),
-                          Text(
-                            "End-to-End Encrypted Private Room Created",
-                            style: TextStyle(color: Color(0xFFE1BEE7), fontSize: 11, fontWeight: FontWeight.w500),
-                          ),
-                        ],
+          IconButton(
+            icon: Icon(_isLocked ? Icons.lock : Icons.lock_open, color: Colors.redAccent),
+            onPressed: () => setState(() => _isLocked = !_isLocked),
+          ),
+          IconButton(
+            icon: Icon(_isGhostMode ? Icons.visibility_off : Icons.visibility, color: Colors.purpleAccent),
+            onPressed: () => setState(() => _isGhostMode = !_isGhostMode),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline, color: Colors.purpleAccent),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: const Color(0xFF1E1B26),
+                builder: (context) => Wrap(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.photo_library, color: Colors.purpleAccent),
+                      title: const Text('Pick from Gallery', style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickVideoFromGallery();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.videocam, color: Colors.purpleAccent),
+                      title: const Text('Record Video', style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _recordVideoFromCamera();
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Video Player Section
+          GestureDetector(
+            onTap: _toggleControls,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: _isVideoInitialized
+                      ? VideoPlayer(_videoController!)
+                      : Container(color: Colors.black),
+                ),
+                if (_showControls && _isVideoInitialized) ...[
+                  Container(color: Colors.black38),
+                  IconButton(
+                    iconSize: 50,
+                    icon: Icon(
+                      _videoController!.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _videoController!.value.isPlaying
+                            ? _videoController!.pause()
+                            : _videoController!.play();
+                      });
+                      _startControlsTimer();
+                    },
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: IconButton(
+                      icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white),
+                      onPressed: () {
+                        setState(() {
+                          _isMuted = !_isMuted;
+                          _videoController!.setVolume(_isMuted ? 0 : 1);
+                        });
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: VideoProgressIndicator(
+                      _videoController!,
+                      allowScrubbing: true,
+                      colors: const VideoProgressColors(
+                        playedColor: Colors.purpleAccent,
+                        bufferedColor: Colors.grey,
+                        backgroundColor: Colors.white24,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  ..._messages.map((msg) {
-                    final isMe = msg['username'] == 'You';
-                    final isGhost = msg['is_ghost'] ?? false;
-
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE040FB),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (isGhost) ...[
-                                  const Icon(Icons.timer_outlined, color: Colors.white, size: 14),
-                                  const SizedBox(width: 4),
-                                ],
-                                Text(
-                                  msg['text'] ?? '',
-                                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text("You", style: TextStyle(color: Colors.white70, fontSize: 10)),
-                                SizedBox(width: 2),
-                                Icon(Icons.done_all, color: Colors.white70, size: 12),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ],
-              ),
+                ]
+              ],
             ),
           ),
 
-          // Message Input Field
+          const SizedBox(height: 8),
+
+          // Badges Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text('LOCKED PARTY', style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Colors.purple, shape: BoxShape.circle),
+                      child: const Text('👻', style: TextStyle(fontSize: 10)),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.tealAccent, size: 12),
+                          SizedBox(width: 4),
+                          Text('AES-256 ENCRYPTED', style: TextStyle(color: Colors.tealAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Emoji Selector
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _quickEmojis.length,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () {
+                    _commentController.text += _quickEmojis[index];
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(color: Color(0xFF231D34), shape: BoxShape.circle),
+                    child: Text(_quickEmojis[index], style: const TextStyle(fontSize: 16)),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Encryption Notice Banner
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            color: const Color(0xFF141420),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2A163B),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock, color: Colors.amber, size: 14),
+                SizedBox(width: 6),
+                Text('End-to-End Encrypted Private Room Created', style: TextStyle(color: Colors.purpleAccent, fontSize: 11)),
+              ],
+            ),
+          ),
+
+          // Realtime Comments List
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _supabase.from('comments').stream(primaryKey: ['id']).order('created_at', ascending: true),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.purpleAccent));
+                }
+                final comments = snapshot.data!;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: comments.length,
+                  itemBuilder: (context, index) {
+                    final comment = comments[index];
+                    final isUser = comment['is_user'] ?? false;
+                    return Align(
+                      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isUser ? const Color(0xFFD342EF) : const Color(0xFF231D34),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          comment['content'] ?? '',
+                          style: TextStyle(color: isUser ? Colors.white : Colors.white70),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          // Bottom Input Field
+          Padding(
+            padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D0D15),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: const Color(0xFFE040FB)),
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        hintText: "Type comment...",
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                        border: InputBorder.none,
+                  child: TextField(
+                    controller: _commentController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Type comment...',
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      filled: true,
+                      fillColor: const Color(0xFF191328),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: const BorderSide(color: Colors.purpleAccent),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: const BorderSide(color: Colors.purple, width: 2),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 CircleAvatar(
-                  radius: 22,
-                  backgroundColor: const Color(0xFFE040FB),
+                  backgroundColor: const Color(0xFFD342EF),
+                  radius: 24,
                   child: IconButton(
-                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                    onPressed: () => _sendMessage(),
+                    icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                    onPressed: _sendComment,
                   ),
                 ),
               ],
@@ -572,6 +490,27 @@ class _WatchPartyContentScreenState extends State<WatchPartyContentScreen> {
           ),
         ],
       ),
+
+      // Bottom Navigation Bar
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF130F21),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.amber,
+        unselectedItemColor: Colors.grey,
+        currentIndex: 2,
+        items: const [
+          BottomNavigationBarViewItem(icon: Icon(Icons.style), label: 'Feed'),
+          BottomNavigationBarViewItem(icon: Icon(Icons.add_circle), label: 'Upload'),
+          BottomNavigationBarViewItem(icon: Icon(Icons.groups), label: 'Party'),
+          BottomNavigationBarViewItem(icon: Icon(Icons.bar_chart), label: 'Analytics'),
+          BottomNavigationBarViewItem(icon: Icon(Icons.lock), label: 'Vault'),
+        ],
+      ),
     );
   }
+}
+
+class BottomNavigationBarViewItem extends BottomNavigationBarItem {
+  const BottomNavigationBarViewItem({required Widget icon, required String label})
+      : super(icon: icon, label: label);
 }
