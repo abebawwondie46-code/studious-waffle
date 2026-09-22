@@ -27,7 +27,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _isRoomLocked = true;
   bool _isUnlockedByPassword = true; 
   bool _ghostMode = false;
-  int _activeViewers = 3; // Simulated Online Viewers
+  int _activeViewers = 3;
 
   // Local Chat Cache for Instant UI Display
   final List<Map<String, dynamic>> _localMessages = [];
@@ -55,14 +55,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // 1. App Bar Actions
+  // 1. Share Room Code
   void _shareRoomCode() {
     Clipboard.setData(ClipboardData(text: "${widget.roomName} Code: ${widget.roomId}"));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         backgroundColor: Colors.purpleAccent,
         content: Row(
-          children: const [
+          children: [
             Icon(Icons.check_circle, color: Colors.white),
             SizedBox(width: 8),
             Text('የሩም መግቢያ ኮድ ተቀድቷል (Copied)!'),
@@ -72,34 +72,77 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
+  // 2. Fixed Bottom Sheet Media Picker (ከተሸፈነው የታችኛው አሞሌ ነፃ የወጣ)
   void _showMediaPicker() {
     final TextEditingController urlController = TextEditingController();
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // የታችኛው ክፍል ሙሉ በሙሉ እንዲታይ ያደርጋል
       backgroundColor: const Color(0xFF181824),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "ቪዲዮ ይምረጡ",
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.link, color: Colors.purpleAccent),
-                title: const Text("ከ Web Link (URL)", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showUrlInputDialog(urlController);
-                },
-              ),
-            ],
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade600,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.video_collection, color: Colors.purpleAccent),
+                    SizedBox(width: 8),
+                    Text(
+                      "ቪዲዮ ወይም ፋይል ይምረጡ",
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.2), shape: BoxShape.circle),
+                    child: const Icon(Icons.link_rounded, color: Colors.purpleAccent),
+                  ),
+                  title: const Text("ከ Web Link (URL)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("የቪዲዮ ሊንክ በማስገባት ይክፈቱ", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showUrlInputDialog(urlController);
+                  },
+                ),
+                const Divider(color: Colors.white10),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.2), shape: BoxShape.circle),
+                    child: const Icon(Icons.folder_copy_rounded, color: Colors.purpleAccent),
+                  ),
+                  title: const Text("ከስልክ ጋለሪ / Document", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("ከስልክዎ ላይ ቪዲዮ ይምረጡ", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -141,12 +184,50 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Quick Emoji Sender
+  // 3. Delete Message Logic (ረዘም አድርገው ሲጫኑ ማጥፊያ)
+  void _confirmDeleteMessage(String msgId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF181824),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text("መልእክት አጥፋ", style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
+        ),
+        content: const Text("ይህንን መልእክት ማጥፋት እርግጠኛ ነዎት?", style: TextStyle(color: Colors.grey)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("ሰርዝ", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(context);
+              setState(() {
+                _localMessages.removeWhere((m) => m['id'].toString() == msgId);
+              });
+              try {
+                await _supabase.from('comments').delete().eq('id', msgId);
+              } catch (e) {
+                debugPrint("Delete error: $e");
+              }
+            },
+            child: const Text("አጥፋ (Delete)"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 4. Send Emoji & Message
   void _sendEmoji(String emoji) {
     _sendRawMessage(emoji);
   }
 
-  // Instant & Secure Message Sending Logic
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -156,8 +237,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   Future<void> _sendRawMessage(String text) async {
     final now = DateTime.now();
+    final msgId = DateTime.now().millisecondsSinceEpoch.toString();
     final newMsg = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'id': msgId,
       'video_id': widget.roomId,
       'username': 'You',
       'text': text,
@@ -165,23 +247,20 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       'is_ghost': _ghostMode,
     };
 
-    // 1. Instant UI Refresh (አፑ ወዲያውኑ መልእክቱን እንዲያሳየው)
     setState(() {
       _localMessages.add(newMsg);
     });
 
-    // Ghost Mode Self-Destruct Logic (ከ 8 ሰከንድ በኋላ እንዲጠፋ)
     if (_ghostMode) {
       Timer(const Duration(seconds: 8), () {
         if (mounted) {
           setState(() {
-            _localMessages.removeWhere((m) => m['id'] == newMsg['id']);
+            _localMessages.removeWhere((m) => m['id'] == msgId);
           });
         }
       });
     }
 
-    // 2. Background Sync to Supabase
     try {
       await _supabase.from('comments').insert({
         'video_id': widget.roomId,
@@ -208,7 +287,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F17),
 
-      // 1. የላይኛው አሞሌ (App Bar & Actions)
+      // App Bar
       appBar: AppBar(
         backgroundColor: const Color(0xFF181824),
         elevation: 4,
@@ -284,7 +363,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
       body: Column(
         children: [
-          // 2. የቪዲዮ ማጫወቻ ክፍል (Video Display Area)
+          // Video Display Area
           Expanded(
             flex: 4,
             child: Container(
@@ -303,7 +382,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       child: CircularProgressIndicator(color: Colors.purpleAccent),
                     ),
 
-                  // Private Room Locked Popup Overlay
                   if (!_isUnlockedByPassword)
                     Container(
                       color: Colors.black87,
@@ -365,7 +443,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // 3. የሁኔታ እና ፈጣን ምላሽ አሞሌዎች (Status & Reaction Bars)
+          // Status & Quick Emojis
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: const Color(0xFF12121D),
@@ -396,7 +474,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                             margin: const EdgeInsets.only(right: 6),
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(color: Colors.purple.shade900, borderRadius: BorderRadius.circular(4)),
-                            child: const Text("GHOST (8s)", style: TextStyle(color: Colors.purpleAccent, fontSize: 9, fontWeight: FontWeight.bold)),
+                            child: const Text("👻 GHOST (8s)", style: TextStyle(color: Colors.purpleAccent, fontSize: 9, fontWeight: FontWeight.bold)),
                           ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -415,7 +493,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
                 const SizedBox(height: 6),
 
-                // Quick Emoji Bar
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -442,7 +519,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // 4. የቻት እና የመልእክት መላኪያ ክፍል (Chat Section - Direct Stream + Local Cache)
+          // Chat Messages (Long Press to Delete)
           Expanded(
             flex: 5,
             child: StreamBuilder<List<Map<String, dynamic>>>(
@@ -453,7 +530,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               builder: (context, snapshot) {
                 final dbComments = snapshot.data ?? [];
 
-                // Combine DB Stream with Local Instant Feed
                 final allComments = [...dbComments];
                 for (var localMsg in _localMessages) {
                   if (!allComments.any((m) => m['id'].toString() == localMsg['id'].toString())) {
@@ -464,7 +540,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 return ListView(
                   padding: const EdgeInsets.all(12),
                   children: [
-                    // System Security Notice
                     Center(
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -492,64 +567,67 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         ),
                       ),
 
-                    // Comments Display List
                     ...allComments.map((msg) {
                       final isMe = msg['username'] == 'You';
                       final isGhostMsg = msg['is_ghost'] == true;
+                      final msgId = msg['id'].toString();
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Align(
-                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                            decoration: BoxDecoration(
-                              color: isMe
-                                  ? (isGhostMsg ? Colors.purple.shade900 : Colors.purpleAccent)
-                                  : const Color(0xFF222233),
-                              border: isGhostMsg ? Border.all(color: Colors.purpleAccent, width: 1) : null,
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(16),
-                                topRight: const Radius.circular(16),
-                                bottomLeft: Radius.circular(isMe ? 16 : 2),
-                                bottomRight: Radius.circular(isMe ? 2 : 16),
+                      return GestureDetector(
+                        onLongPress: () => _confirmDeleteMessage(msgId), // ረዘም ሲጫኑ ማጥፊያ
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Align(
+                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: isMe
+                                    ? (isGhostMsg ? Colors.purple.shade900 : Colors.purpleAccent)
+                                    : const Color(0xFF222233),
+                                border: isGhostMsg ? Border.all(color: Colors.purpleAccent, width: 1) : null,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(16),
+                                  topRight: const Radius.circular(16),
+                                  bottomLeft: Radius.circular(isMe ? 16 : 2),
+                                  bottomRight: Radius.circular(isMe ? 2 : 16),
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
+                                ],
                               ),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (isGhostMsg)
-                                      const Padding(
-                                        padding: EdgeInsets.only(right: 6),
-                                        child: Icon(Icons.timer, size: 14, color: Colors.white70),
+                              child: Column(
+                                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isGhostMsg)
+                                        const Padding(
+                                          padding: EdgeInsets.only(right: 6),
+                                          child: Text("👻", style: TextStyle(fontSize: 12)),
+                                        ),
+                                      Text(
+                                        msg['text'] ?? '',
+                                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w400),
                                       ),
-                                    Text(
-                                      msg['text'] ?? '',
-                                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w400),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      msg['username'] ?? 'User',
-                                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 9),
-                                    ),
-                                    if (isMe) ...[
-                                      const SizedBox(width: 4),
-                                      const Icon(Icons.done_all, size: 12, color: Colors.white),
                                     ],
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        msg['username'] ?? 'User',
+                                        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 9),
+                                      ),
+                                      if (isMe) ...[
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.done_all, size: 12, color: Colors.white),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -561,7 +639,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Message Input Bar
+          // Message Input Field
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             color: const Color(0xFF181824),
@@ -582,9 +660,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       controller: _messageController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: _ghostMode ? "Ghost message (disappears in 8s)..." : "Type comment...",
+                        hintText: _ghostMode ? "👻 Ghost message (disappears in 8s)..." : "Type comment...",
                         hintStyle: TextStyle(
-                          color: _ghostMode ? Colors.purpleAccent.withOpacity(0.7) : Colors.grey,
+                          color: _ghostMode ? Colors.purpleAccent.withOpacity(0.8) : Colors.grey,
                           fontSize: 13,
                         ),
                         border: InputBorder.none,
