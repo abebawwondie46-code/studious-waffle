@@ -1,4 +1,4 @@
-import 'async' show Timer;
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -109,9 +109,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       };
 
       try {
-        // መልእክቱን በ Supabase Realtime መላክ
-        await _partyChannel?.send(
-          type: 'broadcast',
+        // መልእክቱን በ Supabase Realtime መላክ (sendBroadcastMessage)
+        await _partyChannel?.sendBroadcastMessage(
           event: 'chat_message',
           payload: msgMap,
         );
@@ -163,7 +162,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   void _showPasscodePromptDialog() {
-    // ላክ የታለፈ ማለፊያ ቃል ካስፈለገ
+    // ማለፊያ ቃል ካስፈለገ የሚታይ Dialog
   }
 
   @override
@@ -230,7 +229,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       ),
       body: Column(
         children: [
-          // ቪዲዮ መመልከቻ ቦታ (Placeholder)
+          // ቪዲዮ መመልከቻ ቦታ
           Container(
             height: 220,
             width: double.infinity,
@@ -259,7 +258,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     ),
                     child: Column(
                       crossAxisAlignment:
-                          isMe ? CrossAlignment.end : CrossAlignment.start,
+                          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                       children: [
                         Text(
                           msg['text'] ?? '',
