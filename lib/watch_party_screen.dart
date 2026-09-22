@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   final String initialRoomId;
@@ -23,12 +24,10 @@ class WatchPartyScreen extends StatefulWidget {
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final SupabaseClient _supabase = Supabase.instance.client;
   final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
   late String _currentRoomId;
   bool _isRoomLocked = true;
-  bool _isUnlockedByPassword = true;
   bool _ghostMode = false;
   int _activeViewers = 3;
 
@@ -38,15 +37,35 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _isInitialized = false;
   bool _isPlaying = true;
   bool _isMuted = false;
+  bool _showControls = true;
+  Timer? _hideControlsTimer;
 
   @override
   void initState() {
     super.initState();
     _currentRoomId = widget.initialRoomId;
     _initializeNetworkVideo('https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4');
+    _startControlsTimer();
   }
 
-  // 1. የኦንላይን ቪዲዮ ማጫወቻ
+  void _startControlsTimer() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() => _showControls = false);
+      }
+    });
+  }
+
+  void _toggleControlsVisibility() {
+    setState(() {
+      _showControls = !_showControls;
+    });
+    if (_showControls) {
+      _startControlsTimer();
+    }
+  }
+
   void _initializeNetworkVideo(String url) {
     _videoController?.dispose();
     setState(() => _isInitialized = false);
@@ -64,7 +83,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // 2. ከስልክ ጋለሪ/ካሜራ የመጣን ፋይል ስክሪኑ ላይ መጫኛ
   void _initializeFileVideo(File file) {
     _videoController?.dispose();
     setState(() => _isInitialized = false);
@@ -82,7 +100,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // 3. ከጋለሪ ቪዲዮ መምረጫ
   Future<void> _pickVideoFromGallery() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
@@ -92,7 +109,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.purpleAccent,
-            content: Text('ቪዲዮ ተመርጦ በስክሪኑ ላይ ተጫኗል፦ ${video.name}'),
+            content: Text('Video loaded from gallery: ${video.name}'),
           ),
         );
       }
@@ -101,7 +118,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 4. ከካሜራ ቪዲዮ መቅረጫ
   Future<void> _recordVideoFromCamera() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
@@ -111,7 +127,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.orangeAccent,
-            content: Text('የተቀረፀው ቪዲዮ በስክሪኑ ላይ ተጫኗል፦ ${video.name}'),
+            content: Text('Recorded video loaded: ${video.name}'),
           ),
         );
       }
@@ -120,7 +136,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 5. የሩም ኮድ በባለእርሳስ ምልክት የመቀየሪያ Dialog
   void _editRoomCodeDialog() {
     final TextEditingController codeController = TextEditingController(text: _currentRoomId);
 
@@ -132,14 +147,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           children: [
             Icon(Icons.edit, color: Colors.purpleAccent),
             SizedBox(width: 8),
-            Text("የሩም ኮድ ይቀይሩ (Custom Code)", style: TextStyle(color: Colors.white, fontSize: 16)),
+            Text("Edit Room Code", style: TextStyle(color: Colors.white, fontSize: 16)),
           ],
         ),
         content: TextField(
           controller: codeController,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            labelText: "አዲስ የሩም ኮድ ያስገቡ",
+            labelText: "Enter Custom Room ID",
             labelStyle: TextStyle(color: Colors.purpleAccent),
             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
           ),
@@ -147,7 +162,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("ሰርዝ", style: TextStyle(color: Colors.grey)),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
@@ -160,7 +175,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 _shareRoomCode();
               }
             },
-            child: const Text("ቀይር እና ላክ (Save & Share)"),
+            child: const Text("Save & Share"),
           ),
         ],
       ),
@@ -175,7 +190,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         backgroundColor: Colors.purpleAccent,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Text('አዲሱ የሩም ኮድ ($_currentRoomId) ተቀድቷል! ለጓደኛዎ ይላኩለት።'),
+        content: Text('Room code ($_currentRoomId) copied to clipboard!'),
       ),
     );
   }
@@ -239,7 +254,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF181824),
-        title: const Text("የቪዲዮ ወይም ፋይል URL ያስገቡ", style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: const Text("Enter Video URL", style: TextStyle(color: Colors.white, fontSize: 16)),
         content: TextField(
           controller: urlController,
           style: const TextStyle(color: Colors.white),
@@ -250,7 +265,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("ሰርዝ", style: TextStyle(color: Colors.grey))),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
             onPressed: () {
@@ -259,7 +274,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 Navigator.pop(context);
               }
             },
-            child: const Text("ክፈት (Play)"),
+            child: const Text("Play"),
           ),
         ],
       ),
@@ -281,11 +296,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               children: [
                 Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade600, borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 16),
-                const Text("ሚዲያ ወይም ፋይል ይምረጡ", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text("Select Media Source", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
                 ListTile(
                   leading: const Icon(Icons.video_library_rounded, color: Colors.purpleAccent),
-                  title: const Text("ቪዲዮ ከጋለሪ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  title: const Text("Gallery Video", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   onTap: () {
                     Navigator.pop(context);
                     _pickVideoFromGallery();
@@ -293,7 +308,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.link_rounded, color: Colors.blueAccent),
-                  title: const Text("በሊንክ (URL) ክፈት", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  title: const Text("Network URL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   onTap: () {
                     Navigator.pop(context);
                     _showUrlInputDialog();
@@ -301,7 +316,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.camera_alt_rounded, color: Colors.orangeAccent),
-                  title: const Text("ካሜራ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  title: const Text("Camera", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   onTap: () {
                     Navigator.pop(context);
                     _recordVideoFromCamera();
@@ -321,13 +336,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _messageController.clear();
 
     final now = DateTime.now();
-    final msgId = DateTime.now().millisecondsSinceEpoch.toString();
+    final msgId = now.millisecondsSinceEpoch.toString();
     final newMsg = {
       'id': msgId,
       'video_id': _currentRoomId,
       'username': 'You',
       'text': text,
-      'created_at': now.toIso8601String(),
+      'created_at': now,
       'is_ghost': _ghostMode,
     };
 
@@ -364,8 +379,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   @override
   void dispose() {
     _messageController.dispose();
-    _passwordController.dispose();
     _videoController?.dispose();
+    _hideControlsTimer?.cancel();
     super.dispose();
   }
 
@@ -400,7 +415,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ],
             ),
-            // *** የሩም ኮድ በባለእርሳስ አዝራር የመቀየሪያ ክፍለ-አካል ***
             Row(
               children: [
                 Text("ID: $_currentRoomId", style: const TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -428,91 +442,101 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       ),
       body: Column(
         children: [
-          // *** የቪዲዮ ማጫወቻ እና የጊዜ መስመር (Video Player & Controls Timeline) ***
+          // *** Video Player with Auto-Hiding Controls ***
           Expanded(
             flex: 4,
-            child: Container(
-              color: Colors.black,
-              child: Stack(
-                children: [
-                  if (_isInitialized && _videoController != null)
-                    Center(
-                      child: AspectRatio(
-                        aspectRatio: _videoController!.value.aspectRatio,
-                        child: VideoPlayer(_videoController!),
-                      ),
-                    )
-                  else
-                    const Center(child: CircularProgressIndicator(color: Colors.purpleAccent)),
-
-                  // የቪዲዮ መቆጣጠሪያዎች እና የጊዜ መስመር (Timeline Track)
-                  if (_isInitialized && _videoController != null)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [Colors.black.withOpacity(0.8), Colors.transparent],
-                          ),
+            child: GestureDetector(
+              onTap: _toggleControlsVisibility,
+              child: Container(
+                color: Colors.black,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_isInitialized && _videoController != null)
+                      Center(
+                        child: AspectRatio(
+                          aspectRatio: _videoController!.value.aspectRatio,
+                          child: VideoPlayer(_videoController!),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            VideoProgressIndicator(
-                              _videoController!,
-                              allowScrubbing: true,
-                              colors: const VideoProgressColors(
-                                playedColor: Colors.purpleAccent,
-                                bufferedColor: Colors.white24,
-                                backgroundColor: Colors.white10,
+                      )
+                    else
+                      const Center(child: CircularProgressIndicator(color: Colors.purpleAccent)),
+
+                    // Auto-hiding timeline controls
+                    if (_isInitialized && _videoController != null && _showControls)
+                      AnimatedOpacity(
+                        opacity: _showControls ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [Colors.black.withOpacity(0.85), Colors.transparent],
                               ),
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
+                                VideoProgressIndicator(
+                                  _videoController!,
+                                  allowScrubbing: true,
+                                  colors: const VideoProgressColors(
+                                    playedColor: Colors.purpleAccent,
+                                    bufferedColor: Colors.white24,
+                                    backgroundColor: Colors.white10,
+                                  ),
+                                ),
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                                          onPressed: () {
+                                            _startControlsTimer();
+                                            setState(() {
+                                              _isPlaying = !_isPlaying;
+                                              _isPlaying ? _videoController!.play() : _videoController!.pause();
+                                            });
+                                          },
+                                        ),
+                                        Text(
+                                          "${_formatDuration(_videoController!.value.position)} / ${_formatDuration(_videoController!.value.duration)}",
+                                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                                        ),
+                                      ],
+                                    ),
                                     IconButton(
-                                      icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                                      icon: Icon(_isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded, color: Colors.white, size: 18),
                                       onPressed: () {
+                                        _startControlsTimer();
                                         setState(() {
-                                          _isPlaying = !_isPlaying;
-                                          _isPlaying ? _videoController!.play() : _videoController!.pause();
+                                          _isMuted = !_isMuted;
+                                          _videoController!.setVolume(_isMuted ? 0 : 1);
                                         });
                                       },
                                     ),
-                                    Text(
-                                      "${_formatDuration(_videoController!.value.position)} / ${_formatDuration(_videoController!.value.duration)}",
-                                      style: const TextStyle(color: Colors.white, fontSize: 10),
-                                    ),
                                   ],
-                                ),
-                                IconButton(
-                                  icon: Icon(_isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded, color: Colors.white, size: 18),
-                                  onPressed: () {
-                                    setState(() {
-                                      _isMuted = !_isMuted;
-                                      _videoController!.setVolume(_isMuted ? 0 : 1);
-                                    });
-                                  },
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
 
-          // *** የስክሪን መብለጥ (Overflow Bug Fix) መፍትሔ ***
+          // Horizontal Status Badges
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: const Color(0xFF12121D),
@@ -551,7 +575,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // የምላሽ ኢሞጂዎች
+          // Emojis Row
           Container(
             color: const Color(0xFF12121D),
             padding: const EdgeInsets.only(bottom: 6, left: 12, right: 12),
@@ -575,7 +599,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // የመልእክት ዝርዝር
+          // Chat Messages with Timestamps & Status Checks
           Expanded(
             flex: 5,
             child: ListView(
@@ -591,16 +615,36 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 const SizedBox(height: 12),
                 ..._localMessages.map((msg) {
                   final isMe = msg['username'] == 'You';
+                  final DateTime msgTime = msg['created_at'] as DateTime;
+                  final timeFormatted = DateFormat('hh:mm a').format(msgTime);
+
                   return Align(
                     alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isMe ? Colors.purpleAccent : const Color(0xFF222233),
+                        color: isMe ? const Color(0xFFE040FB) : const Color(0xFF222233),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(msg['text'] ?? '', style: const TextStyle(color: Colors.white)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(msg['text'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 14)),
+                          const SizedBox(height: 3),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(timeFormatted, style: const TextStyle(color: Colors.white70, fontSize: 9)),
+                              if (isMe) ...[
+                                const SizedBox(width: 4),
+                                const Icon(Icons.done_all, color: Colors.blueAccent, size: 12),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }).toList(),
@@ -608,27 +652,42 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // የመልእክት መፃፊያ ሳጥን
+          // Dynamic Comment Bar (Changes border & hint when Ghost Mode is ON/OFF)
           Container(
             padding: const EdgeInsets.all(12),
             color: const Color(0xFF181824),
             child: Row(
               children: [
                 Expanded(
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(color: const Color(0xFF0F0F17), borderRadius: BorderRadius.circular(24)),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F0F17),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _ghostMode ? const Color(0xFFE040FB) : Colors.white10,
+                        width: _ghostMode ? 1.5 : 1.0,
+                      ),
+                    ),
                     child: TextField(
                       controller: _messageController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(hintText: "Type comment...", hintStyle: TextStyle(color: Colors.grey), border: InputBorder.none),
+                      style: TextStyle(color: _ghostMode ? const Color(0xFFE040FB) : Colors.white),
+                      decoration: InputDecoration(
+                        hintText: _ghostMode ? "Type ghost comment (vanishes in 12s)..." : "Type comment...",
+                        hintStyle: TextStyle(color: _ghostMode ? const Color(0xFFE040FB).withOpacity(0.6) : Colors.grey),
+                        border: InputBorder.none,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor: Colors.purpleAccent,
-                  child: IconButton(icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18), onPressed: _sendMessage),
+                  backgroundColor: _ghostMode ? const Color(0xFFE040FB) : Colors.purpleAccent,
+                  child: IconButton(
+                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                    onPressed: _sendMessage,
+                  ),
                 ),
               ],
             ),
