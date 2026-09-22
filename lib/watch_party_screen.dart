@@ -1,20 +1,18 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
-   const WatchPartyScreen({super.key});
+  const WatchPartyScreen({super.key});
 
   @override
   State<WatchPartyScreen> createState() => _WatchPartyScreenState();
 }
 
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
-  RealtimeChannel? _partyChannel;
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _passcodeController = TextEditingController();
@@ -55,89 +53,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   void initState() {
     super.initState();
     _messageController.addListener(() {
-      setState(() {});
-    });
-    
-    // 1. ገጹ ሲከፈት Supabase Realtime ቻናሉን የማገናኘት ስራ እዚህ ይከናወናል
-    if (_roomId != null) {
-      _setupRealtimeSync(_roomId!);
-    }
-  }
-
-  void _setupRealtimeSync(String roomId) {
-    // ቀደሞ የነበረ ቻናል ካለ ማስወገድ
-    if (_partyChannel != null) {
-      Supabase.instance.client.removeChannel(_partyChannel!);
-    }
-
-    // አዲስ ቻናል በ Room ID መፍጠር
-    _partyChannel = Supabase.instance.client.channel(roomId);
-
-    // 1. የቻት መልእክት መቀበያ
-    _partyChannel!.onBroadcast(
-      event: 'chat_message',
-      callback: (payload) {
-        if (mounted) {
-          final incomingMsg = Map<String, dynamic>.from(payload);
-          setState(() {
-            _messages.add(incomingMsg);
-          });
-
-          if (incomingMsg['isGhost'] == 'true') {
-            Timer(const Duration(seconds: 15), () {
-              if (mounted) {
-                setState(() {
-                  _messages.removeWhere((m) => m['id'] == incomingMsg['id']);
-                });
-              }
-            });
-          }
-        }
-      },
-    );
-
-    // 2. የቪዲዮ እንቅስቃሴ መቀበያ (Play/Pause/Seek)
-    _partyChannel!.onBroadcast(
-      event: 'video_control',
-      callback: (payload) {
-        final action = payload['action'];
-        final position = Duration(milliseconds: payload['position'] ?? 0);
-
-        if (action == 'play') {
-          _videoController?.seekTo(position);
-          _videoController?.play();
-        } else if (action == 'pause') {
-          _videoController?.pause();
-        } else if (action == 'seek') {
-          _videoController?.seekTo(position);
-        }
-      },
-    );
-
-    // 3. Subscribe ማድረግ እና የኔትወርክ ሁኔታን ማወቅ
-    _partyChannel!.subscribe((status, error) {
-      if (mounted) {
-        if (status == RealtimeSubscribeStatus.subscribed) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('🟢 ከኢንተርኔት/Realtime ጋር ተገናኝቷል!'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('🔴 የኢንተርኔት ግንኙነት ተቋርጧል!'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      }
+      setState(() {}); 
     });
 
-    // ገጹ ሲከፈት ማለፊያ ቃል መጠየቅ ካለበት
+    // Automatically prompt passcode dialog when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isLocked && !_isAuthenticated) {
         _showPasscodePromptDialog();
@@ -147,9 +66,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   @override
   void dispose() {
-    if (_partyChannel != null) {
-      Supabase.instance.client.removeChannel(_partyChannel!);
-    }
     _videoController?.dispose();
     _messageController.dispose();
     _urlController.dispose();
@@ -241,7 +157,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Audio Recording 
+  // Audio Recording Toggle
   void _toggleAudioRecording() {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
@@ -445,7 +361,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  void _sendMessage({String? customText}) async {
+  void _sendMessage({String? customText}) {
     if (_isLocked && !_isAuthenticated) {
       _showPasscodePromptDialog();
       return;
@@ -464,42 +380,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         'isAudio': 'false',
       };
 
-      try {
-        // የ Supabase Broadcast መልእክት መላኪያ ትክክለኛ Method
-        await _partyChannel?.sendBroadcastMessage(
-          event: 'chat_message',
-          payload: msgMap,
-        );
+      setState(() {
+        _messages.add(msgMap);
+        if (customText == null) _messageController.clear();
+      });
 
-        // 2. በስኬት ከተላከ ብቻ በራስህ ስልክ UI ላይ መጨመር
-        if (mounted) {
-          setState(() {
-            _messages.add(msgMap);
-            if (customText == null) _messageController.clear();
-          });
-
-          // Ghost Mode ከሆነ ከ15 ሰከንድ በኋላ ከስክሪን እንዲጠፋ
-          if (_ghostMode) {
-            Timer(const Duration(seconds: 15), () {
-              if (mounted) {
-                setState(() {
-                  _messages.removeWhere((m) => m['id'] == msgMap['id']);
-                });
-              }
+      if (_ghostMode) {
+        Timer(const Duration(seconds: 15), () {
+          if (mounted) {
+            setState(() {
+              _messages.removeWhere((m) => m['id'] == msgMap['id']);
             });
           }
-        }
-      } catch (e) {
-        // 3. ኢንተርኔት ከተቋረጠ መልእክቱ ሳይላክ ለተጠቃሚው ማስጠንቀቂያ ማሳየት
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('⚠️ ኢንተርኔት የለም! መልእክት መላክ አይቻልም።'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
+        });
       }
     }
   }
