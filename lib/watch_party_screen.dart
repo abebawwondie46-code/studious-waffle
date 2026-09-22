@@ -26,16 +26,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
-  // Security & Feature States
   bool _isRoomLocked = true;
   bool _isUnlockedByPassword = true;
   bool _ghostMode = false;
   int _activeViewers = 3;
 
-  // Local Chat Cache for Instant Display & Auto-Delete
   final List<Map<String, dynamic>> _localMessages = [];
 
-  // Video State
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   String _currentVideoUrl =
@@ -58,11 +55,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // 1. Pick Video from Phone Gallery
+  // 1. Gallery Video Picker
   Future<void> _pickVideoFromGallery() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
       if (video != null) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.purpleAccent,
@@ -75,7 +73,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 2. Pick Document File
+  // 2. Document File Picker
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -84,6 +82,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       );
 
       if (result != null && result.files.single.path != null) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.blueAccent,
@@ -96,11 +95,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. Record Video from Camera
+  // 3. Camera Recorder
   Future<void> _recordVideoFromCamera() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
       if (video != null) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.orangeAccent,
@@ -113,7 +113,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // Share Room Code
   void _shareRoomCode() {
     Clipboard.setData(ClipboardData(text: "${widget.roomName} Code: ${widget.roomId}"));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -130,7 +129,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Professional Bottom Sheet Media Picker
   void _showMediaPicker() {
     showModalBottomSheet(
       context: context,
@@ -165,8 +163,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
-
-                // Video from Gallery
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(10),
@@ -181,8 +177,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   },
                 ),
                 const Divider(color: Colors.white10),
-
-                // Research Documents / Study Materials
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(10),
@@ -197,8 +191,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   },
                 ),
                 const Divider(color: Colors.white10),
-
-                // Camera
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(10),
@@ -220,7 +212,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // Delete Message Logic
   void _confirmDeleteMessage(String msgId) {
     showDialog(
       context: context,
@@ -286,7 +277,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       _localMessages.add(newMsg);
     });
 
-    // 12-second auto-delete timer
     if (_ghostMode) {
       Timer(const Duration(seconds: 12), () {
         if (mounted) {
@@ -322,8 +312,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F17),
-
-      // App Bar
       appBar: AppBar(
         backgroundColor: const Color(0xFF181824),
         elevation: 4,
@@ -396,10 +384,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ),
         ],
       ),
-
       body: Column(
         children: [
-          // Video Player Area
           Expanded(
             flex: 4,
             child: Container(
@@ -417,7 +403,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     const Center(
                       child: CircularProgressIndicator(color: Colors.purpleAccent),
                     ),
-
                   if (!_isUnlockedByPassword)
                     Container(
                       color: Colors.black87,
@@ -478,8 +463,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
           ),
-
-          // Status & Emojis Bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: const Color(0xFF12121D),
@@ -528,7 +511,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   ],
                 ),
                 const SizedBox(height: 6),
-
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -554,8 +536,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ],
             ),
           ),
-
-          // Real-time Chat Stream
           Expanded(
             flex: 5,
             child: StreamBuilder<List<Map<String, dynamic>>>(
@@ -591,7 +571,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         ),
                       ),
                     ),
-
                     if (allComments.isEmpty)
                       const Padding(
                         padding: EdgeInsets.only(top: 40),
@@ -602,7 +581,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                           ),
                         ),
                       ),
-
                     ...allComments.map((msg) {
                       final isMe = msg['username'] == 'You';
                       final isGhostMsg = msg['is_ghost'] == true;
@@ -637,7 +615,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      // ⏱️ Emoji instead of 👻
                                       if (isGhostMsg)
                                         const Padding(
                                           padding: EdgeInsets.only(right: 6),
@@ -675,8 +652,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               },
             ),
           ),
-
-          // Message Input Field
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             color: const Color(0xFF181824),
