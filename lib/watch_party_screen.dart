@@ -54,7 +54,39 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // 1. ከጋለሪ ቪዲዮ መምረጫ (image_picker)
+  // Ghost Mode ቶስት ብቅ ብሎ እንዲጠፋ የማድረጊያ ዘዴ
+  void _toggleGhostMode() {
+    setState(() {
+      _ghostMode = !_ghostMode;
+    });
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 2),
+        backgroundColor: _ghostMode ? const Color(0xFF8E24AA) : const Color(0xFF333344),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Row(
+          children: [
+            Icon(
+              _ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              _ghostMode
+                  ? '👻 Ghost Mode Activated! (Messages vanish in 12s)'
+                  : '👁️ Normal Mode Activated',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 1. ከጋለሪ ቪዲዮ መምረጫ
   Future<void> _pickVideoFromGallery() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
@@ -72,7 +104,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 2. ከካሜራ ቪዲዮ መቅረጫ (image_picker)
+  // 2. ከካሜራ ቪዲዮ መቅረጫ
   Future<void> _recordVideoFromCamera() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
@@ -90,7 +122,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. የቪዲዮ ወይም ፋይል ሊንክ (URL) ማስገቢያ
+  // 3. የቪዲዮ/ፋይል ሊንክ ማስገቢያ
   void _showUrlInputDialog() {
     final TextEditingController urlController = TextEditingController();
 
@@ -297,6 +329,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       _localMessages.add(newMsg);
     });
 
+    // 12 ሰከንድ ሲሞላ መልእክቱ ከታች ይጠፋል
     if (_ghostMode) {
       Timer(const Duration(seconds: 12), () {
         if (mounted) {
@@ -385,17 +418,20 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             },
             tooltip: 'Toggle Lock Status',
           ),
+          // *** የሚያምር የ Ghost / Eye Toggle Button ***
           IconButton(
-            icon: Icon(
-              _ghostMode ? Icons.visibility_off : Icons.visibility,
-              color: _ghostMode ? Colors.purpleAccent : Colors.white70,
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+              child: Icon(
+                _ghostMode ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                key: ValueKey<bool>(_ghostMode),
+                color: _ghostMode ? const Color(0xFFE040FB) : Colors.white70,
+                size: 24,
+              ),
             ),
-            onPressed: () {
-              setState(() {
-                _ghostMode = !_ghostMode;
-              });
-            },
-            tooltip: 'Ghost Mode',
+            onPressed: _toggleGhostMode,
+            tooltip: 'Toggle Ghost Mode',
           ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: Colors.purpleAccent, size: 26),
@@ -508,13 +544,42 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     ),
                     Row(
                       children: [
-                        if (_ghostMode)
-                          Container(
+                        // *** Ghost Mode ሲበራ የሚያምር የኢሞጂ እና Neon Badge ***
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 300),
+                          opacity: _ghostMode ? 1.0 : 0.0,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
                             margin: const EdgeInsets.only(right: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.purple.shade900, borderRadius: BorderRadius.circular(6)),
-                            child: const Text("👻", style: TextStyle(fontSize: 12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8E24AA).withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE040FB), width: 1),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x66E040FB),
+                                  blurRadius: 6,
+                                  spreadRadius: 1,
+                                )
+                              ],
+                            ),
+                            child: const Row(
+                              children: [
+                                Text("👻", style: TextStyle(fontSize: 12)),
+                                SizedBox(width: 4),
+                                Text(
+                                  "GHOST MODE ACTIVE",
+                                  style: TextStyle(
+                                    color: Color(0xFFE040FB),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                        ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(4)),
@@ -616,17 +681,26 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                               decoration: BoxDecoration(
                                 color: isMe
-                                    ? (isGhostMsg ? Colors.purple.shade900 : Colors.purpleAccent)
+                                    ? (isGhostMsg ? const Color(0xFF6A1B9A) : Colors.purpleAccent)
                                     : const Color(0xFF222233),
-                                border: isGhostMsg ? Border.all(color: Colors.purpleAccent, width: 1) : null,
+                                border: isGhostMsg
+                                    ? Border.all(color: const Color(0xFFE040FB), width: 1.5)
+                                    : null,
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
                                   bottomLeft: Radius.circular(isMe ? 16 : 2),
                                   bottomRight: Radius.circular(isMe ? 2 : 16),
                                 ),
-                                boxShadow: const [
-                                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
+                                boxShadow: [
+                                  if (isGhostMsg)
+                                    const BoxShadow(
+                                      color: Color(0x44E040FB),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 2),
+                                    )
+                                  else
+                                    const BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
                                 ],
                               ),
                               child: Column(
@@ -678,23 +752,33 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0F0F17),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: _ghostMode ? Colors.purpleAccent : const Color(0xFF2A2A3D),
-                        width: 1.5,
+                        color: _ghostMode ? const Color(0xFFE040FB) : const Color(0xFF2A2A3D),
+                        width: _ghostMode ? 2.0 : 1.5,
                       ),
+                      boxShadow: _ghostMode
+                          ? [
+                              const BoxShadow(
+                                color: Color(0x33E040FB),
+                                blurRadius: 10,
+                                spreadRadius: 1,
+                              )
+                            ]
+                          : [],
                     ),
                     child: TextField(
                       controller: _messageController,
                       style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        hintText: "Type comment...",
+                      decoration: InputDecoration(
+                        hintText: _ghostMode ? "Type ghost comment (vanishes in 12s)..." : "Type comment...",
                         hintStyle: TextStyle(
-                          color: Colors.grey,
+                          color: _ghostMode ? const Color(0xFFCE93D8) : Colors.grey,
                           fontSize: 13,
                         ),
                         border: InputBorder.none,
@@ -706,7 +790,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 const SizedBox(width: 8),
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor: Colors.purpleAccent,
+                  backgroundColor: _ghostMode ? const Color(0xFFE040FB) : Colors.purpleAccent,
                   child: IconButton(
                     icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                     onPressed: _sendMessage,
