@@ -1,11 +1,10 @@
-import 'dart:async';
+import 'dart0:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   final String initialRoomId;
@@ -376,6 +375,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     return "$minutes:$seconds";
   }
 
+  // intl ሳያስፈልግ ሰዓቱን በ 12-hour format ማዘጋጃ ዘዴ
+  String _formatTimeString(DateTime dateTime) {
+    int hour = dateTime.hour;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    if (hour == 0) hour = 12;
+    final hourStr = hour.toString().padLeft(2, '0');
+    return "$hourStr:$minute $period";
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
@@ -442,7 +452,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       ),
       body: Column(
         children: [
-          // *** Video Player with Auto-Hiding Controls ***
+          // Video Player
           Expanded(
             flex: 4,
             child: GestureDetector(
@@ -462,7 +472,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     else
                       const Center(child: CircularProgressIndicator(color: Colors.purpleAccent)),
 
-                    // Auto-hiding timeline controls
                     if (_isInitialized && _videoController != null && _showControls)
                       AnimatedOpacity(
                         opacity: _showControls ? 1.0 : 0.0,
@@ -599,7 +608,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Chat Messages with Timestamps & Status Checks
+          // Messages
           Expanded(
             flex: 5,
             child: ListView(
@@ -616,7 +625,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ..._localMessages.map((msg) {
                   final isMe = msg['username'] == 'You';
                   final DateTime msgTime = msg['created_at'] as DateTime;
-                  final timeFormatted = DateFormat('hh:mm a').format(msgTime);
+                  final timeFormatted = _formatTimeString(msgTime);
 
                   return Align(
                     alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -652,7 +661,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Dynamic Comment Bar (Changes border & hint when Ghost Mode is ON/OFF)
+          // Comment Bar
           Container(
             padding: const EdgeInsets.all(12),
             color: const Color(0xFF181824),
