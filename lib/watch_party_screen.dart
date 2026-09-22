@@ -55,19 +55,43 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   void initState() {
     super.initState();
     _messageController.addListener(() {
-      setState(() {}); 
+      setState(() {});
     });
-void _setupRealtimeSync() {
-    _partyChannel = Supabase.instance.client.channel('room_$_roomId');
+    
+    // 1. ገጹ ሲከፈት Supabase Realtime ቻናሉን የማገናኘት ስራ እዚህ ይከናወናል
+    if (_roomId != null) {
+      _setupRealtimeSync(_roomId!);
+    }
+  }
+
+  void _setupRealtimeSync(String roomId) {
+    // ቀደሞ የነበረ ቻናል ካለ ማስወገድ
+    if (_partyChannel != null) {
+      Supabase.instance.client.removeChannel(_partyChannel!);
+    }
+
+    // አዲስ ቻናል በ Room ID መፍጠር
+    _partyChannel = Supabase.instance.client.channel(roomId);
 
     // 1. የቻት መልእክት መቀበያ
     _partyChannel!.onBroadcast(
       event: 'chat_message',
       callback: (payload) {
         if (mounted) {
+          final incomingMsg = Map<String, dynamic>.from(payload);
           setState(() {
-            _messages.add(Map<String, String>.from(payload['data']));
+            _messages.add(incomingMsg);
           });
+
+          if (incomingMsg['isGhost'] == 'true') {
+            Timer(const Duration(seconds: 15), () {
+              if (mounted) {
+                setState(() {
+                  _messages.removeWhere((m) => m['id'] == incomingMsg['id']);
+                });
+              }
+            });
+          }
         }
       },
     );
@@ -77,7 +101,7 @@ void _setupRealtimeSync() {
       event: 'video_control',
       callback: (payload) {
         final action = payload['action'];
-        final position = Duration(milliseconds: payload['position']);
+        final position = Duration(milliseconds: payload['position'] ?? 0);
 
         if (action == 'play') {
           _videoController?.seekTo(position);
@@ -88,7 +112,10 @@ void _setupRealtimeSync() {
           _videoController?.seekTo(position);
         }
       },
-    ).subscribe((status, error) {
+    );
+
+    // 3. Subscribe ማድረግ እና የኔትወርክ ሁኔታን ማወቅ
+    _partyChannel!.subscribe((status, error) {
       if (mounted) {
         if (status == RealtimeSubscribeStatus.subscribed) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -109,8 +136,8 @@ void _setupRealtimeSync() {
         }
       }
     });
-  }
-    // Automatically prompt passcode dialog when screen loads
+
+    // ገጹ ሲከፈት ማለፊያ ቃል መጠየቅ ካለበት
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isLocked && !_isAuthenticated) {
         _showPasscodePromptDialog();
@@ -120,6 +147,9 @@ void _setupRealtimeSync() {
 
   @override
   void dispose() {
+    if (_partyChannel != null) {
+      Supabase.instance.client.removeChannel(_partyChannel!);
+    }
     _videoController?.dispose();
     _messageController.dispose();
     _urlController.dispose();
