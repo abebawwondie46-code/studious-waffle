@@ -21,11 +21,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final List<Map<String, dynamic>> _messages = [];
 
   // State Variables
-  bool _isLocked = false;
+  bool _isLocked = true;
   bool _isAuthenticated = true;
   bool _ghostMode = false;
-  String _videoSource = 'No video loaded';
-
+  String _videoSource = 'No Content Loaded';
   final String _correctPasscode = "1234";
 
   @override
@@ -34,7 +33,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // 1. Room መፍጠር
+  // Realtime Sync & Room Setup
   // ---------------------------------------------------------------------------
   void _createRoom() {
     final randomCode = Random().nextInt(9000) + 1000;
@@ -77,7 +76,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       callback: (payload) {
         if (mounted) {
           setState(() {
-            _videoSource = payload['source'] ?? 'No video loaded';
+            _videoSource = payload['source'] ?? 'No Content Loaded';
           });
         }
       },
@@ -92,13 +91,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 children: [
                   Icon(Icons.wifi, color: Colors.white),
                   SizedBox(width: 8),
-                  Text('ከኢንተርኔት ጋር በስኬት ተገናኝቷል!'),
+                  Text('ከኢንተርኔት ጋር ተገናኝቷል!'),
                 ],
               ),
-              backgroundColor: Colors.green.shade700,
+              backgroundColor: const Color(0xFF8A2BE2),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              duration: const Duration(seconds: 2),
             ),
           );
         } else {
@@ -114,7 +112,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               backgroundColor: Colors.redAccent,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -123,120 +120,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // 2. Passcode Popup (Overflow ያተስተካከለበት ቦታ)
-  // ---------------------------------------------------------------------------
-  void _showPasscodePromptDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1E1E2C),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: Colors.deepPurple.shade400, width: 1),
-          ),
-          // Flexible Row እና TextOverflow በመጠቀም የ 2.7px Overflow ኤረር ተቀርፏል
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.security, color: Colors.purpleAccent, size: 24),
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Private Room Locked',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'ቪዲዮውን እና ቻቱን ለማየት የሩሙን ማለፊያ ፓስወርድ ያስገቡ።',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: _passcodeController,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Passcode (e.g. 1234)',
-                  labelStyle: const TextStyle(color: Colors.purpleAccent),
-                  prefixIcon: const Icon(Icons.key, color: Colors.purpleAccent),
-                  filled: true,
-                  fillColor: Colors.black26,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.deepPurple.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.purpleAccent, width: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _leaveRoom();
-              },
-              child: const Text('ውጣ', style: TextStyle(color: Colors.redAccent, fontSize: 15)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purpleAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () {
-                if (_passcodeController.text == _correctPasscode) {
-                  setState(() {
-                    _isAuthenticated = true;
-                  });
-                  _passcodeController.clear();
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('🔓 በስኬት ተከፍቷል!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('❌ የተሳሳተ ፓስወርድ!'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              child: const Text('ክፈት', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 3. Actions & Actions Functions
+  // Action Handlers
   // ---------------------------------------------------------------------------
   void _shareRoomCode() {
     if (_roomId != null) {
@@ -244,7 +128,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('📋 የሩም ኮድ አድራሻ ($_roomId) Copy ተደርጓል!'),
-          backgroundColor: Colors.purple.shade700,
+          backgroundColor: const Color(0xFFD800A6),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -266,7 +150,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   void _openMediaPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E1E2C),
+      backgroundColor: const Color(0xFF141221),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -291,7 +175,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
               const SizedBox(height: 12),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.purpleAccent),
+                leading: const Icon(Icons.photo_library, color: Color(0xFFE040FB)),
                 title: const Text('ከጋለሪ (Gallery)', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
@@ -327,7 +211,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1E1E2C),
+          backgroundColor: const Color(0xFF141221),
           title: const Text('የቪዲዮ ሊንክ ያስገቡ', style: TextStyle(color: Colors.white)),
           content: TextField(
             controller: linkController,
@@ -343,7 +227,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               child: const Text('ሰርዝ', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD800A6)),
               onPressed: () {
                 if (linkController.text.trim().isNotEmpty) {
                   Navigator.pop(context);
@@ -382,9 +266,90 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // 4. Live Chat
-  // ---------------------------------------------------------------------------
+  void _showPasscodePromptDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF141221),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: Color(0xFF8A2BE2), width: 1),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.security, color: Color(0xFFE040FB), size: 22),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Private Room Locked',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'ቪዲዮውን እና ቻቱን ለማየት የሩሙን ማለፊያ ፓስወርድ ያስገቡ።',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passcodeController,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Enter Passcode (e.g. 1234)',
+                  labelStyle: const TextStyle(color: Color(0xFFE040FB)),
+                  filled: true,
+                  fillColor: Colors.black38,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF8A2BE2)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _leaveRoom();
+              },
+              child: const Text('ውጣ', style: TextStyle(color: Colors.redAccent)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD800A6)),
+              onPressed: () {
+                if (_passcodeController.text == _correctPasscode) {
+                  setState(() {
+                    _isAuthenticated = true;
+                  });
+                  _passcodeController.clear();
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('❌ የተሳሳተ ፓስወርድ!'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('ክፈት', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _sendEmojiReaction(String emoji) {
     _sendMessage(customText: emoji);
   }
@@ -451,7 +416,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     setState(() {
       _roomId = null;
       _messages.clear();
-      _videoSource = 'No video loaded';
+      _videoSource = 'No Content Loaded';
       _isAuthenticated = true;
     });
   }
@@ -467,247 +432,222 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // UI BUILD
+  // UI Build
   // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    // 1. LOBBY SCREEN (ክፍል ካልተፈጠረ)
     if (_roomId == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0F0F1A),
+        backgroundColor: const Color(0xFF0B0914),
         appBar: AppBar(
           title: const Text('Secret Party Lobby', style: TextStyle(fontWeight: FontWeight.bold)),
-          backgroundColor: const Color(0xFF1E1E2C),
+          backgroundColor: const Color(0xFF141221),
           elevation: 0,
           centerTitle: true,
         ),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.purpleAccent.withOpacity(0.3), width: 2),
-                  ),
-                  child: const Icon(Icons.video_library_rounded, size: 70, color: Colors.purpleAccent),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1A34),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFD800A6), width: 2),
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'ወደ አብሮ የመመልከቻ ክፍል እንኳን ደህና መጡ!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                child: const Icon(Icons.vpn_key_rounded, size: 60, color: Color(0xFFE040FB)),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'ወደ አብሮ የመመልከቻ ክፍል እንኳን ደህና መጡ!',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                onPressed: _createRoom,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('አዲስ Room ፍጠር'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD800A6),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'ከጓደኞችዎ ጋር በአንድ ላይ ቪዲዮዎችን ይመልከቱ እና በምስጢር ይወያዩ።',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.white54),
-                ),
-                const SizedBox(height: 36),
-                ElevatedButton.icon(
-                  onPressed: _createRoom,
-                  icon: const Icon(Icons.add_rounded, size: 22),
-                  label: const Text('አዲስ Room ፍጠር', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purpleAccent,
-                    foregroundColor: Colors.white,
-                    elevation: 8,
-                    shadowColor: Colors.purpleAccent.withOpacity(0.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    // 2. WATCH PARTY & CHAT SCREEN
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFF0B0914),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E1E2C),
+        backgroundColor: const Color(0xFF141221),
         elevation: 0,
         title: Row(
           children: [
-            const Icon(Icons.security, size: 18, color: Colors.purpleAccent),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                'Secret Party ($_roomId)',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
+            const Icon(Icons.vpn_key_rounded, color: Color(0xFFE040FB), size: 20),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Secret Party', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(_roomId ?? '', style: const TextStyle(fontSize: 11, color: Color(0xFFE040FB))),
+              ],
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, size: 20),
-            tooltip: 'Share Code',
+            icon: const Icon(Icons.share_outlined, color: Colors.white70, size: 20),
             onPressed: _shareRoomCode,
           ),
           IconButton(
             icon: Icon(_isLocked ? Icons.lock : Icons.lock_open,
-                size: 20, color: _isLocked ? Colors.redAccent : Colors.greenAccent),
-            tooltip: 'Lock Room',
+                color: _isLocked ? const Color(0xFFFF5252) : Colors.greenAccent, size: 20),
             onPressed: _toggleLockState,
           ),
           IconButton(
             icon: Icon(_ghostMode ? Icons.visibility_off : Icons.visibility,
-                size: 20, color: _ghostMode ? Colors.purpleAccent : Colors.white70),
-            tooltip: 'Ghost Mode',
+                color: _ghostMode ? const Color(0xFFE040FB) : Colors.white70, size: 20),
             onPressed: _toggleGhostMode,
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, size: 22, color: Colors.cyanAccent),
-            tooltip: 'Add Video',
+            icon: const Icon(Icons.add_box_outlined, color: Color(0xFFE040FB), size: 22),
             onPressed: _openMediaPicker,
           ),
           IconButton(
             icon: const Icon(Icons.exit_to_app_rounded, color: Colors.redAccent, size: 22),
-            tooltip: 'Exit',
             onPressed: _leaveRoom,
           ),
         ],
       ),
       body: Column(
         children: [
-          // Status Badges Bar
+          // 1. Media Player Display Area
           Container(
-            color: const Color(0xFF161624),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            height: 210,
+            width: double.infinity,
+            color: Colors.black,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _isLocked ? Colors.redAccent.withOpacity(0.2) : Colors.green.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _isLocked ? Colors.redAccent : Colors.green, width: 1),
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF201B35),
+                    shape: BoxShape.circle,
                   ),
-                  child: Row(
-                    children: [
-                      Icon(_isLocked ? Icons.lock : Icons.public, size: 12, color: _isLocked ? Colors.redAccent : Colors.greenAccent),
-                      const SizedBox(width: 4),
-                      Text(
-                        _isLocked ? 'LOCKED' : 'PUBLIC PARTY',
-                        style: TextStyle(color: _isLocked ? Colors.redAccent : Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
+                  child: const Icon(Icons.shield_outlined, size: 48, color: Color(0xFFE040FB)),
                 ),
-                Row(
-                  children: [
-                    if (_ghostMode)
-                      Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.purpleAccent, width: 1),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.visibility_off, size: 12, color: Colors.purpleAccent),
-                            SizedBox(width: 4),
-                            Text('Ghost', style: TextStyle(color: Colors.purpleAccent, fontSize: 10)),
-                          ],
-                        ),
-                      ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blueGrey.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.blueGrey, width: 1),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.shield_outlined, size: 12, color: Colors.cyanAccent),
-                          SizedBox(width: 4),
-                          Text('Encrypted', style: TextStyle(color: Colors.cyanAccent, fontSize: 10)),
-                        ],
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                Text(_videoSource, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 14),
+                ElevatedButton.icon(
+                  onPressed: _openMediaPicker,
+                  icon: const Icon(Icons.lock_open_rounded, size: 16),
+                  label: const Text('Load Private Content', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD800A6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Video Display Area
+          // 2. Status Bar & Badges
           Container(
-            height: 200,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Colors.black,
-              border: Border(bottom: BorderSide(color: Colors.white10)),
-            ),
-            child: _isAuthenticated
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.play_circle_fill, size: 55, color: Colors.purpleAccent),
-                        const SizedBox(height: 8),
-                        Text(
-                          _videoSource,
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
-                        ),
-                      ],
+            color: const Color(0xFF141221),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Row(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  )
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    const SizedBox(width: 6),
+                    Text(
+                      _isLocked ? 'LOCKED (PIN: 1234)' : 'PUBLIC PARTY',
+                      style: TextStyle(
+                        color: _isLocked ? const Color(0xFFFF5252) : Colors.greenAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.edit, size: 12, color: Colors.white38),
+                  ],
+                ),
+                const Spacer(),
+                if (_ghostMode)
+                  Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2D1B4E),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
                       children: [
-                        const Icon(Icons.lock_clock_rounded, size: 45, color: Colors.redAccent),
-                        const SizedBox(height: 8),
-                        const Text('Video Locked - Password Required', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: _showPasscodePromptDialog,
-                          child: const Text('Enter Passcode', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ),
+                        Icon(Icons.visibility_off, size: 12, color: Color(0xFFE040FB)),
+                        SizedBox(width: 4),
+                        Text('Ghost', style: TextStyle(color: Color(0xFFE040FB), fontSize: 10)),
                       ],
                     ),
                   ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E2638),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.shield_outlined, size: 12, color: Colors.cyanAccent),
+                      SizedBox(width: 4),
+                      Text('Encrypted', style: TextStyle(color: Colors.cyanAccent, fontSize: 10)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          // Quick Emoji Bar
+          // 3. Quick Emoji Reaction Bar
           Container(
-            color: const Color(0xFF161624),
+            color: const Color(0xFF100E1B),
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: ['❤️', '🔥', '😂', '👏', '😮', '🎉'].map((emoji) {
+              children: ['😮', '🔒', '🔥', '😂', '👏', '🎉', '👻'].map((emoji) {
                 return InkWell(
                   borderRadius: BorderRadius.circular(20),
                   onTap: () => _sendEmojiReaction(emoji),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1C1A2E),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(emoji, style: const TextStyle(fontSize: 16)),
                   ),
                 );
               }).toList(),
             ),
           ),
 
-          // Chat Area
+          // 4. Chat Messages Area
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(12),
@@ -717,24 +657,23 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     margin: const EdgeInsets.only(bottom: 14),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.15),
+                      color: const Color(0xFF231238),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.purpleAccent.withOpacity(0.3)),
+                      border: Border.all(color: const Color(0xFF8A2BE2).withOpacity(0.5)),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.lock_outline, size: 13, color: Colors.purpleAccent),
+                        Icon(Icons.lock, size: 12, color: Color(0xFFE040FB)),
                         SizedBox(width: 6),
                         Text(
                           'End-to-End Encrypted Private Room Created',
-                          style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.w500),
+                          style: TextStyle(color: Color(0xFFE040FB), fontSize: 11),
                         ),
                       ],
                     ),
                   ),
                 ),
-
                 ..._messages.map((msg) {
                   final isMe = msg['sender'] == 'You';
                   return Align(
@@ -743,13 +682,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isMe ? Colors.purpleAccent : const Color(0xFF252538),
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(16),
-                          topRight: const Radius.circular(16),
-                          bottomLeft: Radius.circular(isMe ? 16 : 0),
-                          bottomRight: Radius.circular(isMe ? 0 : 16),
-                        ),
+                        color: isMe ? const Color(0xFFD800A6) : const Color(0xFF1C1A2E),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
                         crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -772,10 +706,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Chat Input Field
+          // 5. Styled Chat Input
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: const Color(0xFF1E1E2C),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            color: const Color(0xFF141221),
             child: SafeArea(
               child: Row(
                 children: [
@@ -783,9 +717,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: Colors.black26,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white12),
+                        color: const Color(0xFF0B0914),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(color: const Color(0xFF8A2BE2), width: 1.5),
                       ),
                       child: TextField(
                         controller: _messageController,
@@ -798,12 +732,16 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    backgroundColor: Colors.purpleAccent,
-                    child: IconButton(
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                      onPressed: () => _sendMessage(),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: () => _sendMessage(),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFD800A6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                     ),
                   ),
                 ],
