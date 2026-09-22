@@ -33,7 +33,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Realtime Sync & Room Setup
+  // 1. Room መፍጠር & Supabase Realtime ማገናኘት
   // ---------------------------------------------------------------------------
   void _createRoom() {
     final randomCode = Random().nextInt(9000) + 1000;
@@ -60,17 +60,31 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
     _partyChannel = _supabase.channel(roomId);
 
+    // የሚመጡ መልእክቶችን ማዳመጥ (Listen for messages)
     _partyChannel?.onBroadcast(
       event: 'chat_message',
       callback: (payload) {
         if (mounted) {
+          final incomingMsg = Map<String, dynamic>.from(payload);
           setState(() {
-            _messages.add(Map<String, dynamic>.from(payload));
+            _messages.add(incomingMsg);
           });
+
+          // Ghost Message ከሆነ ከ15 ሰከንድ በኋላ አውቶማቲክ ይጠፋል
+          if (incomingMsg['isGhost'] == 'true') {
+            Timer(const Duration(seconds: 15), () {
+              if (mounted) {
+                setState(() {
+                  _messages.removeWhere((m) => m['id'] == incomingMsg['id']);
+                });
+              }
+            });
+          }
         }
       },
     );
 
+    // የሚመጡ የቪዲዮ መቆጣጠሪያዎችን ማዳመጥ
     _partyChannel?.onBroadcast(
       event: 'video_control',
       callback: (payload) {
@@ -82,6 +96,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       },
     );
 
+    // የኔትወርክ/ኢንተርኔት ግንኙነትን መከታተል
     _partyChannel?.subscribe((status, error) {
       if (mounted) {
         if (status == RealtimeSubscribeStatus.subscribed) {
@@ -97,6 +112,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               backgroundColor: const Color(0xFF8A2BE2),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              duration: const Duration(seconds: 2),
             ),
           );
         } else {
@@ -112,6 +128,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               backgroundColor: Colors.redAccent,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -120,7 +137,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Action Handlers
+  // 1. App Bar Action Handlers
   // ---------------------------------------------------------------------------
   void _shareRoomCode() {
     if (_roomId != null) {
@@ -145,6 +162,16 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     setState(() {
       _ghostMode = !_ghostMode;
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_ghostMode
+            ? '👁️‍🗨️ Ghost Mode በርቷል! መልእክቶች ከ15 ሰከንድ በኋላ ይጠፋሉ።'
+            : '👁️ Ghost Mode ጠፍቷል።'),
+        backgroundColor: const Color(0xFF8A2BE2),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _openMediaPicker() {
@@ -266,6 +293,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 2. Private Room Locked Popup
+  // ---------------------------------------------------------------------------
   void _showPasscodePromptDialog() {
     showDialog(
       context: context,
@@ -350,6 +380,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // 3 & 4. Live Chat & Reaction Bar
+  // ---------------------------------------------------------------------------
   void _sendEmojiReaction(String emoji) {
     _sendMessage(customText: emoji);
   }
@@ -432,7 +465,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // UI Build
+  // UI BUILD
   // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
@@ -483,6 +516,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B0914),
+      // 1. የላይኛው አሞሌ (App Bar & Actions)
       appBar: AppBar(
         backgroundColor: const Color(0xFF141221),
         elevation: 0,
@@ -502,31 +536,36 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white70, size: 20),
+            tooltip: 'Share Code',
             onPressed: _shareRoomCode,
           ),
           IconButton(
             icon: Icon(_isLocked ? Icons.lock : Icons.lock_open,
                 color: _isLocked ? const Color(0xFFFF5252) : Colors.greenAccent, size: 20),
+            tooltip: 'Lock Room',
             onPressed: _toggleLockState,
           ),
           IconButton(
             icon: Icon(_ghostMode ? Icons.visibility_off : Icons.visibility,
                 color: _ghostMode ? const Color(0xFFE040FB) : Colors.white70, size: 20),
+            tooltip: 'Ghost Mode',
             onPressed: _toggleGhostMode,
           ),
           IconButton(
             icon: const Icon(Icons.add_box_outlined, color: Color(0xFFE040FB), size: 22),
+            tooltip: 'Media Picker',
             onPressed: _openMediaPicker,
           ),
           IconButton(
             icon: const Icon(Icons.exit_to_app_rounded, color: Colors.redAccent, size: 22),
+            tooltip: 'Exit Room',
             onPressed: _leaveRoom,
           ),
         ],
       ),
       body: Column(
         children: [
-          // 1. Media Player Display Area
+          // 2. የቪዲዮ ማጫወቻ ክፍል (Video Display Area)
           Container(
             height: 210,
             width: double.infinity,
@@ -560,7 +599,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // 2. Status Bar & Badges
+          // 3. የሁኔታ እና ፈጣን ምላሽ አሞሌዎች (Status & Reaction Bars)
           Container(
             color: const Color(0xFF141221),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -624,7 +663,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // 3. Quick Emoji Reaction Bar
+          // ኢሞጂዎች (Quick Emoji Bar)
           Container(
             color: const Color(0xFF100E1B),
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -647,11 +686,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // 4. Chat Messages Area
+          // 4. የቻት እና የመልእክት መላኪያ ክፍል (Chat Section)
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
+                // System Message
                 Center(
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 14),
@@ -676,6 +716,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
                 ..._messages.map((msg) {
                   final isMe = msg['sender'] == 'You';
+                  final isGhostMsg = msg['isGhost'] == 'true';
                   return Align(
                     alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
@@ -685,17 +726,26 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         color: isMe ? const Color(0xFFD800A6) : const Color(0xFF1C1A2E),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Column(
-                        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            msg['text'] ?? '',
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            msg['time'] ?? '',
-                            style: const TextStyle(color: Colors.white60, fontSize: 9),
+                          if (isGhostMsg) ...[
+                            const Icon(Icons.timer_outlined, size: 14, color: Colors.white70),
+                            const SizedBox(width: 6),
+                          ],
+                          Column(
+                            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                msg['text'] ?? '',
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                msg['time'] ?? '',
+                                style: const TextStyle(color: Colors.white60, fontSize: 9),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -706,7 +756,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // 5. Styled Chat Input
+          // Text Field & Send Button
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             color: const Color(0xFF141221),
