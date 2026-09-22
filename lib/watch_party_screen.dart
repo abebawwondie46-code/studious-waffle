@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   final String roomId;
@@ -22,6 +24,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final SupabaseClient _supabase = Supabase.instance.client;
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
   // Security & Feature States
   bool _isRoomLocked = true;
@@ -55,7 +58,62 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // 1. Share Room Code
+  // 1. Pick Video from Phone Gallery
+  Future<void> _pickVideoFromGallery() async {
+    try {
+      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+      if (video != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.purpleAccent,
+            content: Text('ቪዲዮ ተመረጠ፦ ${video.name}'),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Gallery Picker Error: $e");
+    }
+  }
+
+  // 2. Pick Document File
+  Future<void> _pickDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'ppt'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.blueAccent,
+            content: Text('ዶክመንት ተመረጠ፦ ${result.files.single.name}'),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Document Picker Error: $e");
+    }
+  }
+
+  // 3. Record Video from Camera
+  Future<void> _recordVideoFromCamera() async {
+    try {
+      final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+      if (video != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.orangeAccent,
+            content: Text('ቪዲዮ ተቀርጿል፦ ${video.name}'),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Camera Error: $e");
+    }
+  }
+
+  // Share Room Code
   void _shareRoomCode() {
     Clipboard.setData(ClipboardData(text: "${widget.roomName} Code: ${widget.roomId}"));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -72,7 +130,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 2. Updated Custom Media & File Picker (No Web Link, Added Educational/Camera options)
+  // Professional Bottom Sheet Media Picker
   void _showMediaPicker() {
     showModalBottomSheet(
       context: context,
@@ -102,68 +160,57 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.perm_media_rounded, color: Colors.purpleAccent),
-                    SizedBox(width: 8),
-                    Text(
-                      "ሚዲያ ወይም ፋይል ይምረጡ",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                const Text(
+                  "ሚዲያ ወይም ፋይል ይምረጡ",
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
 
                 // Video from Gallery
                 ListTile(
                   leading: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(color: Colors.purple.withOpacity(0.2), shape: BoxShape.circle),
                     child: const Icon(Icons.video_library_rounded, color: Colors.purpleAccent),
                   ),
-                  title: const Text("ቪዲዮ ከጋለሪ (Gallery Video)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("ከስልክዎ ጋለሪ ቪዲዮ ይምረጡ", style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  onTap: () => Navigator.pop(context),
+                  title: const Text("ቪዲዮ ከጋለሪ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("ከስልክዎ ላይ ቪዲዮ ይምረጡ", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickVideoFromGallery();
+                  },
                 ),
                 const Divider(color: Colors.white10),
 
-                // Research Documents
+                // Research Documents / Study Materials
                 ListTile(
                   leading: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.article_rounded, color: Colors.blueAccent),
+                    child: const Icon(Icons.description_rounded, color: Colors.blueAccent),
                   ),
-                  title: const Text("ጥናታዊ ጽሁፍ (Research Document)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  title: const Text("ጥናታዊ ጽሁፍ / ዶክመንት", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   subtitle: const Text("PDF፣ Word ወይም የጥናት ሰነዶችን ያጋሩ", style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  onTap: () => Navigator.pop(context),
-                ),
-                const Divider(color: Colors.white10),
-
-                // Educational Materials
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.school_rounded, color: Colors.greenAccent),
-                  ),
-                  title: const Text("የተማሪዎች መማሪያ (Educational Material)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text("የትምህርት ሞጁሎችና ማስታወሻዎች", style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickDocument();
+                  },
                 ),
                 const Divider(color: Colors.white10),
 
                 // Camera
                 ListTile(
                   leading: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(color: Colors.orange.withOpacity(0.2), shape: BoxShape.circle),
                     child: const Icon(Icons.camera_alt_rounded, color: Colors.orangeAccent),
                   ),
-                  title: const Text("ካሜራ (Camera)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  title: const Text("ካሜራ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   subtitle: const Text("በቀጥታ ቪዲዮ ወይም ፎቶ ያንሱ", style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _recordVideoFromCamera();
+                  },
                 ),
               ],
             ),
@@ -173,7 +220,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 3. Delete Message Logic
+  // Delete Message Logic
   void _confirmDeleteMessage(String msgId) {
     showDialog(
       context: context,
@@ -212,7 +259,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 4. Send Emojis & Messages (12s Ghost Mode)
   void _sendEmoji(String emoji) {
     _sendRawMessage(emoji);
   }
@@ -240,7 +286,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       _localMessages.add(newMsg);
     });
 
-    // Ghost messages disappear in 12 seconds
+    // 12-second auto-delete timer
     if (_ghostMode) {
       Timer(const Duration(seconds: 12), () {
         if (mounted) {
@@ -353,7 +399,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
       body: Column(
         children: [
-          // Video Player Section
+          // Video Player Area
           Expanded(
             flex: 4,
             child: Container(
@@ -459,7 +505,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     ),
                     Row(
                       children: [
-                        // Ghost Icon only (👻) as requested
                         if (_ghostMode)
                           Container(
                             margin: const EdgeInsets.only(right: 6),
@@ -510,7 +555,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Real-time Chat Messages Stream
+          // Real-time Chat Stream
           Expanded(
             flex: 5,
             child: StreamBuilder<List<Map<String, dynamic>>>(
@@ -592,10 +637,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      // ⏱️ Emoji instead of 👻
                                       if (isGhostMsg)
                                         const Padding(
                                           padding: EdgeInsets.only(right: 6),
-                                          child: Text("👻", style: TextStyle(fontSize: 12)),
+                                          child: Text("⏱️", style: TextStyle(fontSize: 12)),
                                         ),
                                       Text(
                                         msg['text'] ?? '',
