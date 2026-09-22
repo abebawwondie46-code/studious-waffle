@@ -54,7 +54,41 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // Ghost Mode ቶስት ብቅ ብሎ እንዲጠፋ የማድረጊያ ዘዴ
+  // 1. የሩም ቁልፍ On/Off ሲደረግ ግልጽ ማረጋገጫ የሚሰጥ አሰራር
+  void _toggleRoomLock() {
+    setState(() {
+      _isRoomLocked = !_isRoomLocked;
+    });
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 2),
+        backgroundColor: _isRoomLocked ? const Color(0xFFD32F2F) : const Color(0xFF388E3C),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Row(
+          children: [
+            Icon(
+              _isRoomLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _isRoomLocked
+                    ? '🔒 Private Mode: Only users with password can join'
+                    : '🔓 Public Mode: Anyone with room code can join',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 2. Ghost Mode On/Off ሲደረግ ግልጽ ማረጋገጫ የሚሰጥ አሰራር
   void _toggleGhostMode() {
     setState(() {
       _ghostMode = !_ghostMode;
@@ -74,11 +108,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               color: Colors.white,
             ),
             const SizedBox(width: 10),
-            Text(
-              _ghostMode
-                  ? '👻 Ghost Mode Activated! (Messages vanish in 12s)'
-                  : '👁️ Normal Mode Activated',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            Expanded(
+              child: Text(
+                _ghostMode
+                    ? '👻 Ghost Mode ON: Comments automatically disappear in 12s'
+                    : '👁️ Ghost Mode OFF: Comments stay saved in room history',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
             ),
           ],
         ),
@@ -86,7 +122,27 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 1. ከጋለሪ ቪዲዮ መምረጫ
+  // 3. ጓደኛ የመጋበዣ ኮድ እና ሊንክ ኮፒ ማድረጊያ
+  void _shareRoomCode() {
+    Clipboard.setData(ClipboardData(text: "${widget.roomName} Code: ${widget.roomId}"));
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.purpleAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white),
+            SizedBox(width: 10),
+            Text('የሩም መግቢያ ኮድ ተቀድቷል! ለጓደኛዎ ይላኩለት።'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ከጋለሪ ቪዲዮ መምረጫ
   Future<void> _pickVideoFromGallery() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
@@ -104,7 +160,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 2. ከካሜራ ቪዲዮ መቅረጫ
+  // ከካሜራ ቪዲዮ መቅረጫ
   Future<void> _recordVideoFromCamera() async {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
@@ -122,7 +178,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. የቪዲዮ/ፋይል ሊንክ ማስገቢያ
+  // የቪዲዮ/ፋይል URL ማስገቢያ
   void _showUrlInputDialog() {
     final TextEditingController urlController = TextEditingController();
 
@@ -161,22 +217,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             child: const Text("ክፈት (Play)"),
           ),
         ],
-      ),
-    );
-  }
-
-  void _shareRoomCode() {
-    Clipboard.setData(ClipboardData(text: "${widget.roomName} Code: ${widget.roomId}"));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Colors.purpleAccent,
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 8),
-            Text('የሩም መግቢያ ኮድ ተቀድቷል (Copied)!'),
-          ],
-        ),
       ),
     );
   }
@@ -329,7 +369,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       _localMessages.add(newMsg);
     });
 
-    // 12 ሰከንድ ሲሞላ መልእክቱ ከታች ይጠፋል
     if (_ghostMode) {
       Timer(const Duration(seconds: 12), () {
         if (mounted) {
@@ -379,16 +418,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.green.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.greenAccent.withOpacity(0.5)),
                   ),
                   child: Row(
                     children: [
                       const Icon(Icons.circle, color: Colors.greenAccent, size: 6),
-                      const SizedBox(width: 3),
-                      Text("$_activeViewers", style: const TextStyle(color: Colors.greenAccent, fontSize: 10)),
+                      const SizedBox(width: 4),
+                      Text("$_activeViewers", style: const TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -407,18 +447,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             tooltip: 'Share Room Code',
           ),
           IconButton(
-            icon: Icon(
-              _isRoomLocked ? Icons.lock : Icons.lock_open,
-              color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Icon(
+                _isRoomLocked ? Icons.lock : Icons.lock_open_rounded,
+                key: ValueKey<bool>(_isRoomLocked),
+                color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
+              ),
             ),
-            onPressed: () {
-              setState(() {
-                _isRoomLocked = !_isRoomLocked;
-              });
-            },
+            onPressed: _toggleRoomLock,
             tooltip: 'Toggle Lock Status',
           ),
-          // *** የሚያምር የ Ghost / Eye Toggle Button ***
           IconButton(
             icon: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
@@ -527,28 +566,40 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _isRoomLocked ? Colors.redAccent.withOpacity(0.2) : Colors.greenAccent.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _isRoomLocked ? "LOCKED PARTY" : "PUBLIC PARTY",
-                        style: TextStyle(
+                        border: Border.all(
                           color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                          width: 1,
                         ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isRoomLocked ? Icons.lock_outline : Icons.lock_open_outlined,
+                            size: 11,
+                            color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _isRoomLocked ? "LOCKED PARTY" : "PUBLIC PARTY",
+                            style: TextStyle(
+                              color: _isRoomLocked ? Colors.redAccent : Colors.greenAccent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     Row(
                       children: [
-                        // *** Ghost Mode ሲበራ የሚያምር የኢሞጂ እና Neon Badge ***
-                        AnimatedOpacity(
-                          duration: const Duration(milliseconds: 300),
-                          opacity: _ghostMode ? 1.0 : 0.0,
-                          child: AnimatedContainer(
+                        if (_ghostMode)
+                          AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             margin: const EdgeInsets.only(right: 6),
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -579,7 +630,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                               ],
                             ),
                           ),
-                        ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(4)),
