@@ -21,7 +21,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   String? _roomCode; 
   bool _isLocked = true;
   bool _isGhostMode = true;
-  bool _isUnlocked = false; 
+  bool _isUnlocked = false; // በይለፍ ቃል መከፈቱን መቆጣጠሪያ
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
@@ -43,7 +43,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     final randomId = 1000 + random.nextInt(9000);
     setState(() {
       _roomCode = 'SEC-$randomId';
-      _isUnlocked = false;
+      _isUnlocked = false; // አዲስ ሩም ሲፈጠር መጀመሪያ የተቆለፈ ይሆናል
     });
 
     if (_isLocked) {
@@ -80,6 +80,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               TextField(
                 controller: passwordController,
                 obscureText: true,
+                autofocus: true, // ፖፕአፑ ሲከፈት በቀጥታ ኪቦርዱ እንዲመጣ ያደርጋል
                 keyboardType: TextInputType.number,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
@@ -107,7 +108,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               onPressed: () {
                 if (passwordController.text.isNotEmpty) {
                   setState(() {
-                    _isUnlocked = true;
+                    _isUnlocked = true; // ይለፍ ቃሉ ትክክል ሲሆን ቻቱ ይከፈታል
                   });
                   Navigator.pop(context);
                 }
@@ -242,6 +243,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. ገና Room ካልተፈጠረ የሚታይ Lobby ገጽ
     if (_roomCode == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F0C1B),
@@ -290,8 +292,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       );
     }
 
+    // 2. Room ከተፈጠረ በኋላ የሚታይ ዋና Watch Party Screen
     return Scaffold(
-      resizeToAvoidBottomInset: true, 
+      resizeToAvoidBottomInset: true, // ኪቦርዱ ሲወጣ ስክሪኑ አብሮ እንዲወጣ ያደርጋል
       backgroundColor: const Color(0xFF0F0C1B),
       appBar: AppBar(
         backgroundColor: const Color(0xFF191328),
@@ -400,6 +403,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Video Player Area
             GestureDetector(
               onTap: _toggleControls,
               child: Stack(
@@ -462,6 +466,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
             const SizedBox(height: 6),
 
+            // Status Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
@@ -513,6 +518,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
             const SizedBox(height: 6),
 
+            // Quick Emoji Bar
             SizedBox(
               height: 34,
               child: ListView.builder(
@@ -521,7 +527,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 itemBuilder: (context, index) {
                   return GestureDetector(
-                    onTap: () => _sendComment(textToSend: _quickEmojis[index]),
+                    onTap: _isUnlocked ? () => _sendComment(textToSend: _quickEmojis[index]) : null,
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       padding: const EdgeInsets.all(6),
@@ -535,6 +541,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
             const SizedBox(height: 6),
 
+            // Security Banner
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
@@ -551,6 +558,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
+            // Chat Stream
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
                 stream: _supabase
@@ -590,6 +598,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
+            // Text Field & Send Button (የይለፍ ቃል እስካልገባ ድረስ እንዳይነካ enabled: _isUnlocked ተደርጓል)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
@@ -597,6 +606,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   Expanded(
                     child: TextField(
                       controller: _commentController,
+                      enabled: _isUnlocked, 
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       decoration: InputDecoration(
                         hintText: _isGhostMode ? 'Ghost message (disappears in 5s)...' : 'Type comment...',
@@ -612,16 +622,20 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                           borderRadius: BorderRadius.circular(30),
                           borderSide: const BorderSide(color: Colors.purple, width: 2),
                         ),
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: const BorderSide(color: Colors.grey),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 6),
                   CircleAvatar(
-                    backgroundColor: const Color(0xFFD342EF),
+                    backgroundColor: _isUnlocked ? const Color(0xFFD342EF) : Colors.grey,
                     radius: 20,
                     child: IconButton(
                       icon: const Icon(Icons.send, color: Colors.white, size: 16),
-                      onPressed: () => _sendComment(),
+                      onPressed: _isUnlocked ? () => _sendComment() : null,
                     ),
                   ),
                 ],
@@ -631,6 +645,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ),
       ),
 
+      // Single Bottom Navigation Bar (የተደጋገመው ሜኑ ተወግዷል)
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF130F21),
         type: BottomNavigationBarType.fixed,
