@@ -18,10 +18,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _commentController = TextEditingController();
   final List<String> _quickEmojis = ['🔥', '❤️', '😂', '😮', '👏', '🎉', '💩'];
 
-  String? _roomCode; 
+  String? _roomCode;
   bool _isLocked = true;
   bool _isGhostMode = true;
-  bool _isUnlocked = false; // በይለፍ ቃል መከፈቱን መቆጣጠሪያ
+  bool _isUnlocked = false;
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
@@ -43,7 +43,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     final randomId = 1000 + random.nextInt(9000);
     setState(() {
       _roomCode = 'SEC-$randomId';
-      _isUnlocked = false; // አዲስ ሩም ሲፈጠር መጀመሪያ የተቆለፈ ይሆናል
+      _isUnlocked = false;
     });
 
     if (_isLocked) {
@@ -80,7 +80,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               TextField(
                 controller: passwordController,
                 obscureText: true,
-                autofocus: true, // ፖፕአፑ ሲከፈት በቀጥታ ኪቦርዱ እንዲመጣ ያደርጋል
+                autofocus: true,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
@@ -108,7 +108,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               onPressed: () {
                 if (passwordController.text.isNotEmpty) {
                   setState(() {
-                    _isUnlocked = true; // ይለፍ ቃሉ ትክክል ሲሆን ቻቱ ይከፈታል
+                    _isUnlocked = true;
                   });
                   Navigator.pop(context);
                 }
@@ -218,18 +218,22 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
     _commentController.clear();
 
-    final response = await _supabase.from('comments').insert({
-      'content': text,
-      'is_user': true,
-      'room_id': _roomCode,
-      'created_at': DateTime.now().toIso8601String(),
-    }).select();
+    try {
+      final response = await _supabase.from('comments').insert({
+        'content': text,
+        'is_user': true,
+        'room_id': _roomCode,
+        'created_at': DateTime.now().toIso8601String(),
+      }).select();
 
-    if (_isGhostMode && response.isNotEmpty) {
-      final insertedId = response[0]['id'];
-      Timer(const Duration(seconds: 5), () async {
-        await _supabase.from('comments').delete().eq('id', insertedId);
-      });
+      if (_isGhostMode && response.isNotEmpty) {
+        final insertedId = response[0]['id'];
+        Timer(const Duration(seconds: 5), () async {
+          await _supabase.from('comments').delete().eq('id', insertedId);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error sending message: $e');
     }
   }
 
@@ -243,7 +247,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. ገና Room ካልተፈጠረ የሚታይ Lobby ገጽ
     if (_roomCode == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F0C1B),
@@ -292,9 +295,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       );
     }
 
-    // 2. Room ከተፈጠረ በኋላ የሚታይ ዋና Watch Party Screen
     return Scaffold(
-      resizeToAvoidBottomInset: true, // ኪቦርዱ ሲወጣ ስክሪኑ አብሮ እንዲወጣ ያደርጋል
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF0F0C1B),
       appBar: AppBar(
         backgroundColor: const Color(0xFF191328),
@@ -403,7 +405,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Video Player Area
             GestureDetector(
               onTap: _toggleControls,
               child: Stack(
@@ -464,16 +465,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
 
-            // Status Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: _isLocked ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(6),
@@ -497,7 +497,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.teal.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(6),
@@ -516,11 +516,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
 
-            // Quick Emoji Bar
             SizedBox(
-              height: 34,
+              height: 30,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: _quickEmojis.length,
@@ -530,20 +529,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     onTap: _isUnlocked ? () => _sendComment(textToSend: _quickEmojis[index]) : null,
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(color: Color(0xFF231D34), shape: BoxShape.circle),
-                      child: Text(_quickEmojis[index], style: const TextStyle(fontSize: 13)),
+                      child: Text(_quickEmojis[index], style: const TextStyle(fontSize: 12)),
                     ),
                   );
                 },
               ),
             ),
 
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
 
-            // Security Banner
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
                 color: const Color(0xFF2A163B),
                 borderRadius: BorderRadius.circular(16),
@@ -551,14 +549,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock, color: Colors.amber, size: 12),
-                  SizedBox(width: 6),
-                  Text('End-to-End Encrypted Private Room Created', style: TextStyle(color: Colors.purpleAccent, fontSize: 10)),
+                  Icon(Icons.lock, color: Colors.amber, size: 11),
+                  SizedBox(width: 4),
+                  Text('End-to-End Encrypted Private Room Created', style: TextStyle(color: Colors.purpleAccent, fontSize: 9)),
                 ],
               ),
             ),
 
-            // Chat Stream
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
                 stream: _supabase
@@ -567,12 +564,38 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     .eq('room_id', _roomCode!)
                     .order('created_at', ascending: true),
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator(color: Colors.purpleAccent));
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          'RLS Error / Unable to load: ${snapshot.error}',
+                          style: const TextStyle(color: Colors.redAccent, fontSize: 11),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
                   }
-                  final comments = snapshot.data!;
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.purpleAccent),
+                    );
+                  }
+
+                  final comments = snapshot.data ?? [];
+
+                  if (comments.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No messages yet. Say hi! 👋',
+                        style: TextStyle(color: Colors.white38, fontSize: 13),
+                      ),
+                    );
+                  }
+
                   return ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     itemCount: comments.length,
                     itemBuilder: (context, index) {
                       final comment = comments[index];
@@ -580,11 +603,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       return Align(
                         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: isUser ? const Color(0xFFD342EF) : const Color(0xFF231D34),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: Text(
                             comment['content'] ?? '',
@@ -598,22 +621,21 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Text Field & Send Button (የይለፍ ቃል እስካልገባ ድረስ እንዳይነካ enabled: _isUnlocked ተደርጓል)
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(6.0),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _commentController,
-                      enabled: _isUnlocked, 
+                      enabled: _isUnlocked,
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       decoration: InputDecoration(
                         hintText: _isGhostMode ? 'Ghost message (disappears in 5s)...' : 'Type comment...',
                         hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
                         filled: true,
                         fillColor: const Color(0xFF191328),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                           borderSide: const BorderSide(color: Colors.purpleAccent),
@@ -632,9 +654,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   const SizedBox(width: 6),
                   CircleAvatar(
                     backgroundColor: _isUnlocked ? const Color(0xFFD342EF) : Colors.grey,
-                    radius: 20,
+                    radius: 18,
                     child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white, size: 16),
+                      icon: const Icon(Icons.send, color: Colors.white, size: 15),
                       onPressed: _isUnlocked ? () => _sendComment() : null,
                     ),
                   ),
@@ -643,22 +665,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ],
         ),
-      ),
-
-      // Single Bottom Navigation Bar (የተደጋገመው ሜኑ ተወግዷል)
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF130F21),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.amber,
-        unselectedItemColor: Colors.grey,
-        currentIndex: 2,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.style), label: 'Feed'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: 'Upload'),
-          BottomNavigationBarItem(icon: Icon(Icons.groups), label: 'Party'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Analytics'),
-          BottomNavigationBarItem(icon: Icon(Icons.lock), label: 'Vault'),
-        ],
       ),
     );
   }
