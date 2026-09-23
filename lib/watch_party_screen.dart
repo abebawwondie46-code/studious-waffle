@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:video_player/video_player.dart';
+import 'package0:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
@@ -569,7 +569,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          'RLS Error / Unable to load: ${snapshot.error}',
+                          'Error: ${snapshot.error}',
                           style: const TextStyle(color: Colors.redAccent, fontSize: 11),
                           textAlign: TextAlign.center,
                         ),
