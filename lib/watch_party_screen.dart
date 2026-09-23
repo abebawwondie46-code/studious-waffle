@@ -1,4 +1,4 @@
-import 'dart0:async';
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -242,7 +242,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Lobby Screen
     if (_roomCode == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F0C1B),
@@ -291,7 +290,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       );
     }
 
-    // 2. Main Watch Party Screen (resizeToAvoidBottomInset ኪቦርዱ ስክሪኑን እንዳይደብቀው ይረዳል)
     return Scaffold(
       resizeToAvoidBottomInset: true, 
       backgroundColor: const Color(0xFF0F0C1B),
@@ -335,7 +333,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ],
           ),
         ),
-        // Overflow ን ለመከላከል አይኮኖች የተቀነሰ ስፋት (Padding) ተሰጥቷቸዋል
         actions: [
           IconButton(
             constraints: const BoxConstraints(),
@@ -403,7 +400,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Video Player Section
             GestureDetector(
               onTap: _toggleControls,
               child: Stack(
@@ -466,7 +462,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
             const SizedBox(height: 6),
 
-            // Status Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
@@ -518,7 +513,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
             const SizedBox(height: 6),
 
-            // Emoji Bar
             SizedBox(
               height: 34,
               child: ListView.builder(
@@ -541,7 +535,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
             const SizedBox(height: 6),
 
-            // Encrypted Notice
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
@@ -558,7 +551,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Chat Area
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
                 stream: _supabase
@@ -598,7 +590,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ),
             ),
 
-            // Text Input Field & Send Button
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
@@ -640,7 +631,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ),
       ),
 
-      // Bottom Nav Bar
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF130F21),
         type: BottomNavigationBarType.fixed,
