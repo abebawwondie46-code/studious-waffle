@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,16 +18,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final TextEditingController _commentController = TextEditingController();
   final List<String> _quickEmojis = ['🔥', '❤️', '😂', '😮', '👏', '🎉', '💩'];
 
-  String _roomCode = 'SEC-7069';
+  String? _roomCode; // null ከሆነ ገና Room አልተፈጠረም (Lobby ላይ ነው)
   bool _isLocked = true;
   bool _isGhostMode = true;
+  bool _isRoomUnlockedByPassword = false;
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
-
   bool _showControls = true;
   Timer? _controlsTimer;
-
   bool _isMuted = false;
 
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -38,15 +38,104 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4');
   }
 
+  // Random Room Code መፍጠሪያ
+  void _createNewRoom() {
+    final random = Random();
+    final randomId = 1000 + random.nextInt(9000);
+    setState(() {
+      _roomCode = 'SEC-$randomId';
+      _isRoomUnlockedByPassword = false;
+    });
+
+    if (_isLocked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showPasswordDialog();
+      });
+    }
+  }
+
+  // የይለፍ ቃል መጠየቂያ Popup Dialog
+  void _showPasswordDialog() {
+    final passwordController = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1B26),
+          title: const Row(
+            children: [
+              Icon(Icons.lock, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('Private Room Locked', style: TextStyle(color: Colors.white, fontSize: 16)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enter passcode to access video & live chat.',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Passcode (Any 4 digits)',
+                  hintStyle: TextStyle(color: Colors.white38),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purpleAccent)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.purple)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _exitRoom();
+              },
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+              onPressed: () {
+                if (passwordController.text.isNotEmpty) {
+                  setState(() {
+                    _isRoomUnlockedByPassword = true;
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Unlock'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ከ Room መውጫ (Exit Room)
+  void _exitRoom() {
+    setState(() {
+      _roomCode = null;
+      _isRoomUnlockedByPassword = false;
+    });
+  }
+
   void _initializeNetworkVideo(String url) {
     _videoController?.dispose();
     _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
       ..initialize().then((_) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-        _videoController?.play();
-        _startControlsTimer();
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          _videoController?.play();
+          _startControlsTimer();
+        }
       });
 
     _videoController?.addListener(() {
@@ -113,70 +202,34 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   }
 
   void _shareRoomCode() {
-    Clipboard.setData(ClipboardData(text: _roomCode));
+    if (_roomCode == null) return;
+    Clipboard.setData(ClipboardData(text: _roomCode!));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Room Code copied: $_roomCode')),
     );
   }
 
-  void _editRoomCodeDialog() {
-    final controller = TextEditingController(text: _roomCode);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1E1B26),
-          title: const Text(
-            'Edit Room Code',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: TextField(
-            controller: controller,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.purple),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.purpleAccent),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-              onPressed: () {
-                setState(() {
-                  _roomCode = controller.text.trim();
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _sendComment() async {
-    final text = _commentController.text.trim();
+  // መልእክት መላኪያ (Ghost Mode ከተበራ ከ5 ሰከንድ በኋላ ይጠፋል)
+  Future<void> _sendComment({String? textToSend}) async {
+    final text = textToSend ?? _commentController.text.trim();
     if (text.isEmpty) return;
 
     _commentController.clear();
 
-    await _supabase.from('comments').insert({
+    final response = await _supabase.from('comments').insert({
       'content': text,
       'is_user': true,
+      'room_id': _roomCode,
       'created_at': DateTime.now().toIso8601String(),
-    });
+    }).select();
+
+    // Ghost Mode ከበራ ከ 5 ሰከንድ በኋላ መልእክቱን ከ Database ማጥፋት
+    if (_isGhostMode && response.isNotEmpty) {
+      final insertedId = response[0]['id'];
+      Timer(const Duration(seconds: 5), () async {
+        await _supabase.from('comments').delete().eq('id', insertedId);
+      });
+    }
   }
 
   @override
@@ -189,6 +242,56 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. ገና Room ካልተፈጠረ የሚታይ Lobby ገጽ
+    if (_roomCode == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0F0C1B),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF191328),
+          title: const Text('Watch Party Lobby', style: TextStyle(color: Colors.white)),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.groups_outlined, size: 80, color: Colors.purpleAccent),
+                const SizedBox(height: 24),
+                const Text(
+                  'Welcome to Secret Watch Party',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Create an encrypted room to watch videos and chat with friends in real-time.',
+                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD342EF),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  label: const Text(
+                    'አዲስ Room ፍጠር (Create Room)',
+                    style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: _createNewRoom,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 2. Room ከተፈጠረ በኋላ የሚታይ ዋና Watch Party Screen
     return Scaffold(
       backgroundColor: const Color(0xFF0F0C1B),
       appBar: AppBar(
@@ -201,9 +304,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               children: [
                 const Text(
                   'Secret Party',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
@@ -214,36 +317,55 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     children: [
                       CircleAvatar(radius: 3, backgroundColor: Colors.green),
                       SizedBox(width: 4),
-                      Text('3', style: TextStyle(color: Colors.green, fontSize: 12)),
+                      Text('3', style: TextStyle(color: Colors.green, fontSize: 11)),
                     ],
                   ),
                 ),
               ],
             ),
-            GestureDetector(
-              onTap: _editRoomCodeDialog,
-              child: Text(
-                'ID: $_roomCode',
-                style: const TextStyle(fontSize: 11, color: Colors.purpleAccent),
-              ),
+            Text(
+              'ID: $_roomCode',
+              style: const TextStyle(fontSize: 11, color: Colors.purpleAccent),
             ),
           ],
         ),
         actions: [
+          // Share Icon
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.white),
+            icon: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
             onPressed: _shareRoomCode,
           ),
+          // Lock Icon
           IconButton(
-            icon: Icon(_isLocked ? Icons.lock : Icons.lock_open, color: Colors.redAccent),
-            onPressed: () => setState(() => _isLocked = !_isLocked),
+            icon: Icon(_isLocked ? Icons.lock : Icons.lock_open, color: Colors.redAccent, size: 20),
+            onPressed: () {
+              setState(() {
+                _isLocked = !_isLocked;
+              });
+            },
           ),
+          // Ghost Mode Icon
           IconButton(
-            icon: Icon(_isGhostMode ? Icons.visibility_off : Icons.visibility, color: Colors.purpleAccent),
-            onPressed: () => setState(() => _isGhostMode = !_isGhostMode),
+            icon: Icon(
+              _isGhostMode ? Icons.visibility_off : Icons.visibility,
+              color: _isGhostMode ? Colors.purpleAccent : Colors.grey,
+              size: 20,
+            ),
+            onPressed: () {
+              setState(() {
+                _isGhostMode = !_isGhostMode;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_isGhostMode ? 'Ghost Mode ON (Messages auto-delete in 5s)' : 'Ghost Mode OFF'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
           ),
+          // Plus Icon (Media Picker)
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Colors.purpleAccent),
+            icon: const Icon(Icons.add_circle_outline, color: Colors.purpleAccent, size: 20),
             onPressed: () {
               showModalBottomSheet(
                 context: context,
@@ -271,11 +393,16 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               );
             },
           ),
+          // Exit Room Icon (ከ Room መውጫ)
+          IconButton(
+            icon: const Icon(Icons.exit_to_app, color: Colors.red, size: 22),
+            onPressed: _exitRoom,
+          ),
         ],
       ),
       body: Column(
         children: [
-          // Video Player Section
+          // Video Player Area
           GestureDetector(
             onTap: _toggleControls,
             child: Stack(
@@ -290,7 +417,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 if (_showControls && _isVideoInitialized) ...[
                   Container(color: Colors.black38),
                   IconButton(
-                    iconSize: 50,
+                    iconSize: 46,
                     icon: Icon(
                       _videoController!.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
                       color: Colors.white,
@@ -305,8 +432,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     },
                   ),
                   Positioned(
-                    top: 10,
-                    right: 10,
+                    top: 8,
+                    right: 8,
                     child: IconButton(
                       icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white),
                       onPressed: () {
@@ -336,41 +463,49 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Badges Bar
+          // Status & Reaction Bars
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.2),
+                    color: _isLocked ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text('LOCKED PARTY', style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    _isLocked ? 'LOCKED PARTY' : 'PUBLIC PARTY',
+                    style: TextStyle(
+                      color: _isLocked ? Colors.redAccent : Colors.greenAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 Row(
                   children: [
+                    if (_isGhostMode)
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: Colors.purple, shape: BoxShape.circle),
+                        child: const Text('👻', style: TextStyle(fontSize: 10)),
+                      ),
+                    const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.purple, shape: BoxShape.circle),
-                      child: const Text('👻', style: TextStyle(fontSize: 10)),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.teal.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.check_circle, color: Colors.tealAccent, size: 12),
+                          Icon(Icons.check_circle, color: Colors.tealAccent, size: 11),
                           SizedBox(width: 4),
-                          Text('AES-256 ENCRYPTED', style: TextStyle(color: Colors.tealAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                          Text('AES-256 ENCRYPTED', style: TextStyle(color: Colors.tealAccent, fontSize: 9, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -380,36 +515,34 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Emoji Selector
+          // Quick Emoji Bar
           SizedBox(
-            height: 40,
+            height: 36,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _quickEmojis.length,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               itemBuilder: (context, index) {
                 return GestureDetector(
-                  onTap: () {
-                    _commentController.text += _quickEmojis[index];
-                  },
+                  onTap: () => _sendComment(textToSend: _quickEmojis[index]),
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6),
                     decoration: const BoxDecoration(color: Color(0xFF231D34), shape: BoxShape.circle),
-                    child: Text(_quickEmojis[index], style: const TextStyle(fontSize: 16)),
+                    child: Text(_quickEmojis[index], style: const TextStyle(fontSize: 14)),
                   ),
                 );
               },
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Encryption Notice Banner
+          // Security Banner
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
               color: const Color(0xFF2A163B),
               borderRadius: BorderRadius.circular(16),
@@ -417,17 +550,21 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock, color: Colors.amber, size: 14),
+                Icon(Icons.lock, color: Colors.amber, size: 12),
                 SizedBox(width: 6),
-                Text('End-to-End Encrypted Private Room Created', style: TextStyle(color: Colors.purpleAccent, fontSize: 11)),
+                Text('End-to-End Encrypted Private Room Created', style: TextStyle(color: Colors.purpleAccent, fontSize: 10)),
               ],
             ),
           ),
 
-          // Realtime Comments List
+          // Live Chat Stream
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _supabase.from('comments').stream(primaryKey: ['id']).order('created_at', ascending: true),
+              stream: _supabase
+                  .from('comments')
+                  .stream(primaryKey: ['id'])
+                  .eq('room_id', _roomCode!)
+                  .order('created_at', ascending: true),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator(color: Colors.purpleAccent));
@@ -450,7 +587,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         ),
                         child: Text(
                           comment['content'] ?? '',
-                          style: TextStyle(color: isUser ? Colors.white : Colors.white70),
+                          style: TextStyle(color: isUser ? Colors.white : Colors.white70, fontSize: 13),
                         ),
                       ),
                     );
@@ -460,21 +597,21 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ),
           ),
 
-          // Bottom Input Field
+          // Text Field & Send Button
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(10.0),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _commentController,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'Type comment...',
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintText: _isGhostMode ? 'Ghost message (disappears in 5s)...' : 'Type comment...',
+                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
                       filled: true,
                       fillColor: const Color(0xFF191328),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: const BorderSide(color: Colors.purpleAccent),
@@ -489,10 +626,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 const SizedBox(width: 8),
                 CircleAvatar(
                   backgroundColor: const Color(0xFFD342EF),
-                  radius: 24,
+                  radius: 22,
                   child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                    onPressed: _sendComment,
+                    icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                    onPressed: () => _sendComment(),
                   ),
                 ),
               ],
@@ -501,7 +638,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ],
       ),
 
-      // Bottom Navigation Bar
+      // Bottom Nav Bar
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF130F21),
         type: BottomNavigationBarType.fixed,
