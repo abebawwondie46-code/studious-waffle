@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package0:video_player/video_player.dart';
+import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
@@ -453,7 +453,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       child: VideoProgressIndicator(
                         _videoController!,
                         allowScrubbing: true,
-                        colors: const VideoProgressColors(
+                        colors: VideoProgressColors(
                           playedColor: Colors.purpleAccent,
                           bufferedColor: Colors.grey,
                           backgroundColor: Colors.white24,
