@@ -8,8 +8,8 @@ class WatchPartyScreen extends StatefulWidget {
 
   const WatchPartyScreen({
     super.key,
-    required this.roomCode,
-    required this.videoUrl,
+    this.roomCode = '7069', // ነባሪ የ Room Code (ከስህተት ለመጠበቅ)
+    this.videoUrl = 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
   });
 
   @override
@@ -373,7 +373,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     CircleAvatar(
                       backgroundColor: Colors.purpleAccent,
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18), // Send Button ( > )
+                        icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
                         onPressed: () => _sendMessage(),
                       ),
                     ),
