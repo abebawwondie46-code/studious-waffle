@@ -1,20 +1,13 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
+  final String roomCode;
   final String videoUrl;
-  final String roomTitle;
-  final String passcode;
 
   const WatchPartyScreen({
     super.key,
+    required this.roomCode,
     required this.videoUrl,
-    required this.roomTitle,
-    required this.passcode,
   });
 
   @override
@@ -22,332 +15,175 @@ class WatchPartyScreen extends StatefulWidget {
 }
 
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
-  late VideoPlayerController _controller;
-  final TextEditingController _commentController = TextEditingController();
-  final TextEditingController _passcodeController = TextEditingController();
-  final SupabaseClient supabase = Supabase.instance.client;
+  final TextEditingController _messageController = TextEditingController();
+  final List<Map<String, dynamic>> _messages = [];
 
-  bool _isLocked = true;
-  bool _isGhostMode = false;
-  bool _isPlaying = false;
-  bool _isMuted = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeVideoPlayer(widget.videoUrl);
-  }
-
-  void _initializeVideoPlayer(String url) {
-    _controller = VideoPlayerController.networkUrl(Uri.parse(url))
-      ..initialize().then((_) {
-        setState(() {});
-      });
-
-    _controller.addListener(() {
-      if (mounted) {
-        setState(() {
-          _isPlaying = _controller.value.isPlaying;
-        });
-      }
-    });
-  }
-
-  Future<void> _pickVideoFromGallery() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? video = await picker.pickVideo(source: ImageSource.gallery);
-
-    if (video != null) {
-      _controller.dispose();
-      _controller = VideoPlayerController.contentUri(Uri.parse(video.path))
-        ..initialize().then((_) {
-          setState(() {
-            _controller.play();
-          });
-        });
-    }
-  }
-
-  void _unlockRoom() {
-    if (_passcodeController.text == widget.passcode) {
+  // መልእክት መላክ (Live Chat)
+  void _sendMessage() {
+    final text = _messageController.text.trim();
+    if (text.isNotEmpty) {
       setState(() {
-        _isLocked = false;
+        _messages.add({
+          'text': text,
+          'isMe': true,
+          'time': DateTime.now(),
+        });
       });
-      _controller.play();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('የተሳሳተ የይለፍ ቃል ያስገቡ!')),
-      );
+      _messageController.clear();
     }
   }
 
-  Future<void> _sendMessage() async {
-    final text = _commentController.text.trim();
-    if (text.isEmpty) return;
-
-    _commentController.clear();
-
-    final response = await supabase.from('comments').insert({
-      'content': text,
-      'is_user': true,
-      'created_at': DateTime.now().toIso8601String(),
-    }).select().single();
-
-    if (_isGhostMode && response != null) {
-      Timer(const Duration(seconds: 5), () async {
-        await supabase.from('comments').delete().eq('id', response['id']);
-      });
-    }
+  // ከ Room መውጣት (ወደ Lobby መመለስ)
+  void _exitRoom() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ከ Room መውጣት'),
+        content: const Text('እርግጠኛ ነዎት ከዚህ Room መውጣት ይፈልጋሉ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('አይ'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context); // Dialog መዝጋት
+              Navigator.pop(context); // ወደ Main/Lobby Screen መመለስ
+            },
+            child: const Text('ውጣ', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
-    _commentController.dispose();
-    _passcodeController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLocked) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.lock, size: 80, color: Colors.deepPurpleAccent),
-                const SizedBox(height: 16),
-                Text(
-                  widget.roomTitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _passcodeController,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'የክፍሉን የይለፍ ቃል ያስገቡ',
-                    labelStyle: const TextStyle(color: Colors.white70),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.deepPurpleAccent),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.purple),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _unlockRoom,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurpleAccent,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                  ),
-                  child: const Text('ግባ', style: TextStyle(fontSize: 16, color: Colors.white)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(widget.roomTitle),
+        // የ Room Code ከላይ በ App Bar ላይ እንዲታይ
+        title: Text('Room Code: ${widget.roomCode}'),
         backgroundColor: Colors.deepPurple,
+        automaticallyImplyLeading: false, // ነባሪውን የጀርባ ፍላጻ ለማጥፋት
         actions: [
+          // የቀይ መውጫ ቁልፍ (Exit Icon)
           IconButton(
-            icon: Icon(_isGhostMode ? Icons.visibility_off : Icons.visibility),
-            tooltip: 'Ghost Mode',
-            onPressed: () {
-              setState(() {
-                _isGhostMode = !_isGhostMode;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    _isGhostMode
-                        ? 'Ghost Mode ተበርቷል (መልዕክቶች ከ5 ሰከንድ በኋላ ይወገዳሉ)'
-                        : 'Ghost Mode ተጠፍቷል',
-                  ),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.copy),
-            tooltip: 'የክፍል ኮድ ኮፒ አድርግ',
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: widget.passcode));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('የይለፍ ቃሉ ኮፒ ተደርጓል!')),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.folder_open),
-            tooltip: 'ከጋለሪ ቪዲዮ ምረጥ',
-            onPressed: _pickVideoFromGallery,
+            icon: const Icon(Icons.exit_to_app, color: Colors.redAccent),
+            tooltip: 'ከ Room ውጣ',
+            onPressed: _exitRoom,
           ),
         ],
       ),
       body: Column(
         children: [
-          AspectRatio(
-            aspectRatio: _controller.value.isInitialized
-                ? _controller.value.aspectRatio
-                : 16 / 9,
-            child: Stack(
-              alignment: Alignment.bottomCenter,
+          // የቪዲዮ ማጫወቻ ቦታ
+          Container(
+            height: 220,
+            color: Colors.black,
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.play_circle_fill, size: 60, color: Colors.white),
+                  SizedBox(height: 8),
+                  Text('ቪዲዮ እየተጫወተ ነው...', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+
+          // የ Chat ርዕስ እና የ Room Code ማሳያ
+          Container(
+            padding: const EdgeInsets.all(12),
+            color: Colors.deepPurple.shade50,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _controller.value.isInitialized
-                    ? VideoPlayer(_controller)
-                    : const Center(child: CircularProgressIndicator()),
-                VideoProgressIndicator(
-                  _controller,
-                  allowScrubbing: true,
-                  colors: const VideoProgressColors(
-                    playedColor: Colors.deepPurpleAccent,
-                    bufferedColor: Colors.white24,
-                    backgroundColor: Colors.grey,
-                  ),
-                ),
-                Positioned(
-                  bottom: 10,
-                  left: 10,
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          _isPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isPlaying
-                                ? _controller.pause()
-                                : _controller.play();
-                          });
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          _isMuted ? Icons.volume_off : Icons.volume_up,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isMuted = !_isMuted;
-                            _controller.setVolume(_isMuted ? 0 : 1);
-                          });
-                        },
-                      ),
-                    ],
+                const Icon(Icons.chat, color: Colors.deepPurple),
+                const SizedBox(width: 8),
+                Text(
+                  'የውይይት ክፍል (Room: ${widget.roomCode})',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                    fontSize: 16,
                   ),
                 ),
               ],
             ),
           ),
+
+          // የመልእክቶች ዝርዝር ማሳያ (Live Chat)
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: supabase
-                  .from('comments')
-                  .stream(primaryKey: ['id'])
-                  .order('created_at', ascending: true),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                final isMe = message['isMe'] ?? true;
 
-                final comments = snapshot.data!;
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: comments.length,
-                  itemBuilder: (context, index) {
-                    final comment = comments[index];
-                    final isUser = comment['is_user'] ?? false;
-
-                    return Align(
-                      alignment:
-                          isUser ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isUser
-                              ? Colors.deepPurple
-                              : Colors.grey.shade800,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          comment['content'] ?? '',
-                          style: const TextStyle(color: Colors.white),
-                        ),
+                return Align(
+                  alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isMe ? Colors.deepPurple : Colors.grey.shade300,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(12),
+                        topRight: const Radius.circular(12),
+                        bottomLeft: Radius.circular(isMe ? 12 : 0),
+                        bottomRight: Radius.circular(isMe ? 0 : 12),
                       ),
-                    );
-                  },
+                    ),
+                    child: Text(
+                      message['text'],
+                      style: TextStyle(
+                        color: isMe ? Colors.white : Colors.black87,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
           ),
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: ['❤️', '😂', '🔥', '👏', '😮', '🎉'].map((emoji) {
-                return GestureDetector(
-                  onTap: () {
-                    _commentController.text += emoji;
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          Padding(
+
+          // የታችኛው የጽሁፍ ሳጥን እና የላኪያ ቁልፍ
+          Container(
             padding: const EdgeInsets.all(8.0),
+            color: Colors.grey.shade100,
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _commentController,
-                    style: const TextStyle(color: Colors.white),
+                    controller: _messageController,
                     decoration: InputDecoration(
-                      hintText: 'መልዕክት ይጻፉ...',
-                      hintStyle: const TextStyle(color: Colors.white54),
+                      hintText: 'መልእክት ይጻፉ...',
+                      fillColor: Colors.white,
                       filled: true,
-                      fillColor: Colors.grey.shade900,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
                     ),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor: Colors.deepPurpleAccent,
+                  backgroundColor: Colors.deepPurple,
                   child: IconButton(
                     icon: const Icon(Icons.send, color: Colors.white),
                     onPressed: _sendMessage,
