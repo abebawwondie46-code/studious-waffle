@@ -1,20 +1,17 @@
-import 'dart:async';
-import 'dart:convert';
+import 'dart0:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   final String roomCode;
-  final String videoUrl;
 
   const WatchPartyScreen({
     super.key,
     this.roomCode = '7069',
-    this.videoUrl = 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
   });
 
   @override
@@ -22,74 +19,42 @@ class WatchPartyScreen extends StatefulWidget {
 }
 
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
+  final _supabase = Supabase.instance.client;
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _passcodeController = TextEditingController();
   final TextEditingController _urlController = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [];
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   final ImagePicker _picker = ImagePicker();
 
-  // WebSocket ለኢንተርኔት የቀጥታ ቻት
-  WebSocketChannel? _channel;
-  bool _isConnectedToInternet = false;
-
   bool _isLocked = false;
-  bool _isGhostMode = true;
+  bool _isGhostMode = false;
   bool _isRoomLockedState = false;
   final String _correctPasscode = '1234';
 
   @override
   void initState() {
     super.initState();
-    _initializeVideoFromUrl(widget.videoUrl);
-    _connectToOnlineChatServer();
+    _fetchVideoFromSupabase();
+  }
 
-    _messages.add({
-      'text': '🔒 End-to-End Encrypted Private Room Created',
-      'isSystem': true,
+  // 1. ከ Supabase Database የቪዲዮውን ሊንክ በ Real-time መውሰጃ
+  void _fetchVideoFromSupabase() {
+    _supabase
+        .from('videos')
+        .stream(primaryKey: ['id'])
+        .listen((data) {
+      if (data.isNotEmpty && data.last['video_link'] != null) {
+        String videoUrl = data.last['video_link'];
+        _initializeVideoFromUrl(videoUrl);
+      }
     });
   }
 
-  // ከኢንተርኔት Live Chat Server ጋር ማገናኛ
-  void _connectToOnlineChatServer() {
-    try {
-      // ይፋዊ የነጻ WebSocket ፈተና ሰርቨር (Postman Echo Server)
-      _channel = WebSocketChannel.connect(
-        Uri.parse('wss://ws.postman-echo.com/raw'),
-      );
-
-      setState(() {
-        _isConnectedToInternet = true;
-      });
-
-      // ከኢንተርኔት የሚመጡ መልእክቶችን ማዳመጫ
-      _channel!.stream.listen(
-        (data) {
-          try {
-            final decoded = jsonDecode(data);
-            if (decoded['room'] == widget.roomCode && decoded['sender'] != 'me') {
-              _addMessageToUI(decoded['text'], isMe: false);
-            }
-          } catch (_) {
-            // ተራ ጽሁፍ ከሆነ
-          }
-        },
-        onError: (error) {
-          setState(() => _isConnectedToInternet = false);
-        },
-        onDone: () {
-          setState(() => _isConnectedToInternet = false);
-        },
-      );
-    } catch (e) {
-      setState(() => _isConnectedToInternet = false);
-    }
-  }
-
-  // ቪዲዮ ከኢንተርኔት (Web/Streaming URL) መክፈቻ
+  // ቪዲዮውን ማጫወት
   Future<void> _initializeVideoFromUrl(String url) async {
+    if (url.isEmpty) return;
     setState(() => _isVideoInitialized = false);
     await _videoController?.dispose();
 
@@ -102,7 +67,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // ከጋለሪ ወይም ከካሜራ ቪዲዮ መምረጫ
+  // 2. ከጋለሪ ወይም ከካሜራ ቪዲዮ መምረጫ
   Future<void> _pickVideo(ImageSource source) async {
     final XFile? pickedFile = await _picker.pickVideo(source: source);
     if (pickedFile != null) {
@@ -119,12 +84,21 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
+  // 3. አዲስ የቪዲዮ URL ወደ Supabase መላኪያ/መቀየሪያ
+  Future<void> _updateVideoUrlInSupabase(String url) async {
+    try {
+      await _supabase.from('videos').insert({'video_link': url});
+    } catch (e) {
+      // ስህተት ካለ
+    }
+  }
+
   void _showLinkInputDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey.shade900,
-        title: const Text('የቪዲዮ Online URL ያስገቡ', style: TextStyle(color: Colors.white)),
+        title: const Text('የቪዲዮ URL ያስገቡ', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: _urlController,
           style: const TextStyle(color: Colors.white),
@@ -142,7 +116,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
             onPressed: () {
               if (_urlController.text.trim().isNotEmpty) {
-                _initializeVideoFromUrl(_urlController.text.trim());
+                _updateVideoUrlInSupabase(_urlController.text.trim());
                 _urlController.clear();
               }
               Navigator.pop(context);
@@ -154,45 +128,16 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // መልእክት ወደ ኢንተርኔት ሰርቨር መላኪያ
-  void _sendMessage([String? customText]) {
+  // 4. መልእክት ወደ Supabase Database መላኪያ
+  Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
-      _addMessageToUI(text, isMe: true);
-
-      // በኢንተርኔት ለሌሎች የሩሙ አባላት መላክ
-      if (_channel != null && _isConnectedToInternet) {
-        final payload = jsonEncode({
-          'room': widget.roomCode,
-          'sender': 'user_${DateTime.now().millisecondsSinceEpoch}',
-          'text': text,
-        });
-        _channel!.sink.add(payload);
-      }
-
       if (customText == null) _messageController.clear();
-    }
-  }
 
-  void _addMessageToUI(String text, {required bool isMe}) {
-    final newMessage = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'text': text,
-      'isMe': isMe,
-      'isSystem': false,
-    };
-
-    setState(() {
-      _messages.add(newMessage);
-    });
-
-    if (_isGhostMode) {
-      Timer(const Duration(seconds: 5), () {
-        if (mounted) {
-          setState(() {
-            _messages.removeWhere((msg) => msg['id'] == newMessage['id']);
-          });
-        }
+      await _supabase.from('comments').insert({
+        'content': text,
+        'room_code': widget.roomCode,
+        'created_at': DateTime.now().toIso8601String(),
       });
     }
   }
@@ -243,8 +188,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.language, color: Colors.greenAccent),
-              title: const Text('ከኢንተርኔት ሊንክ (Online URL)', style: TextStyle(color: Colors.white)),
+              leading: const Icon(Icons.link, color: Colors.greenAccent),
+              title: const Text('ከSupabase / Web URL', style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
                 _showLinkInputDialog();
@@ -258,7 +203,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   @override
   void dispose() {
-    _channel?.sink.close();
     _videoController?.dispose();
     _messageController.dispose();
     _passcodeController.dispose();
@@ -279,20 +223,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Text(
-                  'Secret Party',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(width: 8),
-                // የኢንተርኔት ግንኙነት አመልካች ነጥብ
-                Icon(
-                  Icons.circle,
-                  size: 10,
-                  color: _isConnectedToInternet ? Colors.greenAccent : Colors.redAccent,
-                ),
-              ],
+            const Text(
+              'Secret Party',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             Text(
               'SEC-${widget.roomCode}',
@@ -343,7 +276,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         children: [
           Column(
             children: [
-              // Online Video Display Area
+              // የቪዲዮ ማጫወቻ
               Container(
                 height: 230,
                 width: double.infinity,
@@ -379,7 +312,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       ),
               ),
 
-              // Badges Section
+              // Badges
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(
@@ -392,7 +325,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         border: Border.all(color: Colors.greenAccent),
                       ),
                       child: const Text(
-                        'PUBLIC PARTY',
+                        'SUPABASE CONNECTED',
                         style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -406,23 +339,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         ),
                         child: const Text('👻 GHOST', style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withAlpha(40),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        '🔒 ENCRYPTED',
-                        style: TextStyle(color: Colors.blueAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    ),
                   ],
                 ),
               ),
 
-              // Quick Emoji Bar
+              // Emoji Bar
               SizedBox(
                 height: 45,
                 child: ListView(
@@ -439,52 +360,49 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // Chat Messages
+              // 5. ከ Supabase `comments` Table መልእክቶችን በ Real-time ማሳያ
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final message = _messages[index];
-
-                    if (message['isSystem'] == true) {
-                      return Center(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white10,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            message['text'],
-                            style: const TextStyle(color: Colors.white60, fontSize: 12),
-                          ),
-                        ),
-                      );
+                child: StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: _supabase
+                      .from('comments')
+                      .stream(primaryKey: ['id'])
+                      .order('created_at', ascending: true),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator(color: Colors.purpleAccent));
                     }
 
-                    final isMe = message['isMe'] ?? true;
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isMe ? Colors.purple.shade700 : Colors.grey.shade800,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          message['text'],
-                          style: const TextStyle(color: Colors.white, fontSize: 15),
-                        ),
-                      ),
+                    final messages = snapshot.data!;
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = messages[index];
+                        final text = msg['content'] ?? '';
+
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade700,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              text,
+                              style: const TextStyle(color: Colors.white, fontSize: 15),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
               ),
 
-              // Message Input Box
+              // Message Input Field
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
@@ -494,7 +412,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         controller: _messageController,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          hintText: 'Ghost message (disappears)...',
+                          hintText: 'Type a message...',
                           hintStyle: const TextStyle(color: Colors.white38),
                           fillColor: Colors.grey.shade900,
                           filled: true,
@@ -522,7 +440,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ],
           ),
 
-          // Security Passcode Modal
+          // Security Modal
           if (_isLocked)
             Container(
               color: Colors.black.withAlpha(240),
