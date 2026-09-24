@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:video_player/video_player.dart';
+import 'package0:video_player/video_player.dart' if (dart.library.io) 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   const WatchPartyScreen({super.key});
@@ -222,7 +222,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       final response = await _supabase.from('comments').insert({
         'content': text,
         'is_user': true,
-        'room_id': _roomCode,
         'created_at': DateTime.now().toIso8601String(),
       }).select();
 
@@ -561,7 +560,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 stream: _supabase
                     .from('comments')
                     .stream(primaryKey: ['id'])
-                    .eq('room_id', _roomCode!)
                     .order('created_at', ascending: true),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
