@@ -31,7 +31,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _isGhostMode = false;
   bool _isPlaying = false;
   bool _isMuted = false;
-  String? _localVideoPath;
 
   @override
   void initState() {
@@ -63,7 +62,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       _controller = VideoPlayerController.contentUri(Uri.parse(video.path))
         ..initialize().then((_) {
           setState(() {
-            _localVideoPath = video.path;
             _controller.play();
           });
         });
@@ -209,7 +207,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       ),
       body: Column(
         children: [
-          // ቪዲዮ ማጫወቻ
           AspectRatio(
             aspectRatio: _controller.value.isInitialized
                 ? _controller.value.aspectRatio
@@ -265,8 +262,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               ],
             ),
           ),
-
-          // የቀጥታ ውይይት (Live Chat) ክፍል
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: supabase
@@ -311,8 +306,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               },
             ),
           ),
-
-          // የኢሞጂ አቋራጮች
           SizedBox(
             height: 40,
             child: ListView(
@@ -330,8 +323,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               }).toList(),
             ),
           ),
-
-          // መልዕክት መላኪያ ሳጥን
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -349,8 +340,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                     ),
                   ),
                 ),
