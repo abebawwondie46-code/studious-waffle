@@ -42,76 +42,115 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ከ Supabase በ room_id ተለይቶ ቪዲዮ መከታተያ (NULL ያልሆኑትን ብቻ ይወስዳል)
-  void _fetchVideoFromSupabase() {
-    _supabase
-        .from('videos')
-        .stream(primaryKey: ['id'])
-        .eq('room_id', widget.roomCode)
-        .listen((data) {
-      if (data.isNotEmpty) {
-        final validVideos = data.where((item) => 
-          item['video_url'] != null && 
-          item['video_url'].toString().startsWith('http')
-        ).toList();
+  // 1. ከ Supabase በ Direct Select ቪዲዮ የመውሰጃ ፈንክሽን
+  Future<void> _fetchVideoFromSupabase() async {
+    try {
+      final response = await _supabase
+          .from('videos')
+          .select()
+          .eq('room_id', widget.roomCode);
+
+      if (response != null && response is List && response.isNotEmpty) {
+        // ቅንፎች [ ] እና ባዶ ቦታዎች ካሉ ማጽዳት
+        final validVideos = response.where((item) {
+          if (item['video_url'] == null) return false;
+          String url = item['video_url']
+              .toString()
+              .replaceAll('[', '')
+              .replaceAll(']', '')
+              .trim();
+          return url.startsWith('http://') || url.startsWith('https://');
+        }).toList();
 
         if (validVideos.isNotEmpty) {
-          String videoUrl = validVideos.last['video_url'];
-          _initializeVideoFromUrl(videoUrl);
+          String cleanUrl = validVideos.last['video_url']
+              .toString()
+              .replaceAll('[', '')
+              .replaceAll(']', '')
+              .trim();
+          _initializeVideoFromUrl(cleanUrl);
+        } else {
+          if (mounted) {
+            setState(() {
+              _hasVideoError = true;
+              _errorMessage = 'ትክክለኛ የቪዲዮ ሊንክ አልተገኘም';
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _hasVideoError = true;
+            _errorMessage = 'ለዚህ ሩም (SEC-${widget.roomCode}) የተመደበ ቪዲዮ የለም';
+          });
         }
       }
-    }, onError: (error) {
-      setState(() {
-        _hasVideoError = true;
-        _errorMessage = 'ከኢንተርኔት ጋር መገናኘት አልተቻለም';
-      });
-    });
+    } catch (e) {
+      debugPrint('Supabase fetch error: $e');
+      if (mounted) {
+        setState(() {
+          _hasVideoError = true;
+          _errorMessage = 'ከ Supabase ጋር መገናኘት አልተቻለም';
+        });
+      }
+    }
   }
 
-  // ቪዲዮውን ከኢንተርኔት ጫኖ የማዘጋጀት ስራ
+  // 2. ቪዲዮውን መጫኛ እና ማጫወቻ ፈንክሽን
   Future<void> _initializeVideoFromUrl(String url) async {
     if (url.isEmpty) return;
-    
-    setState(() {
-      _isVideoInitialized = false;
-      _hasVideoError = false;
-    });
+
+    if (mounted) {
+      setState(() {
+        _isVideoInitialized = false;
+        _hasVideoError = false;
+      });
+    }
 
     await _videoController?.dispose();
 
     try {
-      _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
-      
+      final uri = Uri.parse(url);
+      _videoController = VideoPlayerController.networkUrl(uri);
+
       await _videoController!.initialize().timeout(
         const Duration(seconds: 15),
         onTimeout: () {
-          throw Exception('የኢንተርኔት ኮኔክሽን ዘገምተኛ ነው ወይም ቪዲዮው አልተገኘም');
+          throw Exception('Timeout');
         },
       );
 
       _videoController!.addListener(() {
         if (_videoController!.value.hasError) {
-          setState(() {
-            _hasVideoError = true;
-            _errorMessage = 'ቪዲዮውን ማጫወት አልተቻለም';
-          });
+          if (mounted) {
+            setState(() {
+              _hasVideoError = true;
+              _errorMessage = 'ቪዲዮውን ማጫወት አልተቻለም';
+            });
+          }
         }
-        setState(() {}); 
+        if (mounted) setState(() {});
       });
 
-      setState(() {
-        _isVideoInitialized = true;
-        _hasVideoError = false;
-      });
-      _videoController?.play();
+      if (mounted) {
+        setState(() {
+          _isVideoInitialized = true;
+          _hasVideoError = false;
+        });
+        _videoController?.play();
+      }
     } catch (e) {
-      setState(() {
-        _hasVideoError = true;
-        _errorMessage = 'ቪዲዮውን መጫን አልተቻለም፦ ኢንተርኔትዎን ወይም ሊንኩን ያረጋግጡ';
-      });
+      debugPrint('Video player error: $e');
+      if (mounted) {
+        setState(() {
+          _hasVideoError = true;
+          _errorMessage = 'ቪዲዮውን መጫን አልተቻለም፦ Direct MP4 ሊንክ ይጠቀሙ';
+        });
+      }
     }
   }
 
+  // ከስልክ ፋይል/ካሜራ ቪዲዮ መምረጫ
   Future<void> _pickVideo(ImageSource source) async {
     final XFile? pickedFile = await _picker.pickVideo(source: source);
     if (pickedFile != null) {
@@ -125,7 +164,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         _videoController = VideoPlayerController.file(File(pickedFile.path));
         await _videoController!.initialize();
         _videoController!.addListener(() {
-          setState(() {});
+          if (mounted) setState(() {});
         });
         setState(() {
           _isVideoInitialized = true;
@@ -140,13 +179,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 2. room_id ሁልጊዜ '7069' ሆኖ እንዲገባ ማስተካከያ
+  // 3. አዲስ የቪዲዮ URL ወደ Supabase ማስገቢያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
+    String cleanUrl = url.replaceAll('[', '').replaceAll(']', '').trim();
     try {
       await _supabase.from('videos').insert({
-        'video_url': url,
-        'room_id': widget.roomCode, // NULL እንዳይሆን በትክክል roomCode ይልካል
+        'video_url': cleanUrl,
+        'room_id': widget.roomCode,
       });
+      _fetchVideoFromSupabase();
     } catch (e) {
       debugPrint('Error inserting video: $e');
     }
@@ -176,7 +217,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             onPressed: () {
               if (_urlController.text.trim().isNotEmpty) {
                 _updateVideoUrlInSupabase(_urlController.text.trim());
-                _initializeVideoFromUrl(_urlController.text.trim());
                 _urlController.clear();
               }
               Navigator.pop(context);
@@ -224,9 +264,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             onPressed: () async {
               Navigator.pop(context);
               await _supabase.from('comments').delete().eq('id', id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('መልእክቱ ተጠፍቷል')),
-              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('መልእክቱ ተጠፍቷል')),
+                );
+              }
             },
             child: const Text('አጥፋ', style: TextStyle(color: Colors.redAccent)),
           ),
@@ -497,7 +539,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                 CircularProgressIndicator(color: Colors.purpleAccent),
                                 SizedBox(height: 10),
                                 Text(
-                                  'ቪዲዮው ከኢንተርኔት እየተጫነ ነው...',
+                                  'ቪዲዮው እየተጫነ ነው...',
                                   style: TextStyle(color: Colors.white54, fontSize: 12),
                                 ),
                               ],
