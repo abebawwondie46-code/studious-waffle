@@ -28,9 +28,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _isVideoInitialized = false;
   final ImagePicker _picker = ImagePicker();
 
-  bool _isLocked = false;
+  bool _isLocked = true; // አፑ ሲከፈት መጀመሪያ ተቆልፎ እንዲነሳ
   bool _isGhostMode = false;
-  bool _isRoomLockedState = false;
+  bool _isRoomLockedState = true;
   final String _correctPasscode = '1234';
 
   @override
@@ -39,11 +39,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ከ Supabase 'video_url' ኮለም በ Real-time መውሰጃ
+  // 1. ከ Supabase በ room_id ተለይቶ ቪዲዮ መከታተያ
   void _fetchVideoFromSupabase() {
     _supabase
         .from('videos')
         .stream(primaryKey: ['id'])
+        .eq('room_id', widget.roomCode)
         .listen((data) {
       if (data.isNotEmpty && data.last['video_url'] != null) {
         String videoUrl = data.last['video_url'];
@@ -52,7 +53,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     });
   }
 
-  // ቪዲዮውን ማጫወት
   Future<void> _initializeVideoFromUrl(String url) async {
     if (url.isEmpty) return;
     setState(() => _isVideoInitialized = false);
@@ -67,7 +67,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // 2. ከጋለሪ ወይም ከካሜራ ቪዲዮ መምረጫ
   Future<void> _pickVideo(ImageSource source) async {
     final XFile? pickedFile = await _picker.pickVideo(source: source);
     if (pickedFile != null) {
@@ -84,12 +83,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. አዲስ የቪዲዮ URL ወደ 'video_url' ኮለም መላኪያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
     try {
-      await _supabase.from('videos').insert({'video_url': url});
+      await _supabase.from('videos').insert({
+        'video_url': url,
+        'room_id': widget.roomCode,
+      });
     } catch (e) {
-      // error handling
+      debugPrint('Error inserting video: $e');
     }
   }
 
@@ -128,17 +129,25 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 4. መልእክት ወደ 'text' እና 'room_id' ኮለም መላኪያ
+  // 2. መልእክት መላኪያ (Ghost Mode ከሆነ ከ10 ሰከንድ በኋላ አውቶማቲክ እንዲጠፋ ያደርጋል)
   Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
       if (customText == null) _messageController.clear();
 
-      await _supabase.from('comments').insert({
+      final response = await _supabase.from('comments').insert({
         'text': text,
         'room_id': widget.roomCode,
         'created_at': DateTime.now().toIso8601String(),
-      });
+      }).select();
+
+      // Ghost Mode በርቶ ከሆነ ከ 10 ሰከንድ በኋላ መልእክቱን አውቶማቲክ ማጥፋት
+      if (_isGhostMode && response.isNotEmpty) {
+        final String msgId = response.first['id'].toString();
+        Timer(const Duration(seconds: 10), () async {
+          await _supabase.from('comments').delete().eq('id', msgId);
+        });
+      }
     }
   }
 
@@ -147,9 +156,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       setState(() {
         _isLocked = false;
       });
+      _passcodeController.clear();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('የተሳሳተ ፓስወርድ! (1234)')),
+        const SnackBar(content: Text('የተሳሳተ ፓስወርድ! (ትክክለኛው: 1234)')),
       );
     }
   }
@@ -215,6 +225,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       
+      // 1. የላይኛው አሞሌ (App Bar & Actions)
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
@@ -233,15 +244,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ],
         ),
         actions: [
+          // የማጋሪያ አይኮን (Share Icon)
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: 'SEC-${widget.roomCode}'));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('የሩም ኮድ ኮፒ ተደርጓል!')),
+                SnackBar(content: Text('የሩም መግቢያ ኮድ SEC-${widget.roomCode} ኮፒ ተደርጓል!')),
               );
             },
           ),
+          // የቁልፍ አይኮን (Lock Icon)
           IconButton(
             icon: Icon(
               _isRoomLockedState ? Icons.lock : Icons.lock_open,
@@ -253,6 +266,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               });
             },
           ),
+          // የዓይን አይኮን (Ghost Mode Icon)
           IconButton(
             icon: Icon(
               _isGhostMode ? Icons.visibility_off : Icons.visibility,
@@ -262,8 +276,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               setState(() {
                 _isGhostMode = !_isGhostMode;
               });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_isGhostMode ? 'Ghost Mode ተበርቷል (መልእክት ከ10 ሰከንድ በኋላ ይጠፋል)' : 'Ghost Mode ተጠፍቷል'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
             },
           ),
+          // የፕላስ አይኮን (Media Picker - +)
           IconButton(
             icon: const Icon(Icons.add, color: Colors.white, size: 28),
             onPressed: _showMediaPicker,
@@ -275,7 +296,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         children: [
           Column(
             children: [
-              // የቪዲዮ ማጫወቻ
+              // 2. የቪዲዮ ማጫወቻ ክፍል (Video Display Area)
               Container(
                 height: 230,
                 width: double.infinity,
@@ -311,38 +332,65 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       ),
               ),
 
-              // Badges
+              // 3. የሁኔታ እና ፈጣን ምላሽ አሞሌዎች (Status & Reaction Bars)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withAlpha(40),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.greenAccent),
-                      ),
-                      child: const Text(
-                        'SUPABASE CONNECTED',
-                        style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (_isGhostMode)
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      // PUBLIC PARTY / LOCKED ባጅ
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.purple.withAlpha(50),
+                          color: _isRoomLockedState ? Colors.red.withAlpha(40) : Colors.green.withAlpha(40),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: _isRoomLockedState ? Colors.redAccent : Colors.greenAccent),
                         ),
-                        child: const Text('👻 GHOST', style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          _isRoomLockedState ? '🔒 LOCKED ROOM' : '🌐 PUBLIC PARTY',
+                          style: TextStyle(
+                            color: _isRoomLockedState ? Colors.redAccent : Colors.greenAccent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                  ],
+                      const SizedBox(width: 8),
+                      // Ghost ባጅ
+                      if (_isGhostMode)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withAlpha(50),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.purpleAccent),
+                          ),
+                          child: const Text(
+                            '👻 GHOST MODE',
+                            style: TextStyle(color: Colors.purpleAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      if (_isGhostMode) const SizedBox(width: 8),
+                      // Encrypted ባጅ
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withAlpha(40),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blueAccent),
+                        ),
+                        child: const Text(
+                          '🔐 ENCRYPTED',
+                          style: TextStyle(color: Colors.blueAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
-              // Emoji Bar
+              // ኢሞጂዎች (Quick Emoji Bar)
               SizedBox(
                 height: 45,
                 child: ListView(
@@ -359,12 +407,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // 5. ከ Supabase 'comments' Table መልእክቶችን በ 'text' ኮለም መውሰጃ
+              // 4. የቻት እና የመልእክት መላኪያ ክፍል (Chat Section)
               Expanded(
                 child: StreamBuilder<List<Map<String, dynamic>>>(
                   stream: _supabase
                       .from('comments')
                       .stream(primaryKey: ['id'])
+                      .eq('room_id', widget.roomCode)
                       .order('created_at', ascending: true),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
@@ -373,29 +422,44 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
                     final messages = snapshot.data!;
 
-                    return ListView.builder(
+                    return ListView(
                       padding: const EdgeInsets.all(12),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = messages[index];
-                        final text = msg['text'] ?? ''; // በ 'text' ኮለም ተተክቷል
-
-                        return Align(
-                          alignment: Alignment.centerRight,
+                      children: [
+                        // የስርዓት መልእክት (System Encryption Message)
+                        Center(
                           child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.purple.shade700,
-                              borderRadius: BorderRadius.circular(20),
+                              color: Colors.grey.shade900,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(
-                              text,
-                              style: const TextStyle(color: Colors.white, fontSize: 15),
+                            child: const Text(
+                              '🔒 End-to-End Encrypted Private Room Created',
+                              style: TextStyle(color: Colors.white54, fontSize: 11),
                             ),
                           ),
-                        );
-                      },
+                        ),
+
+                        ...messages.map((msg) {
+                          final text = msg['text'] ?? '';
+                          return Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: _isGhostMode ? Colors.purple.shade900 : Colors.purple.shade700,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                text,
+                                style: const TextStyle(color: Colors.white, fontSize: 15),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
                     );
                   },
                 ),
@@ -411,7 +475,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         controller: _messageController,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          hintText: 'Type a message...',
+                          hintText: _isGhostMode ? 'Ghost message (disappears)...' : 'Type a message...',
                           hintStyle: const TextStyle(color: Colors.white38),
                           fillColor: Colors.grey.shade900,
                           filled: true,
@@ -439,10 +503,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ],
           ),
 
-          // Security Modal
+          // Private Room Locked Popup (ፓስወርድ መጠየቂያ)
           if (_isLocked)
             Container(
-              color: Colors.black.withAlpha(240),
+              color: Colors.black.withAlpha(245),
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -455,6 +519,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         'Private Room Locked',
                         style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                       ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'ቪዲዮውን እና ቻቱን ለማየት ይለፍ ቃል ያስገቡ',
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                      ),
                       const SizedBox(height: 20),
                       TextField(
                         controller: _passcodeController,
@@ -462,7 +531,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          hintText: 'ፓስወርድ ያስገቡ (1234)',
+                          hintText: 'ፓስወርድ (1234)',
                           hintStyle: const TextStyle(color: Colors.white38),
                           filled: true,
                           fillColor: Colors.grey.shade900,
