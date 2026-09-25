@@ -26,6 +26,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
+  bool _hasVideoError = false; // የኢንተርኔት/የቪዲዮ ስህተት መኖሩን መከታተያ
+  String _errorMessage = '';
   final ImagePicker _picker = ImagePicker();
 
   bool _isLocked = true; // አፑ ሲከፈት መጀመሪያ ተቆልፎ እንዲነሳ
@@ -50,36 +52,79 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         String videoUrl = data.last['video_url'];
         _initializeVideoFromUrl(videoUrl);
       }
+    }, onError: (error) {
+      setState(() {
+        _hasVideoError = true;
+        _errorMessage = 'ከኢንተርኔት ጋር መገናኘት አልተቻለም';
+      });
     });
   }
 
+  // ቪዲዮውን ከኢንተርኔት ጫኖ የማዘጋጀት ስራ
   Future<void> _initializeVideoFromUrl(String url) async {
     if (url.isEmpty) return;
-    setState(() => _isVideoInitialized = false);
+    
+    setState(() {
+      _isVideoInitialized = false;
+      _hasVideoError = false;
+    });
+
     await _videoController?.dispose();
 
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(url))
-      ..initialize().then((_) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-        _videoController?.play();
+    try {
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+      
+      await _videoController!.initialize().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('የኢንተርኔት ኮኔክሽን ዘገምተኛ ነው ወይም ቪዲዮው አልተገኘም');
+        },
+      );
+
+      _videoController!.addListener(() {
+        if (_videoController!.value.hasError) {
+          setState(() {
+            _hasVideoError = true;
+            _errorMessage = 'ቪዲዮውን ማጫወት አልተቻለም';
+          });
+        }
       });
+
+      setState(() {
+        _isVideoInitialized = true;
+        _hasVideoError = false;
+      });
+      _videoController?.play();
+    } catch (e) {
+      setState(() {
+        _hasVideoError = true;
+        _errorMessage = 'ቪዲዮውን መጫን አልተቻለም፦ ኢንተርኔትዎን ወይም ሊንኩን ያረጋግጡ';
+      });
+    }
   }
 
   Future<void> _pickVideo(ImageSource source) async {
     final XFile? pickedFile = await _picker.pickVideo(source: source);
     if (pickedFile != null) {
-      setState(() => _isVideoInitialized = false);
+      setState(() {
+        _isVideoInitialized = false;
+        _hasVideoError = false;
+      });
       await _videoController?.dispose();
 
-      _videoController = VideoPlayerController.file(File(pickedFile.path))
-        ..initialize().then((_) {
-          setState(() {
-            _isVideoInitialized = true;
-          });
-          _videoController?.play();
+      try {
+        _videoController = VideoPlayerController.file(File(pickedFile.path));
+        await _videoController!.initialize();
+        setState(() {
+          _isVideoInitialized = true;
         });
+        _videoController?.play();
+      } catch (e) {
+        setState(() {
+          _hasVideoError = true;
+          _errorMessage = 'ፋይሉን ማጫወት አልተቻለም';
+        });
+      }
     }
   }
 
@@ -118,6 +163,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             onPressed: () {
               if (_urlController.text.trim().isNotEmpty) {
                 _updateVideoUrlInSupabase(_urlController.text.trim());
+                _initializeVideoFromUrl(_urlController.text.trim());
                 _urlController.clear();
               }
               Navigator.pop(context);
@@ -129,7 +175,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 2. መልእክት መላኪያ (Ghost Mode ከሆነ ከ10 ሰከንድ በኋላ አውቶማቲክ እንዲጠፋ ያደርጋል)
+  // 2. መልእክት መላኪያ (Ghost Mode ከ10 ሰከንድ በኋላ ያጠፋዋል)
   Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
@@ -141,7 +187,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         'created_at': DateTime.now().toIso8601String(),
       }).select();
 
-      // Ghost Mode በርቶ ከሆነ ከ 10 ሰከንድ በኋላ መልእክቱን አውቶማቲክ ማጥፋት
       if (_isGhostMode && response.isNotEmpty) {
         final String msgId = response.first['id'].toString();
         Timer(const Duration(seconds: 10), () async {
@@ -224,8 +269,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      
-      // 1. የላይኛው አሞሌ (App Bar & Actions)
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
@@ -244,7 +287,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           ],
         ),
         actions: [
-          // የማጋሪያ አይኮን (Share Icon)
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white),
             onPressed: () {
@@ -254,7 +296,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               );
             },
           ),
-          // የቁልፍ አይኮን (Lock Icon)
           IconButton(
             icon: Icon(
               _isRoomLockedState ? Icons.lock : Icons.lock_open,
@@ -266,7 +307,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               });
             },
           ),
-          // የዓይን አይኮን (Ghost Mode Icon)
           IconButton(
             icon: Icon(
               _isGhostMode ? Icons.visibility_off : Icons.visibility,
@@ -284,62 +324,92 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               );
             },
           ),
-          // የፕላስ አይኮን (Media Picker - +)
           IconButton(
             icon: const Icon(Icons.add, color: Colors.white, size: 28),
             onPressed: _showMediaPicker,
           ),
         ],
       ),
-
       body: Stack(
         children: [
           Column(
             children: [
-              // 2. የቪዲዮ ማጫወቻ ክፍል (Video Display Area)
+              // የቪዲዮ ማጫወቻ / የኢንተርኔት ስህተት ማሳያ ክፍል
               Container(
                 height: 230,
                 width: double.infinity,
-                color: Colors.black,
-                child: _isVideoInitialized && _videoController != null
-                    ? Stack(
-                        alignment: Alignment.center,
+                color: Colors.grey.shade950,
+                child: _hasVideoError
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          AspectRatio(
-                            aspectRatio: _videoController!.value.aspectRatio,
-                            child: VideoPlayer(_videoController!),
-                          ),
-                          IconButton(
-                            iconSize: 60,
-                            icon: Icon(
-                              _videoController!.value.isPlaying
-                                  ? Icons.pause_circle_outline
-                                  : Icons.play_circle_outline,
-                              color: Colors.white70,
+                          const Icon(Icons.wifi_off_rounded, color: Colors.redAccent, size: 40),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              _errorMessage,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white70, fontSize: 13),
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _videoController!.value.isPlaying
-                                    ? _videoController!.pause()
-                                    : _videoController!.play();
-                              });
-                            },
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+                            onPressed: _showLinkInputDialog,
+                            icon: const Icon(Icons.refresh, size: 18, color: Colors.white),
+                            label: const Text('አዲስ ቪዲዮ/ሊንክ አስገባ', style: TextStyle(color: Colors.white)),
                           ),
                         ],
                       )
-                    : const Center(
-                        child: CircularProgressIndicator(color: Colors.purpleAccent),
-                      ),
+                    : _isVideoInitialized && _videoController != null
+                        ? Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              AspectRatio(
+                                aspectRatio: _videoController!.value.aspectRatio,
+                                child: VideoPlayer(_videoController!),
+                              ),
+                              IconButton(
+                                iconSize: 60,
+                                icon: Icon(
+                                  _videoController!.value.isPlaying
+                                      ? Icons.pause_circle_outline
+                                      : Icons.play_circle_outline,
+                                  color: Colors.white70,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _videoController!.value.isPlaying
+                                        ? _videoController!.pause()
+                                        : _videoController!.play();
+                                  });
+                                },
+                              ),
+                            ],
+                          )
+                        : const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(color: Colors.purpleAccent),
+                                SizedBox(height: 10),
+                                Text(
+                                  'ቪዲዮው ከኢንተርኔት እየተጫነ ነው...',
+                                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
               ),
 
-              // 3. የሁኔታ እና ፈጣን ምላሽ አሞሌዎች (Status & Reaction Bars)
+              // ባጆች (Badges)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      // PUBLIC PARTY / LOCKED ባጅ
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -357,7 +427,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Ghost ባጅ
                       if (_isGhostMode)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -372,7 +441,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                           ),
                         ),
                       if (_isGhostMode) const SizedBox(width: 8),
-                      // Encrypted ባጅ
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -390,7 +458,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // ኢሞጂዎች (Quick Emoji Bar)
+              // ፈጣን ኢሞጂዎች
               SizedBox(
                 height: 45,
                 child: ListView(
@@ -407,7 +475,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // 4. የቻት እና የመልእክት መላኪያ ክፍል (Chat Section)
+              // የቻት ክፍል
               Expanded(
                 child: StreamBuilder<List<Map<String, dynamic>>>(
                   stream: _supabase
@@ -425,7 +493,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     return ListView(
                       padding: const EdgeInsets.all(12),
                       children: [
-                        // የስርዓት መልእክት (System Encryption Message)
                         Center(
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 12),
@@ -440,7 +507,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                             ),
                           ),
                         ),
-
                         ...messages.map((msg) {
                           final text = msg['text'] ?? '';
                           return Align(
@@ -465,7 +531,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // Message Input Field
+              // የመልእክት መፃፊያ
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
@@ -503,7 +569,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ],
           ),
 
-          // Private Room Locked Popup (ፓስወርድ መጠየቂያ)
+          // Private Room Lock Popup
           if (_isLocked)
             Container(
               color: Colors.black.withAlpha(245),
