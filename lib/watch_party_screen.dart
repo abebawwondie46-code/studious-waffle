@@ -30,7 +30,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   String _errorMessage = '';
   final ImagePicker _picker = ImagePicker();
 
-  bool _isLocked = true; // አፑ ሲከፈት መጀመሪያ ተቆልፎ እንዲነሳ
+  bool _isLocked = true;
   bool _isGhostMode = false;
   bool _isRoomLockedState = true;
   bool _isMuted = false;
@@ -42,16 +42,23 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ከ Supabase በ room_id ተለይቶ ቪዲዮ መከታተያ
+  // 1. ከ Supabase በ room_id ተለይቶ ቪዲዮ መከታተያ (NULL ያልሆኑትን ብቻ ይወስዳል)
   void _fetchVideoFromSupabase() {
     _supabase
         .from('videos')
         .stream(primaryKey: ['id'])
         .eq('room_id', widget.roomCode)
         .listen((data) {
-      if (data.isNotEmpty && data.last['video_url'] != null) {
-        String videoUrl = data.last['video_url'];
-        _initializeVideoFromUrl(videoUrl);
+      if (data.isNotEmpty) {
+        final validVideos = data.where((item) => 
+          item['video_url'] != null && 
+          item['video_url'].toString().startsWith('http')
+        ).toList();
+
+        if (validVideos.isNotEmpty) {
+          String videoUrl = validVideos.last['video_url'];
+          _initializeVideoFromUrl(videoUrl);
+        }
       }
     }, onError: (error) {
       setState(() {
@@ -89,7 +96,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             _errorMessage = 'ቪዲዮውን ማጫወት አልተቻለም';
           });
         }
-        setState(() {}); // የጊዜ መስመሩ እንዲታደስ (Progress Bar Update)
+        setState(() {}); 
       });
 
       setState(() {
@@ -133,11 +140,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
+  // 2. room_id ሁልጊዜ '7069' ሆኖ እንዲገባ ማስተካከያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
     try {
       await _supabase.from('videos').insert({
         'video_url': url,
-        'room_id': widget.roomCode,
+        'room_id': widget.roomCode, // NULL እንዳይሆን በትክክል roomCode ይልካል
       });
     } catch (e) {
       debugPrint('Error inserting video: $e');
@@ -180,7 +188,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 2. መልእክት መላኪያ (Ghost Mode ከሆነ ከ10 ሰከንድ በኋላ ያጠፋዋል)
   Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
@@ -201,7 +208,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. መልእክት ላይ ጫን ሲደረግ ለማጥፋት (Long Press to Delete Message)
   void _confirmDeleteMessage(String id) {
     showDialog(
       context: context,
@@ -289,7 +295,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // የጊዜ አቀራረብ (Duration to String)
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(duration.inMinutes.remainder(60));
@@ -375,7 +380,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         children: [
           Column(
             children: [
-              // የቪዲዮ ማጫወቻ / የጊዜ መስመር ክፍል
               Container(
                 height: 240,
                 width: double.infinity,
@@ -430,7 +434,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                         });
                                       },
                                     ),
-                                    // Mute/Unmute
                                     Positioned(
                                       right: 10,
                                       top: 10,
@@ -450,7 +453,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                                   ],
                                 ),
                               ),
-                              // የቪዲዮ የጊዜ መስመር (Video Progress Slider)
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 10),
                                 child: Row(
@@ -503,7 +505,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                           ),
               ),
 
-              // ባጆች (Badges)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: SingleChildScrollView(
@@ -558,7 +559,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // ፈጣን ኢሞጂዎች
               SizedBox(
                 height: 45,
                 child: ListView(
@@ -575,7 +575,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // የቻት ክፍል
               Expanded(
                 child: StreamBuilder<List<Map<String, dynamic>>>(
                   stream: _supabase
@@ -612,7 +611,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                           final String id = msg['id'].toString();
 
                           return GestureDetector(
-                            onLongPress: () => _confirmDeleteMessage(id), // ጫን ሲደረግ እንዲጠፋ
+                            onLongPress: () => _confirmDeleteMessage(id),
                             child: Align(
                               alignment: Alignment.centerRight,
                               child: Container(
@@ -636,7 +635,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // የመልእክት መፃፊያ
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
@@ -674,7 +672,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             ],
           ),
 
-          // Private Room Lock Popup
           if (_isLocked)
             Container(
               color: Colors.black.withAlpha(245),
