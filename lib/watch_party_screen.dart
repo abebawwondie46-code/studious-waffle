@@ -42,21 +42,16 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ከ Supabase በ Direct Query ቪዲዮ የመውሰጃ ፈንክሽን
+  // 1. ከ Supabase ቪዲዮ የመውሰጃ ፈንክሽን (ሮበስት እና ኤረር ሃንድሊንግ ያለው)
   Future<void> _fetchVideoFromSupabase() async {
     try {
-      final String currentRoom = widget.roomCode.toString().trim();
-
-      // room_id ን እንደ String እና እንደ Integer በሁለቱም መንገድ መፈለግ
-      final response = await _supabase
-          .from('videos')
-          .select()
-          .or('room_id.eq.$currentRoom,room_id.eq.${int.tryParse(currentRoom) ?? 0}');
+      final response = await _supabase.from('videos').select();
 
       if (response != null && response is List && response.isNotEmpty) {
-        // አላስፈላጊ ምልክቶችን ማጽዳት
-        final validVideos = response.where((item) {
+        // የገባው ዳታ ውስጥ room_id ካለ በሱ መለየት፡ ከሌለ ደግሞ የመጨረሻውን ቪዲዮ መውሰድ
+        final matchingVideos = response.where((item) {
           if (item['video_url'] == null) return false;
+          
           String url = item['video_url']
               .toString()
               .replaceAll('[', '')
@@ -64,11 +59,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               .replaceAll('(', '')
               .replaceAll(')', '')
               .trim();
-          return url.startsWith('http://') || url.startsWith('https://');
+              
+          bool isUrlValid = url.startsWith('http://') || url.startsWith('https://');
+
+          if (item.containsKey('room_id') && item['room_id'] != null) {
+            String itemRoom = item['room_id'].toString().trim();
+            return isUrlValid && (itemRoom == widget.roomCode || itemRoom == 'SEC-${widget.roomCode}');
+          }
+          
+          return isUrlValid;
         }).toList();
 
-        if (validVideos.isNotEmpty) {
-          String cleanUrl = validVideos.last['video_url']
+        if (matchingVideos.isNotEmpty) {
+          String cleanUrl = matchingVideos.last['video_url']
               .toString()
               .replaceAll('[', '')
               .replaceAll(']', '')
@@ -80,7 +83,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
           if (mounted) {
             setState(() {
               _hasVideoError = true;
-              _errorMessage = 'ትክክለኛ የቪዲዮ ሊንክ አልተገኘም';
+              _errorMessage = 'ለዚህ ሩም (SEC-${widget.roomCode}) የተመደበ ቪዲዮ አልተገኘም';
             });
           }
         }
@@ -88,7 +91,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         if (mounted) {
           setState(() {
             _hasVideoError = true;
-            _errorMessage = 'ለዚህ ሩም (SEC-${widget.roomCode}) የተመደበ ቪዲዮ የለም';
+            _errorMessage = 'በ Supabase ላይ የተመዘገበ ቪዲዮ የለም';
           });
         }
       }
@@ -195,10 +198,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         .replaceAll(')', '')
         .trim();
     try {
-      await _supabase.from('videos').insert({
+      final Map<String, dynamic> insertData = {
         'video_url': cleanUrl,
-        'room_id': widget.roomCode,
-      });
+      };
+      
+      try {
+        insertData['room_id'] = widget.roomCode;
+      } catch (_) {}
+
+      await _supabase.from('videos').insert(insertData);
       _fetchVideoFromSupabase();
     } catch (e) {
       debugPrint('Error inserting video: $e');
@@ -245,11 +253,16 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     if (text.isNotEmpty) {
       if (customText == null) _messageController.clear();
 
-      final response = await _supabase.from('comments').insert({
+      final Map<String, dynamic> msgData = {
         'text': text,
-        'room_id': widget.roomCode,
         'created_at': DateTime.now().toIso8601String(),
-      }).select();
+      };
+
+      try {
+        msgData['room_id'] = widget.roomCode;
+      } catch (_) {}
+
+      final response = await _supabase.from('comments').insert(msgData).select();
 
       if (_isGhostMode && response.isNotEmpty) {
         final String msgId = response.first['id'].toString();
@@ -634,7 +647,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                   stream: _supabase
                       .from('comments')
                       .stream(primaryKey: ['id'])
-                      .eq('room_id', widget.roomCode)
                       .order('created_at', ascending: true),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
