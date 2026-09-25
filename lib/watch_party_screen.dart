@@ -39,14 +39,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ከ Supabase Database የቪዲዮውን ሊንክ በ Real-time መውሰጃ
+  // 1. ከ Supabase 'video_url' ኮለም በ Real-time መውሰጃ
   void _fetchVideoFromSupabase() {
     _supabase
         .from('videos')
         .stream(primaryKey: ['id'])
         .listen((data) {
-      if (data.isNotEmpty && data.last['video_link'] != null) {
-        String videoUrl = data.last['video_link'];
+      if (data.isNotEmpty && data.last['video_url'] != null) {
+        String videoUrl = data.last['video_url'];
         _initializeVideoFromUrl(videoUrl);
       }
     });
@@ -84,12 +84,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. አዲስ የቪዲዮ URL ወደ Supabase መላኪያ/መቀየሪያ
+  // 3. አዲስ የቪዲዮ URL ወደ 'video_url' ኮለም መላኪያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
     try {
-      await _supabase.from('videos').insert({'video_link': url});
+      await _supabase.from('videos').insert({'video_url': url});
     } catch (e) {
-      // ስህተት ካለ
+      // error handling
     }
   }
 
@@ -128,15 +128,15 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 4. መልእክት ወደ Supabase Database መላኪያ
+  // 4. መልእክት ወደ 'text' እና 'room_id' ኮለም መላኪያ
   Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
       if (customText == null) _messageController.clear();
 
       await _supabase.from('comments').insert({
-        'content': text,
-        'room_code': widget.roomCode,
+        'text': text,
+        'room_id': widget.roomCode,
         'created_at': DateTime.now().toIso8601String(),
       });
     }
@@ -215,7 +215,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       
-      // Top App Bar
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
@@ -360,7 +359,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // 5. ከ Supabase `comments` Table መልእክቶችን በ Real-time ማሳያ
+              // 5. ከ Supabase 'comments' Table መልእክቶችን በ 'text' ኮለም መውሰጃ
               Expanded(
                 child: StreamBuilder<List<Map<String, dynamic>>>(
                   stream: _supabase
@@ -379,7 +378,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final msg = messages[index];
-                        final text = msg['content'] ?? '';
+                        final text = msg['text'] ?? ''; // በ 'text' ኮለም ተተክቷል
 
                         return Align(
                           alignment: Alignment.centerRight,
