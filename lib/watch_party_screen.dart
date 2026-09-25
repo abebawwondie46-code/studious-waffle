@@ -42,14 +42,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ከ Supabase ቪዲዮ የመውሰጃ ፈንክሽን (ሮበስት እና ኤረር ሃንድሊንግ ያለው)
+  // 1. ለዚህ የተለየ roomCode ብቻ የተመደበውን ቪዲዮ ከ Supabase መውሰጃ
   Future<void> _fetchVideoFromSupabase() async {
     try {
-      final response = await _supabase.from('videos').select();
+      final String currentRoom = widget.roomCode.toString().trim();
+
+      // የዚህን ሩም (room_id) ቪዲዮ ብቻ ለይቶ ይፈልጋል
+      final response = await _supabase
+          .from('videos')
+          .select()
+          .eq('room_id', currentRoom);
 
       if (response != null && response is List && response.isNotEmpty) {
-        // የገባው ዳታ ውስጥ room_id ካለ በሱ መለየት፡ ከሌለ ደግሞ የመጨረሻውን ቪዲዮ መውሰድ
-        final matchingVideos = response.where((item) {
+        final validVideos = response.where((item) {
           if (item['video_url'] == null) return false;
           
           String url = item['video_url']
@@ -60,18 +65,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               .replaceAll(')', '')
               .trim();
               
-          bool isUrlValid = url.startsWith('http://') || url.startsWith('https://');
-
-          if (item.containsKey('room_id') && item['room_id'] != null) {
-            String itemRoom = item['room_id'].toString().trim();
-            return isUrlValid && (itemRoom == widget.roomCode || itemRoom == 'SEC-${widget.roomCode}');
-          }
-          
-          return isUrlValid;
+          return url.startsWith('http://') || url.startsWith('https://');
         }).toList();
 
-        if (matchingVideos.isNotEmpty) {
-          String cleanUrl = matchingVideos.last['video_url']
+        if (validVideos.isNotEmpty) {
+          String cleanUrl = validVideos.last['video_url']
               .toString()
               .replaceAll('[', '')
               .replaceAll(']', '')
@@ -91,7 +89,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         if (mounted) {
           setState(() {
             _hasVideoError = true;
-            _errorMessage = 'በ Supabase ላይ የተመዘገበ ቪዲዮ የለም';
+            _errorMessage = 'ለዚህ ሩም (SEC-${widget.roomCode}) የተመደበ ቪዲዮ የለም';
           });
         }
       }
@@ -106,7 +104,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 2. ቪዲዮውን መጫኛ እና ማጫወቻ ፈንክሽን
+  // 2. ቪዲዮውን የማጫወት ስራ
   Future<void> _initializeVideoFromUrl(String url) async {
     if (url.isEmpty) return;
 
@@ -189,7 +187,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. አዲስ የቪዲዮ URL ወደ Supabase ማስገቢያ
+  // 3. አዲስ የቪዲዮ URL ለዚሁ ሩም (room_id) ብቻ ለይቶ መላኪያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
     String cleanUrl = url
         .replaceAll('[', '')
@@ -198,15 +196,10 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         .replaceAll(')', '')
         .trim();
     try {
-      final Map<String, dynamic> insertData = {
+      await _supabase.from('videos').insert({
         'video_url': cleanUrl,
-      };
-      
-      try {
-        insertData['room_id'] = widget.roomCode;
-      } catch (_) {}
-
-      await _supabase.from('videos').insert(insertData);
+        'room_id': widget.roomCode.toString().trim(), // ለዚሁ ሩም ብቻ ይላካል
+      });
       _fetchVideoFromSupabase();
     } catch (e) {
       debugPrint('Error inserting video: $e');
@@ -248,21 +241,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
+  // 4. መልእክቶችን ለዚሁ ሩም (room_id) ብቻ መላኪያ
   Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
       if (customText == null) _messageController.clear();
 
-      final Map<String, dynamic> msgData = {
+      final response = await _supabase.from('comments').insert({
         'text': text,
+        'room_id': widget.roomCode.toString().trim(),
         'created_at': DateTime.now().toIso8601String(),
-      };
-
-      try {
-        msgData['room_id'] = widget.roomCode;
-      } catch (_) {}
-
-      final response = await _supabase.from('comments').insert(msgData).select();
+      }).select();
 
       if (_isGhostMode && response.isNotEmpty) {
         final String msgId = response.first['id'].toString();
@@ -642,11 +631,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
+              // 5. ቻቱ ለዚሁ ሩም (room_id) ብቻ ለይቶ ይጫናል
               Expanded(
                 child: StreamBuilder<List<Map<String, dynamic>>>(
                   stream: _supabase
                       .from('comments')
                       .stream(primaryKey: ['id'])
+                      .eq('room_id', widget.roomCode.toString().trim())
                       .order('created_at', ascending: true),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
