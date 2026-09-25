@@ -26,13 +26,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
-  bool _hasVideoError = false; // የኢንተርኔት/የቪዲዮ ስህተት መኖሩን መከታተያ
+  bool _hasVideoError = false;
   String _errorMessage = '';
   final ImagePicker _picker = ImagePicker();
 
   bool _isLocked = true; // አፑ ሲከፈት መጀመሪያ ተቆልፎ እንዲነሳ
   bool _isGhostMode = false;
   bool _isRoomLockedState = true;
+  bool _isMuted = false;
   final String _correctPasscode = '1234';
 
   @override
@@ -88,6 +89,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
             _errorMessage = 'ቪዲዮውን ማጫወት አልተቻለም';
           });
         }
+        setState(() {}); // የጊዜ መስመሩ እንዲታደስ (Progress Bar Update)
       });
 
       setState(() {
@@ -115,6 +117,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       try {
         _videoController = VideoPlayerController.file(File(pickedFile.path));
         await _videoController!.initialize();
+        _videoController!.addListener(() {
+          setState(() {});
+        });
         setState(() {
           _isVideoInitialized = true;
         });
@@ -175,7 +180,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 2. መልእክት መላኪያ (Ghost Mode ከ10 ሰከንድ በኋላ ያጠፋዋል)
+  // 2. መልእክት መላኪያ (Ghost Mode ከሆነ ከ10 ሰከንድ በኋላ ያጠፋዋል)
   Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
@@ -194,6 +199,34 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         });
       }
     }
+  }
+
+  // 3. መልእክት ላይ ጫን ሲደረግ ለማጥፋት (Long Press to Delete Message)
+  void _confirmDeleteMessage(String id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey.shade900,
+        title: const Text('መልእክት አጥፋ', style: TextStyle(color: Colors.white)),
+        content: const Text('ይህንን መልእክት ማጥፋት እርግጠኛ ነዎት?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('አይ'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _supabase.from('comments').delete().eq('id', id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('መልእክቱ ተጠፍቷል')),
+              );
+            },
+            child: const Text('አጥፋ', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _unlockRoom() {
@@ -254,6 +287,14 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         ),
       ),
     );
+  }
+
+  // የጊዜ አቀራረብ (Duration to String)
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
   }
 
   @override
@@ -334,11 +375,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         children: [
           Column(
             children: [
-              // የቪዲዮ ማጫወቻ / የኢንተርኔት ስህተት ማሳያ ክፍል
+              // የቪዲዮ ማጫወቻ / የጊዜ መስመር ክፍል
               Container(
-                height: 230,
+                height: 240,
                 width: double.infinity,
-                color: Colors.grey.shade900, // እዚህ ጋር ወደ shade900 ተስተካክሏል
+                color: Colors.grey.shade900,
                 child: _hasVideoError
                     ? Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -363,28 +404,87 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                         ],
                       )
                     : _isVideoInitialized && _videoController != null
-                        ? Stack(
-                            alignment: Alignment.center,
+                        ? Column(
                             children: [
-                              AspectRatio(
-                                aspectRatio: _videoController!.value.aspectRatio,
-                                child: VideoPlayer(_videoController!),
-                              ),
-                              IconButton(
-                                iconSize: 60,
-                                icon: Icon(
-                                  _videoController!.value.isPlaying
-                                      ? Icons.pause_circle_outline
-                                      : Icons.play_circle_outline,
-                                  color: Colors.white70,
+                              Expanded(
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    AspectRatio(
+                                      aspectRatio: _videoController!.value.aspectRatio,
+                                      child: VideoPlayer(_videoController!),
+                                    ),
+                                    IconButton(
+                                      iconSize: 55,
+                                      icon: Icon(
+                                        _videoController!.value.isPlaying
+                                            ? Icons.pause_circle_outline
+                                            : Icons.play_circle_outline,
+                                        color: Colors.white70,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _videoController!.value.isPlaying
+                                              ? _videoController!.pause()
+                                              : _videoController!.play();
+                                        });
+                                      },
+                                    ),
+                                    // Mute/Unmute
+                                    Positioned(
+                                      right: 10,
+                                      top: 10,
+                                      child: IconButton(
+                                        icon: Icon(
+                                          _isMuted ? Icons.volume_off : Icons.volume_up,
+                                          color: Colors.white,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _isMuted = !_isMuted;
+                                            _videoController!.setVolume(_isMuted ? 0 : 1);
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _videoController!.value.isPlaying
-                                        ? _videoController!.pause()
-                                        : _videoController!.play();
-                                  });
-                                },
+                              ),
+                              // የቪዲዮ የጊዜ መስመር (Video Progress Slider)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      _formatDuration(_videoController!.value.position),
+                                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                    ),
+                                    Expanded(
+                                      child: SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                                          trackHeight: 3,
+                                        ),
+                                        child: Slider(
+                                          value: _videoController!.value.position.inSeconds.toDouble(),
+                                          max: _videoController!.value.duration.inSeconds.toDouble() > 0
+                                              ? _videoController!.value.duration.inSeconds.toDouble()
+                                              : 1.0,
+                                          activeColor: Colors.purpleAccent,
+                                          inactiveColor: Colors.white24,
+                                          onChanged: (value) {
+                                            _videoController!.seekTo(Duration(seconds: value.toInt()));
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatDuration(_videoController!.value.duration),
+                                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           )
@@ -508,19 +608,24 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                           ),
                         ),
                         ...messages.map((msg) {
-                          final text = msg['text'] ?? '';
-                          return Align(
-                            alignment: Alignment.centerRight,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _isGhostMode ? Colors.purple.shade900 : Colors.purple.shade700,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                text,
-                                style: const TextStyle(color: Colors.white, fontSize: 15),
+                          final String text = msg['text'] ?? '';
+                          final String id = msg['id'].toString();
+
+                          return GestureDetector(
+                            onLongPress: () => _confirmDeleteMessage(id), // ጫን ሲደረግ እንዲጠፋ
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _isGhostMode ? Colors.purple.shade900 : Colors.purple.shade700,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  text,
+                                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                                ),
                               ),
                             ),
                           );
