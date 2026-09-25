@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dartd:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -42,22 +42,27 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ከ Supabase በ Direct Select ቪዲዮ የመውሰጃ ፈንክሽን
+  // 1. ከ Supabase በ Direct Query ቪዲዮ የመውሰጃ ፈንክሽን
   Future<void> _fetchVideoFromSupabase() async {
     try {
+      final String currentRoom = widget.roomCode.toString().trim();
+
+      // room_id ን እንደ String እና እንደ Integer በሁለቱም መንገድ መፈለግ
       final response = await _supabase
           .from('videos')
           .select()
-          .eq('room_id', widget.roomCode);
+          .or('room_id.eq.$currentRoom,room_id.eq.${int.tryParse(currentRoom) ?? 0}');
 
       if (response != null && response is List && response.isNotEmpty) {
-        // ቅንፎች [ ] እና ባዶ ቦታዎች ካሉ ማጽዳት
+        // አላስፈላጊ ምልክቶችን ማጽዳት
         final validVideos = response.where((item) {
           if (item['video_url'] == null) return false;
           String url = item['video_url']
               .toString()
               .replaceAll('[', '')
               .replaceAll(']', '')
+              .replaceAll('(', '')
+              .replaceAll(')', '')
               .trim();
           return url.startsWith('http://') || url.startsWith('https://');
         }).toList();
@@ -67,6 +72,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               .toString()
               .replaceAll('[', '')
               .replaceAll(']', '')
+              .replaceAll('(', '')
+              .replaceAll(')', '')
               .trim();
           _initializeVideoFromUrl(cleanUrl);
         } else {
@@ -90,7 +97,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       if (mounted) {
         setState(() {
           _hasVideoError = true;
-          _errorMessage = 'ከ Supabase ጋር መገናኘት አልተቻለም';
+          _errorMessage = 'ከ Supabase ጋር መገናኘት አልተቻለም፦ $e';
         });
       }
     }
@@ -181,7 +188,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   // 3. አዲስ የቪዲዮ URL ወደ Supabase ማስገቢያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
-    String cleanUrl = url.replaceAll('[', '').replaceAll(']', '').trim();
+    String cleanUrl = url
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+        .replaceAll('(', '')
+        .replaceAll(')', '')
+        .trim();
     try {
       await _supabase.from('videos').insert({
         'video_url': cleanUrl,
