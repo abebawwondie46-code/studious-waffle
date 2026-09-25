@@ -338,7 +338,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               Container(
                 height: 230,
                 width: double.infinity,
-                color: Colors.grey.shade950,
+                color: Colors.grey.shade900, // እዚህ ጋር ወደ shade900 ተስተካክሏል
                 child: _hasVideoError
                     ? Column(
                         mainAxisAlignment: MainAxisAlignment.center,
