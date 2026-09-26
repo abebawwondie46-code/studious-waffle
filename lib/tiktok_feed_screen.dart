@@ -11,7 +11,6 @@ class TikTokFeedScreen extends StatefulWidget {
 class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
   final PageController _pageController = PageController();
 
-  // ለሙከራ የሚሆኑ የማስታወቂያ አብነቶች/ናሙናዎች
   final List<Map<String, dynamic>> _feedItems = [
     {
       "author": "@hibret_bank",
@@ -41,7 +40,7 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: PageView.builder(
-        scrollDirection: Axis.vertical, // ልክ እንደ ቲክቶክ ወደ ታች/ላይ የሚቀያየር
+        scrollDirection: Axis.vertical,
         controller: _pageController,
         itemCount: _feedItems.length,
         itemBuilder: (context, index) {
@@ -49,7 +48,6 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
           return Stack(
             fit: StackFit.expand,
             children: [
-              // 1. የማስታወቂያ/የፖስተር ማሳያ (Poster Container)
               Container(
                 color: item["color"],
                 child: Center(
@@ -67,8 +65,6 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
                   ),
                 ),
               ),
-
-              // 2. በስተቀኝ በኩል ያሉ ቁልፎች (Like, Remix, Share)
               Positioned(
                 right: 16,
                 bottom: 100,
@@ -81,11 +77,8 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
                       style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     const SizedBox(height: 24),
-
-                    // === REMIX / EDIT BUTTON (ወደ ኤዲተር የሚወስድ) ===
                     GestureDetector(
                       onTap: () {
-                        // ይህንን ዲዛይን ወስዶ ወደ ኤዲተሩ ገጽ ለመሄድ
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -113,7 +106,6 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
                     const Icon(Icons.share, color: Colors.white, size: 32),
                     const SizedBox(height: 4),
                     const Text(
@@ -123,13 +115,11 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
                   ],
                 ),
               ),
-
-              // 3. በስተታች የሚቀመጥ መረጃ እና ደውል (Call to Action)
               Positioned(
                 left: 16,
                 bottom: 40,
                 child: Column(
-                  crossAxisAlignment: CrossAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       item["author"],
@@ -159,7 +149,6 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
           );
         },
       ),
-      // ወደ ኤዲተር ገጽ በቀጥታ መሄጃ የመደመር (+) ቁልፍ
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.amber,
         child: const Icon(Icons.add, color: Colors.black, size: 32),
