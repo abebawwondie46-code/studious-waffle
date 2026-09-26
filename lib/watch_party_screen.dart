@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
-  // main.dart ላይ ያለ roomId ቢጠራ እንዲሰራ optional (nullable) ተደርጓል
   final String? roomId;
 
   const WatchPartyScreen({super.key, this.roomId});
@@ -21,7 +20,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   bool _isLoading = false;
   VideoPlayerController? _videoPlayerController;
 
-  // main.dart ላይ roomId ካልተላከ default roomId ይሰጠዋል
   String get effectiveRoomId => widget.roomId ?? 'SEC-7069';
 
   @override
@@ -30,7 +28,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchCurrentRoomVideo();
   }
 
-  // ከ Supabase DB የአሁኑን የቪዲዮ URL ማምጫ
   Future<void> _fetchCurrentRoomVideo() async {
     try {
       final response = await supabase
@@ -47,7 +44,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // የ MP4 ቪዲዮ ፕሌየር ማዘጋጃ
   void _initializeVideoPlayer(String url) {
     _videoPlayerController?.dispose();
 
@@ -62,27 +58,20 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
   }
 
-  // ከጋለሪ ቪዲዮ መርጦ ወደ Supabase Storage አፕሎድ ማድረጊያ
   Future<void> _pickAndUploadVideo() async {
     try {
-      String? filePath;
+      // platform ሳይፈለግ በቀጥታ በ FilePicker መምረጥ
+      final dynamic result = await FilePicker.pickFiles(
+        type: FileType.video,
+      );
 
-      // FilePicker በሁለቱም የቨርዥን መንገድ እንዲሰራ ማረጋገጫ
-      try {
-        final result = await FilePicker.platform.pickFiles(
-          type: FileType.video,
-          allowCompression: true,
-        );
-        if (result != null && result.files.isNotEmpty) {
-          filePath = result.files.single.path;
-        }
-      } catch (_) {
-        // platform አልታወቅም ካለ በስተጀርባ ላለው የቀደመ ቨርዥን
-        final dynamic picker = FilePicker;
-        final result = await picker.pickFiles(type: FileType.video);
-        if (result != null && result.files.isNotEmpty) {
-          filePath = result.files.first.path;
-        }
+      if (result == null) return;
+
+      String? filePath;
+      if (result.files != null && result.files.isNotEmpty) {
+        filePath = result.files.first.path;
+      } else if (result.path != null) {
+        filePath = result.path;
       }
 
       if (filePath == null) return;
@@ -94,24 +83,20 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         _isLoading = true;
       });
 
-      // ወደ 'room_videos' storage bucket አፕሎድ ማድረግ
       await supabase.storage.from('room_videos').upload(
             fileName,
             file,
             fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
           );
 
-      // የቪዲዮውን Public URL ማግኘት
       final String publicUrl =
           supabase.storage.from('room_videos').getPublicUrl(fileName);
 
-      // በ Database ውስጥ የሩሙን video_url ማደስ
       await supabase
           .from('rooms')
           .update({'video_url': publicUrl})
           .eq('room_id', effectiveRoomId);
 
-      // አዲሱን ቪዲዮ ማጫወት
       _initializeVideoPlayer(publicUrl);
 
       if (mounted) {
