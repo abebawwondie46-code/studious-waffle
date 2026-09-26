@@ -1,10 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   final String roomCode;
@@ -20,25 +18,17 @@ class WatchPartyScreen extends StatefulWidget {
 
 class _WatchPartyScreenState extends State<WatchPartyScreen> {
   final _supabase = Supabase.instance.client;
-  final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _passcodeController = TextEditingController();
   final TextEditingController _urlController = TextEditingController();
 
   VideoPlayerController? _videoController;
-  YoutubePlayerController? _youtubeController;
 
   bool _isYoutube = false;
+  String? _youtubeVideoId;
   bool _isVideoInitialized = false;
   bool _hasVideoError = false;
   bool _isUploading = false;
   String _errorMessage = '';
   final ImagePicker _picker = ImagePicker();
-
-  bool _isLocked = true;
-  bool _isGhostMode = false;
-  bool _isRoomLockedState = true;
-  bool _isMuted = false;
-  final String _correctPasscode = '1234';
 
   @override
   void initState() {
@@ -46,7 +36,24 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. የቪዲዮ ሊንክ ከ Supabase መውሰጃ
+  // 1. የዩቲዩብ Video ID መለያ (ያለ ተጨማሪ ፓኬጅ)
+  String? _extractYoutubeId(String url) {
+    final regExp = RegExp(
+      r'^.*(?:youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([^#\&\?]*).*',
+      caseSensitive: false,
+      multiLine: false,
+    );
+    final match = regExp.firstMatch(url);
+    if (match != null && match.groupCount >= 1) {
+      final id = match.group(1);
+      if (id != null && id.length == 11) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  // 2. የቪዲዮ ሊንክ ከ Supabase መውሰጃ
   Future<void> _fetchVideoFromSupabase() async {
     try {
       final String currentRoom = widget.roomCode.toString().trim();
@@ -78,7 +85,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 2. MP4 ወይም YouTube መሆኑን ለይቶ ማጫወቻ
+  // 3. ቪዲዮውን መጫኛ
   Future<void> _loadVideo(String url) async {
     if (url.isEmpty) return;
 
@@ -89,27 +96,17 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       });
     }
 
-    // የነበሩትን ኮንትሮለሮች ማፅዳት
     await _videoController?.dispose();
-    _youtubeController?.dispose();
     _videoController = null;
-    _youtubeController = null;
 
-    // YouTube መሆኑን ማረጋገጫ
-    String? youtubeId = YoutubePlayer.convertUrlToId(url);
+    final youtubeId = _extractYoutubeId(url);
 
     if (youtubeId != null) {
       // ቪዲዮው የ YouTube ከሆነ
-      _isYoutube = true;
-      _youtubeController = YoutubePlayerController(
-        initialVideoId: youtubeId,
-        flags: const YoutubePlayerFlags(
-          autoPlay: true,
-          mute: false,
-        ),
-      );
       if (mounted) {
         setState(() {
+          _isYoutube = true;
+          _youtubeVideoId = youtubeId;
           _isVideoInitialized = true;
         });
       }
@@ -142,7 +139,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. ከጋለሪ መርጦ ወደ Supabase Storage አፕሎድ ማድረጊያ
+  // 4. ከጋለሪ መርጦ ወደ Supabase Storage አፕሎድ ማድረጊያ
   Future<void> _pickAndUploadVideo(ImageSource source) async {
     try {
       final XFile? pickedFile = await _picker.pickVideo(source: source);
@@ -182,7 +179,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 4. URL ወደ Database መላኪያ
+  // 5. URL ወደ Database መላኪያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
     try {
       await _supabase.from('videos').insert({
@@ -269,9 +266,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   @override
   void dispose() {
     _videoController?.dispose();
-    _youtubeController?.dispose();
-    _messageController.dispose();
-    _passcodeController.dispose();
     _urlController.dispose();
     super.dispose();
   }
@@ -303,7 +297,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                       children: [
                         CircularProgressIndicator(color: Colors.purpleAccent),
                         SizedBox(height: 10),
-                        Text('ቪዲዮው ወደ Supabase እየተጫነ ነው...', style: TextStyle(color: Colors.white)),
+                        Text('ቪዲዮው እየተጫነ ነው...', style: TextStyle(color: Colors.white)),
                       ],
                     ),
                   )
@@ -311,7 +305,19 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                     ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.white70)))
                     : _isVideoInitialized
                         ? _isYoutube
-                            ? YoutubePlayer(controller: _youtubeController!)
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.play_circle_fill, size: 60, color: Colors.red),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'YouTube Video ID: $_youtubeVideoId',
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                  ],
+                                ),
+                              )
                             : AspectRatio(
                                 aspectRatio: _videoController!.value.aspectRatio,
                                 child: VideoPlayer(_videoController!),
