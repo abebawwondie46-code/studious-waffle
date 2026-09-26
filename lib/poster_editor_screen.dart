@@ -199,19 +199,45 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
                         icon: Icon(Icons.color_lens, color: _textColor),
                         label: const Text('የጽሁፍ ቀለም'),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () => _pickColor(isTextColor: false),
-                        icon: Icon(Icons.format_color_fill, color: _backgroundColor),
-                        label: const Text('የጀርባ ቀለም'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+                      const SizedBox(height: 20),
+
+// ወደ ቪዲዮ መቀየሪያ ቁልፍ
+ElevatedButton.icon(
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.deepOrange,
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+  ),
+  onPressed: () async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ቪዲዮው በመሰራት ላይ ነው... እባክዎ ትንሽ ይጠብቁ')),
     );
-  }
-}
+
+    RenderRepaintBoundary boundary = _globalKey.currentContext!
+        .findRenderObject() as RenderRepaintBoundary;
+    ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+    var byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    var pngBytes = byteData!.buffer.asUint8List();
+
+    final directory = await getTemporaryDirectory();
+    final tempImagePath =
+        '${directory.path}/temp_poster_${DateTime.now().millisecondsSinceEpoch}.png';
+    await File(tempImagePath).writeAsBytes(pngBytes);
+
+    String? videoPath = await VideoService.convertImageToVideo(tempImagePath);
+
+    if (videoPath != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ቪዲዮው በተሳካ ሁኔታ ተሰርቷል! $videoPath')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ቪዲዮውን በመስራት ላይ ስህተት ተከሰተ')),
+      );
+    }
+  },
+  icon: const Icon(Icons.videocam, color: Colors.white),
+  label: const Text(
+    'በቪዲዮ አዘጋጅ (Convert to Video)',
+    style: TextStyle(color: Colors.white, fontSize: 16),
+  ),
+),
