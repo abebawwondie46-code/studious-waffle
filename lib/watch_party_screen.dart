@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class WatchPartyScreen extends StatefulWidget {
   final String roomId;
@@ -19,10 +18,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   String? _currentVideoUrl;
   bool _isLoading = false;
-
-  // Video Controllers
   VideoPlayerController? _videoPlayerController;
-  YoutubePlayerController? _youtubePlayerController;
 
   @override
   void initState() {
@@ -30,12 +26,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchCurrentRoomVideo();
   }
 
-  // 1. የቪዲዮውን ዓይነት መለያ (YouTube ወይስ MP4 URL)
-  bool _isYouTubeUrl(String url) {
-    return url.contains('youtube.com') || url.contains('youtu.be');
-  }
-
-  // 2. ከ Supabase DB የአሁኑን የቪዲዮ URL ማምጫ
+  // ከ Supabase DB የአሁኑን የቪዲዮ URL ማምጫ
   Future<void> _fetchCurrentRoomVideo() async {
     try {
       final response = await supabase
@@ -52,37 +43,22 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. እንደ ቪዲዮው ዓይነት Player ማዘጋጃ
+  // የ MP4 ቪዲዮ ፕሌየር ማዘጋጃ
   void _initializeVideoPlayer(String url) {
-    _disposeControllers();
+    _videoPlayerController?.dispose();
 
     setState(() {
       _currentVideoUrl = url;
     });
 
-    if (_isYouTubeUrl(url)) {
-      final videoId = YoutubePlayer.convertUrlToId(url);
-      if (videoId != null) {
-        _youtubePlayerController = YoutubePlayerController(
-          initialVideoId: videoId,
-          flags: const YoutubePlayerFlags(
-            autoPlay: true,
-            mute: false,
-            isLive: false,
-          ),
-        );
-      }
-    } else {
-      // ለ Supabase Storage MP4 ቪዲዮዎች
-      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(url))
-        ..initialize().then((_) {
-          setState(() {});
-          _videoPlayerController!.play();
-        });
-    }
+    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(url))
+      ..initialize().then((_) {
+        setState(() {});
+        _videoPlayerController!.play();
+      });
   }
 
-  // 4. ከጋለሪ ቪዲዮ መርጦ ወደ Supabase Storage አፕሎድ ማድረጊያ
+  // ከጋለሪ ቪዲዮ መርጦ ወደ Supabase Storage አፕሎድ ማድረጊያ
   Future<void> _pickAndUploadVideo() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.video,
@@ -99,7 +75,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     });
 
     try {
-      // ወደ 'room_videos' Storage Bucket አፕሎድ ማድረግ
+      // ወደ 'room_videos' storage bucket አፕሎድ ማድረግ
       await supabase.storage.from('room_videos').upload(
             fileName,
             file,
@@ -110,13 +86,13 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       final String publicUrl =
           supabase.storage.from('room_videos').getPublicUrl(fileName);
 
-      // ዳታቤዝ ውስጥ የሩሙን video_url ማደስ
+      // በ Database ውስጥ የሩሙን video_url ማደስ
       await supabase
           .from('rooms')
           .update({'video_url': publicUrl})
           .eq('room_id', widget.roomId);
 
-      // አዲሱን ቪዲዮ በ Player ማጫወት
+      // አዲሱን ቪዲዮ ማጫወት
       _initializeVideoPlayer(publicUrl);
 
       if (mounted) {
@@ -139,16 +115,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  void _disposeControllers() {
-    _videoPlayerController?.dispose();
-    _youtubePlayerController?.dispose();
-    _videoPlayerController = null;
-    _youtubePlayerController = null;
-  }
-
   @override
   void dispose() {
-    _disposeControllers();
+    _videoPlayerController?.dispose();
     super.dispose();
   }
 
@@ -168,7 +137,6 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       ),
       body: Column(
         children: [
-          // ቪዲዮ ማጫወቻው ቦታ
           AspectRatio(
             aspectRatio: 16 / 9,
             child: Container(
@@ -210,17 +178,8 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       );
     }
 
-    // YouTube ቪዲዮ ከሆነ
-    if (_isYouTubeUrl(_currentVideoUrl!) && _youtubePlayerController != null) {
-      return YoutubePlayer(
-        controller: _youtubePlayerController!,
-        showVideoProgressIndicator: true,
-        progressIndicatorColor: Colors.red,
-      );
-    }
-
-    // ከ Supabase የተጫነ MP4 ቪዲዮ ከሆነ
-    if (_videoPlayerController != null && _videoPlayerController!.value.isInitialized) {
+    if (_videoPlayerController != null &&
+        _videoPlayerController!.value.isInitialized) {
       return Stack(
         alignment: Alignment.center,
         children: [
