@@ -1,8 +1,8 @@
+import 'dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'video_service.dart';
 
@@ -29,6 +29,7 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
     _textController.text = _displayText;
   }
 
+  // ፖስተሩን ወደ ስልክ ጋለሪ/ማህደር ማስቀመጫ
   Future<void> _captureAndSavePoster() async {
     try {
       RenderRepaintBoundary boundary =
@@ -38,44 +39,70 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
       var pngBytes = byteData!.buffer.asUint8List();
 
       final directory = await getApplicationDocumentsDirectory();
-      final imagePath = await File('${directory.path}/poster_${DateTime.now().millisecondsSinceEpoch}.png').create();
+      final imagePath = await File(
+              '${directory.path}/poster_${DateTime.now().millisecondsSinceEpoch}.png')
+          .create();
       await imagePath.writeAsBytes(pngBytes);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('ፖስተሩ ተቀምጧል: ${imagePath.path}')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('ስህተት ተከሰቷል: $e')),
       );
     }
   }
 
+  // የቀለም መምረጫ Dialog (ያለ ተጨማሪ ውጫዊ ፓኬጅ ኤረር እንዳይፈጥር)
   void _pickColor({required bool isTextColor}) {
+    final List<Color> colors = [
+      Colors.white,
+      Colors.black,
+      Colors.red,
+      Colors.green,
+      Colors.blue,
+      Colors.amber,
+      Colors.purple,
+      Colors.deepOrange,
+      const Color(0xFF1B5E20),
+      const Color(0xFF0D47A1),
+      const Color(0xFF4E342E),
+    ];
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(isTextColor ? 'የጽሁፍ ቀለም ይምረጡ' : 'የጀርባ ቀለም ይምረጡ'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            pickerColor: isTextColor ? _textColor : _backgroundColor,
-            onColorChanged: (color) {
-              setState(() {
-                if (isTextColor) {
-                  _textColor = color;
-                } else {
-                  _backgroundColor = color;
-                }
-              });
-            },
-          ),
+        content: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: colors.map((color) {
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (isTextColor) {
+                    _textColor = color;
+                  } else {
+                    _backgroundColor = color;
+                  }
+                });
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade400, width: 2),
+                ),
+              ),
+            );
+          }).toList(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('ጨርስ'),
-          ),
-        ],
       ),
     );
   }
@@ -98,6 +125,7 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
         child: Column(
           children: [
             const SizedBox(height: 16),
+            // የፖስተር ቅድመ እይታ (Preview Canvas)
             Center(
               child: RepaintBoundary(
                 key: _globalKey,
@@ -136,16 +164,19 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
                         left: 0,
                         right: 0,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 12),
                           color: Colors.black45,
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 "የእርስዎ ብራንድ/Brand Name",
-                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 12),
                               ),
-                              Icon(Icons.verified, color: Colors.amber, size: 18),
+                              Icon(Icons.verified,
+                                  color: Colors.amber, size: 18),
                             ],
                           ),
                         ),
@@ -156,6 +187,7 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            // የመቆጣጠሪያ ክፍሎች (Controls)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
@@ -201,42 +233,63 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
                       ),
                       ElevatedButton.icon(
                         onPressed: () => _pickColor(isTextColor: false),
-                        icon: Icon(Icons.format_color_fill, color: _backgroundColor),
+                        icon: Icon(Icons.format_color_fill,
+                            color: _backgroundColor),
                         label: const Text('የጀርባ ቀለም'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
+                  // ወደ ቪዲዮ መቀየሪያ ቁልፍ
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                     onPressed: () async {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ቪዲዮው በመሰራት ላይ ነው... እባክዎ ትንሽ ይጠብቁ')),
+                        const SnackBar(
+                            content:
+                                Text('ቪዲዮው በመሰራት ላይ ነው... እባክዎ ትንሽ ይጠብቁ')),
                       );
 
-                      RenderRepaintBoundary boundary = _globalKey.currentContext!
-                          .findRenderObject() as RenderRepaintBoundary;
-                      ui.Image image = await boundary.toImage(pixelRatio: 2.0);
-                      var byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-                      var pngBytes = byteData!.buffer.asUint8List();
+                      try {
+                        RenderRepaintBoundary boundary = _globalKey.currentContext!
+                            .findRenderObject() as RenderRepaintBoundary;
+                        ui.Image image =
+                            await boundary.toImage(pixelRatio: 2.0);
+                        var byteData = await image.toByteData(
+                            format: ui.ImageByteFormat.png);
+                        var pngBytes = byteData!.buffer.asUint8List();
 
-                      final directory = await getTemporaryDirectory();
-                      final tempImagePath =
-                          '${directory.path}/temp_poster_${DateTime.now().millisecondsSinceEpoch}.png';
-                      await File(tempImagePath).writeAsBytes(pngBytes);
+                        final directory = await getTemporaryDirectory();
+                        final tempImagePath =
+                            '${directory.path}/temp_poster_${DateTime.now().millisecondsSinceEpoch}.png';
+                        await File(tempImagePath).writeAsBytes(pngBytes);
 
-                      String? videoPath = await VideoService.convertImageToVideo(tempImagePath);
+                        String? videoPath =
+                            await VideoService.convertImageToVideo(
+                                tempImagePath);
 
-                      if (videoPath != null) {
+                        if (!mounted) return;
+                        if (videoPath != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'ቪዲዮው በተሳካ ሁኔታ ተሰርቷል! $videoPath')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text('ቪዲዮውን በመስራት ላይ ስህተት ተከሰተ')),
+                          );
+                        }
+                      } catch (e) {
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('ቪዲዮው በተሳካ ሁኔታ ተሰርቷል! $videoPath')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('ቪዲዮውን በመስራት ላይ ስህተት ተከሰተ')),
+                          SnackBar(content: Text('ስህተት ተከሰተ: $e')),
                         );
                       }
                     },
@@ -246,6 +299,7 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
                       style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
