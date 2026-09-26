@@ -29,7 +29,7 @@ jobs:
         run: flutter pub get
 
       - name: Re-create Missing Android Files
-        run: flutter create --platforms=android .
+        run: flutter create --project-name=studious_waffle --platforms=android .
 
       - name: Build APK
         run: flutter build apk --debug
