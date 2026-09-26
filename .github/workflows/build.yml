@@ -28,6 +28,9 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
+      - name: Re-create Missing Android Files
+        run: flutter create --platforms=android .
+
       - name: Build APK
         run: flutter build apk --debug
 
