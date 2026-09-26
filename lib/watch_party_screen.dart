@@ -42,12 +42,12 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ለዚህ የተለየ roomCode ብቻ የተመደበውን ቪዲዮ ከ Supabase መውሰጃ
+  // 1. ለዚህ የተለየ roomCode (7069) ብቻ የተመደበውን ቪዲዮ ከ Supabase መውሰጃ
   Future<void> _fetchVideoFromSupabase() async {
     try {
       final String currentRoom = widget.roomCode.toString().trim();
 
-      // የዚህን ሩም (room_id) ቪዲዮ ብቻ ለይቶ ይፈልጋል
+      // room_id = '7069' የሆኑትን ቪዲዮዎች ብቻ ለይቶ መፈለግ
       final response = await _supabase
           .from('videos')
           .select()
@@ -56,7 +56,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       if (response != null && response is List && response.isNotEmpty) {
         final validVideos = response.where((item) {
           if (item['video_url'] == null) return false;
-          
+
           String url = item['video_url']
               .toString()
               .replaceAll('[', '')
@@ -64,7 +64,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
               .replaceAll('(', '')
               .replaceAll(')', '')
               .trim();
-              
+
           return url.startsWith('http://') || url.startsWith('https://');
         }).toList();
 
@@ -104,7 +104,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 2. ቪዲዮውን የማጫወት ስራ
+  // 2. ቪዲዮውን ማጫወቻ ፈንክሽን
   Future<void> _initializeVideoFromUrl(String url) async {
     if (url.isEmpty) return;
 
@@ -187,7 +187,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. አዲስ የቪዲዮ URL ለዚሁ ሩም (room_id) ብቻ ለይቶ መላኪያ
+  // 3. አዲስ የቪዲዮ URL ለዚሁ ሩም (room_id) ብቻ መላኪያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
     String cleanUrl = url
         .replaceAll('[', '')
@@ -198,7 +198,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     try {
       await _supabase.from('videos').insert({
         'video_url': cleanUrl,
-        'room_id': widget.roomCode.toString().trim(), // ለዚሁ ሩም ብቻ ይላካል
+        'room_id': widget.roomCode.toString().trim(), // ለዚሁ ሩም ብቻ ይያያዛል
       });
       _fetchVideoFromSupabase();
     } catch (e) {
