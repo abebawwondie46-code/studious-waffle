@@ -1,4 +1,3 @@
-import 'dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -29,7 +28,6 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
     _textController.text = _displayText;
   }
 
-  // ፖስተሩን ወደ ስልክ ጋለሪ/ማህደር ማስቀመጫ
   Future<void> _captureAndSavePoster() async {
     try {
       RenderRepaintBoundary boundary =
@@ -51,12 +49,11 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ስህተት ተከሰቷል: $e')),
+        SnackBar(content: Text('ስህተት ተከሰተ: $e')),
       );
     }
   }
 
-  // የቀለም መምረጫ Dialog (ያለ ተጨማሪ ውጫዊ ፓኬጅ ኤረር እንዳይፈጥር)
   void _pickColor({required bool isTextColor}) {
     final List<Color> colors = [
       Colors.white,
@@ -125,7 +122,6 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            // የፖስተር ቅድመ እይታ (Preview Canvas)
             Center(
               child: RepaintBoundary(
                 key: _globalKey,
@@ -187,7 +183,6 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // የመቆጣጠሪያ ክፍሎች (Controls)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
@@ -240,7 +235,6 @@ class _PosterEditorScreenState extends State<PosterEditorScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // ወደ ቪዲዮ መቀየሪያ ቁልፍ
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepOrange,
