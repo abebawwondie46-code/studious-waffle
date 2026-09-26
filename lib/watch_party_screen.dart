@@ -5,9 +5,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
 class WatchPartyScreen extends StatefulWidget {
-  final String roomId;
+  // main.dart ላይ ያለ roomId ቢጠራ እንዲሰራ optional (nullable) ተደርጓል
+  final String? roomId;
 
-  const WatchPartyScreen({super.key, required this.roomId});
+  const WatchPartyScreen({super.key, this.roomId});
 
   @override
   State<WatchPartyScreen> createState() => _WatchPartyScreenState();
@@ -19,6 +20,9 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
   String? _currentVideoUrl;
   bool _isLoading = false;
   VideoPlayerController? _videoPlayerController;
+
+  // main.dart ላይ roomId ካልተላከ default roomId ይሰጠዋል
+  String get effectiveRoomId => widget.roomId ?? 'SEC-7069';
 
   @override
   void initState() {
@@ -32,7 +36,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       final response = await supabase
           .from('rooms')
           .select('video_url')
-          .eq('room_id', widget.roomId)
+          .eq('room_id', effectiveRoomId)
           .maybeSingle();
 
       if (response != null && response['video_url'] != null) {
@@ -60,21 +64,36 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
 
   // ከጋለሪ ቪዲዮ መርጦ ወደ Supabase Storage አፕሎድ ማድረጊያ
   Future<void> _pickAndUploadVideo() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-      allowCompression: true,
-    );
-
-    if (result == null || result.files.single.path == null) return;
-
-    final File file = File(result.files.single.path!);
-    final String fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
-
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
+      String? filePath;
+
+      // FilePicker በሁለቱም የቨርዥን መንገድ እንዲሰራ ማረጋገጫ
+      try {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.video,
+          allowCompression: true,
+        );
+        if (result != null && result.files.isNotEmpty) {
+          filePath = result.files.single.path;
+        }
+      } catch (_) {
+        // platform አልታወቅም ካለ በስተጀርባ ላለው የቀደመ ቨርዥን
+        final dynamic picker = FilePicker;
+        final result = await picker.pickFiles(type: FileType.video);
+        if (result != null && result.files.isNotEmpty) {
+          filePath = result.files.first.path;
+        }
+      }
+
+      if (filePath == null) return;
+
+      final File file = File(filePath);
+      final String fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+
+      setState(() {
+        _isLoading = true;
+      });
+
       // ወደ 'room_videos' storage bucket አፕሎድ ማድረግ
       await supabase.storage.from('room_videos').upload(
             fileName,
@@ -90,7 +109,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
       await supabase
           .from('rooms')
           .update({'video_url': publicUrl})
-          .eq('room_id', widget.roomId);
+          .eq('room_id', effectiveRoomId);
 
       // አዲሱን ቪዲዮ ማጫወት
       _initializeVideoPlayer(publicUrl);
@@ -126,7 +145,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('Secret Party (${widget.roomId})'),
+        title: Text('Secret Party ($effectiveRoomId)'),
         backgroundColor: Colors.grey[900],
         actions: [
           IconButton(
