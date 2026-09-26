@@ -42,12 +42,11 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ለዚህ የተለየ roomCode (7069) ብቻ የተመደበውን ቪዲዮ ከ Supabase መውሰጃ
+  // 1. ለዚሁ ሩም (7069) የተመደበውን ቪዲዮ ብቻ ከ Supabase መውሰጃ
   Future<void> _fetchVideoFromSupabase() async {
     try {
       final String currentRoom = widget.roomCode.toString().trim();
 
-      // room_id = '7069' የሆኑትን ቪዲዮዎች ብቻ ለይቶ መፈለግ
       final response = await _supabase
           .from('videos')
           .select()
@@ -187,7 +186,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // 3. አዲስ የቪዲዮ URL ለዚሁ ሩም (room_id) ብቻ መላኪያ
+  // 3. አዲስ የቪዲዮ URL ለዚሁ ሩም (room_id) ብቻ ለይቶ መላኪያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
     String cleanUrl = url
         .replaceAll('[', '')
@@ -198,7 +197,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     try {
       await _supabase.from('videos').insert({
         'video_url': cleanUrl,
-        'room_id': widget.roomCode.toString().trim(), // ለዚሁ ሩም ብቻ ይያያዛል
+        'room_id': widget.roomCode.toString().trim(),
       });
       _fetchVideoFromSupabase();
     } catch (e) {
@@ -241,7 +240,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 4. መልእክቶችን ለዚሁ ሩም (room_id) ብቻ መላኪያ
+  // 4. መልእክቶችን ለዚሁ ሩም ብቻ መላኪያ
   Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
@@ -631,7 +630,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // 5. ቻቱ ለዚሁ ሩም (room_id) ብቻ ለይቶ ይጫናል
+              // 5. ቻቱ ለዚሁ ሩም (room_id) ብቻ ይጫናል
               Expanded(
                 child: StreamBuilder<List<Map<String, dynamic>>>(
                   stream: _supabase
