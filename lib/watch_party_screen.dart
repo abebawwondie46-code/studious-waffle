@@ -42,7 +42,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     _fetchVideoFromSupabase();
   }
 
-  // 1. ለዚሁ ሩም (7069) የተመደበውን ቪዲዮ ብቻ ከ Supabase መውሰጃ
+  // 1. ለዚሁ ሩም (7069) ብቻ የተመደበውን ቪዲዮ ከ Supabase መውሰጃ
   Future<void> _fetchVideoFromSupabase() async {
     try {
       final String currentRoom = widget.roomCode.toString().trim();
@@ -157,36 +157,41 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     }
   }
 
-  // ከስልክ ፋይል/ካሜራ ቪዲዮ መምረጫ
+  // 3. ከጋለሪ ወይም ከካሜራ ቪዲዮ መምረጫ
   Future<void> _pickVideo(ImageSource source) async {
-    final XFile? pickedFile = await _picker.pickVideo(source: source);
-    if (pickedFile != null) {
-      setState(() {
-        _isVideoInitialized = false;
-        _hasVideoError = false;
-      });
-      await _videoController?.dispose();
+    try {
+      final XFile? pickedFile = await _picker.pickVideo(source: source);
+      if (pickedFile != null) {
+        setState(() {
+          _isVideoInitialized = false;
+          _hasVideoError = false;
+        });
+        await _videoController?.dispose();
 
-      try {
         _videoController = VideoPlayerController.file(File(pickedFile.path));
         await _videoController!.initialize();
         _videoController!.addListener(() {
           if (mounted) setState(() {});
         });
-        setState(() {
-          _isVideoInitialized = true;
-        });
-        _videoController?.play();
-      } catch (e) {
+
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          _videoController?.play();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
           _hasVideoError = true;
-          _errorMessage = 'ፋይሉን ማጫወት አልተቻለም';
+          _errorMessage = 'ከስልክህ የተመረጠውን ቪዲዮ ማጫወት አልተቻለም';
         });
       }
     }
   }
 
-  // 3. አዲስ የቪዲዮ URL ለዚሁ ሩም (room_id) ብቻ ለይቶ መላኪያ
+  // 4. አዲስ የቪዲዮ URL ለዚሁ ሩም (room_id) ብቻ መላኪያ
   Future<void> _updateVideoUrlInSupabase(String url) async {
     String cleanUrl = url
         .replaceAll('[', '')
@@ -194,14 +199,25 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
         .replaceAll('(', '')
         .replaceAll(')', '')
         .trim();
+
+    if (cleanUrl.isEmpty) return;
+
     try {
       await _supabase.from('videos').insert({
         'video_url': cleanUrl,
         'room_id': widget.roomCode.toString().trim(),
+        'created_at': DateTime.now().toIso8601String(),
       });
-      _fetchVideoFromSupabase();
+
+      await _fetchVideoFromSupabase();
     } catch (e) {
       debugPrint('Error inserting video: $e');
+      if (mounted) {
+        setState(() {
+          _hasVideoError = true;
+          _errorMessage = 'ቪዲዮውን ማስገባት አልተቻለም፦ $e';
+        });
+      }
     }
   }
 
@@ -240,7 +256,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
     );
   }
 
-  // 4. መልእክቶችን ለዚሁ ሩም ብቻ መላኪያ
+  // 5. መልእክቶችን ለዚሁ ሩም ብቻ መላኪያ
   Future<void> _sendMessage([String? customText]) async {
     final text = customText ?? _messageController.text.trim();
     if (text.isNotEmpty) {
@@ -630,7 +646,7 @@ class _WatchPartyScreenState extends State<WatchPartyScreen> {
                 ),
               ),
 
-              // 5. ቻቱ ለዚሁ ሩም (room_id) ብቻ ይጫናል
+              // 6. ቻቱ ለዚሁ ሩም (room_id) ብቻ ይጫናል
               Expanded(
                 child: StreamBuilder<List<Map<String, dynamic>>>(
                   stream: _supabase
