@@ -105,6 +105,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
   // Direct Call Function
   Future<void> _makePhoneCall(String phoneNumber) async {
+    if (phoneNumber.isEmpty) return;
     final Uri launchUri = Uri(
       scheme: 'tel',
       path: phoneNumber,
@@ -122,7 +123,14 @@ class _FeedScreenState extends State<FeedScreen> {
 
   // Share Content Function
   void _shareContent(FeedItem item) {
-    Share.share('${item.title}\n\nተጨማሪ መረጃ በ ${item.username} | ስልክ: ${item.phoneNumber}');
+    String shareText = item.title;
+    if (item.username.isNotEmpty) {
+      shareText += '\n\nተጋሪ: ${item.username}';
+    }
+    if (item.phoneNumber.isNotEmpty) {
+      shareText += ' | ስልክ: ${item.phoneNumber}';
+    }
+    Share.share(shareText);
   }
 
   void _showCommentsModal(FeedItem item) {
@@ -223,7 +231,6 @@ class _FeedScreenState extends State<FeedScreen> {
             Future<void> pickMedia() async {
               final ImagePicker picker = ImagePicker();
               
-              // Option dialog for image or video
               showModalBottomSheet(
                 context: context,
                 backgroundColor: const Color(0xFF222222),
@@ -424,21 +431,25 @@ class _FeedScreenState extends State<FeedScreen> {
                           ),
                         ),
                         onPressed: () {
-                          if (titleController.text.isNotEmpty || selectedFilePath != null) {
+                          final inputUsername = usernameController.text.trim();
+                          final inputPhone = phoneController.text.trim();
+                          final inputTitle = titleController.text.trim();
+
+                          if (inputTitle.isNotEmpty || selectedFilePath != null) {
+                            // Formatting Username
+                            String finalUsername = inputUsername.isEmpty ? '@user_ethio' : inputUsername;
+                            if (!finalUsername.startsWith('@')) {
+                              finalUsername = '@$finalUsername';
+                            }
+
                             setState(() {
                               _allFeedItems.insert(
                                 0,
                                 FeedItem(
                                   id: DateTime.now().toString(),
-                                  title: titleController.text,
-                                  username: usernameController.text.isEmpty
-                                      ? '@user'
-                                      : (usernameController.text.startsWith('@')
-                                          ? usernameController.text
-                                          : '@${usernameController.text}'),
-                                  phoneNumber: phoneController.text.isEmpty
-                                      ? '0900000000'
-                                      : phoneController.text,
+                                  title: inputTitle,
+                                  username: finalUsername,
+                                  phoneNumber: inputPhone,
                                   category: selectedCategory,
                                   gradientColors: selectedGradient,
                                   mediaPath: selectedFilePath,
@@ -682,7 +693,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
               ),
             ),
 
-          // Dark Overlay for Readable Text
+          // Dark Overlay
           Container(
             color: Colors.black.withOpacity(0.35),
           ),
@@ -695,7 +706,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withOpacity(0.55),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.white24, width: 1),
                   ),
@@ -773,31 +784,34 @@ class _FeedCardItemState extends State<FeedCardItem> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.username,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    shadows: [Shadow(blurRadius: 10, color: Colors.black)],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
+                if (item.username.isNotEmpty)
+                  Text(
+                    item.username,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      shadows: [Shadow(blurRadius: 10, color: Colors.black)],
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                   ),
-                  icon: const Icon(Icons.phone, color: Colors.white, size: 18),
-                  label: Text(
-                    'ይደውሉ: ${item.phoneNumber}',
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                if (item.phoneNumber.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    ),
+                    icon: const Icon(Icons.phone, color: Colors.white, size: 18),
+                    label: Text(
+                      'ይደውሉ: ${item.phoneNumber}',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                    onPressed: widget.onCall,
                   ),
-                  onPressed: widget.onCall,
-                ),
+                ],
               ],
             ),
           ),
