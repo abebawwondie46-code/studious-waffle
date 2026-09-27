@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,7 +61,7 @@ class _FeedScreenState extends State<FeedScreen> {
   final List<FeedItem> _allFeedItems = [
     FeedItem(
       id: '1',
-      title: 'አዳዲስ የይዘት\nፈጠራዎችን እዚህ ያግኙ!',
+      title: 'አዳዲስ የይዘት ፈጠራዎችን እና የቴክኖሎጂ መረጃዎችን እዚህ ያግኙ!',
       username: '@ethio_tech',
       phoneNumber: '0911000000',
       category: 'ቴክኖሎጂ',
@@ -70,7 +72,7 @@ class _FeedScreenState extends State<FeedScreen> {
     ),
     FeedItem(
       id: '2',
-      title: 'የሀገራችን የፖለቲካ እና\nየኢኮኖሚ አዳዲስ መረጃዎች',
+      title: 'የሀገራችን የፖለቲካ እና የኢኮኖሚ አዳዲስ መረጃዎች',
       username: '@ethio_politics',
       phoneNumber: '0922000000',
       category: 'ፖለቲካ',
@@ -78,17 +80,6 @@ class _FeedScreenState extends State<FeedScreen> {
       likes: 3400,
       commentsCount: 112,
       views: 8900,
-    ),
-    FeedItem(
-      id: '3',
-      title: 'ምርጥ የሀበሻ ቡና በቀናሽ\nዋጋ ይሸምቱ',
-      username: '@ethio_coffee',
-      phoneNumber: '0912000000',
-      category: 'ንግድ',
-      gradientColors: [const Color(0xFF2C3E50), const Color(0xFF4CA1AF)],
-      likes: 5100,
-      commentsCount: 88,
-      views: 12400,
     ),
   ];
 
@@ -104,6 +95,28 @@ class _FeedScreenState extends State<FeedScreen> {
           item.username.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
+  }
+
+  // Direct Call Function
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ስልክ መደወል አልተቻለም: $phoneNumber')),
+        );
+      }
+    }
+  }
+
+  // Share Content Function
+  void _shareContent(FeedItem item) {
+    Share.share('${item.title}\n\nተጫማሪ መረጃ በ ${item.username} | ስልክ: ${item.phoneNumber}');
   }
 
   void _showCommentsModal(FeedItem item) {
@@ -129,12 +142,12 @@ class _FeedScreenState extends State<FeedScreen> {
             children: [
               Text(
                 'አስተያየቶች (${item.commentsCount})',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
               ),
               const SizedBox(height: 15),
               const ListTile(
-                leading: CircleAvatar(child: Text('A')),
-                title: Text('@user1'),
+                leading: CircleAvatar(backgroundColor: Colors.amber, child: Text('A', style: TextStyle(color: Colors.black))),
+                title: Text('@user1', style: TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text('በጣም ደስ የሚል መረጃ ነው!'),
               ),
               const SizedBox(height: 10),
@@ -143,9 +156,11 @@ class _FeedScreenState extends State<FeedScreen> {
                   Expanded(
                     child: TextField(
                       controller: commentController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'አስተያየት ይፃፉ...',
-                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFF2C2C2C),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
@@ -436,38 +451,89 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                       child: Stack(
                         children: [
+                          // Main Title Card & Media View
                           Center(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    item.title,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  if (item.mediaPath != null) ...[
-                                    const SizedBox(height: 15),
-                                    Chip(
-                                      avatar: const Icon(Icons.play_circle_fill, color: Colors.amber),
-                                      label: Text(
-                                        item.mediaPath!,
-                                        overflow: TextOverflow.ellipsis,
+                              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                              child: Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.35),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.white24, width: 1),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Category Badge
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(15),
+                                        border: Border.all(color: Colors.amber),
                                       ),
-                                      backgroundColor: Colors.black54,
-                                    )
-                                  ]
-                                ],
+                                      child: Text(
+                                        '# ${item.category}',
+                                        style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 15),
+
+                                    // Title Text
+                                    Text(
+                                      item.title,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        height: 1.4,
+                                      ),
+                                    ),
+
+                                    // Media Preview Card (Video / Image)
+                                    if (item.mediaPath != null) ...[
+                                      const SizedBox(height: 20),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: BorderRadius.circular(15),
+                                          border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.play_circle_fill, color: Colors.amber, size: 36),
+                                            const SizedBox(width: 10),
+                                            Flexible(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    item.mediaPath!,
+                                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  const Text(
+                                                    'የተያያዘ ሚዲያ / ቪዲዮ',
+                                                    style: TextStyle(color: Colors.white54, fontSize: 11),
+                                                  ),
+                                                ],
+                                              ),
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                    ]
+                                  ],
+                                ),
                               ),
                             ),
                           ),
 
+                          // Right Interactive Actions
                           Positioned(
                             right: 16,
                             bottom: 110,
@@ -500,7 +566,11 @@ class _FeedScreenState extends State<FeedScreen> {
                                 IconButton(
                                   iconSize: 30,
                                   icon: const Icon(Icons.auto_awesome, color: Colors.amber),
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Remix Feature Selected')),
+                                    );
+                                  },
                                 ),
                                 const Text('Remix', style: TextStyle(color: Colors.white, fontSize: 11)),
                                 const SizedBox(height: 18),
@@ -508,17 +578,14 @@ class _FeedScreenState extends State<FeedScreen> {
                                 IconButton(
                                   iconSize: 30,
                                   icon: const Icon(Icons.share, color: Colors.white),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('ሊንኩ ተቀድቷል (Link Copied)')),
-                                    );
-                                  },
+                                  onPressed: () => _shareContent(item),
                                 ),
                                 const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11)),
                               ],
                             ),
                           ),
 
+                          // Bottom Left User Info & Call Button
                           Positioned(
                             left: 16,
                             bottom: 40,
@@ -547,16 +614,13 @@ class _FeedScreenState extends State<FeedScreen> {
                                     'ይደውሉ: ${item.phoneNumber}',
                                     style: const TextStyle(color: Colors.white, fontSize: 13),
                                   ),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('ደውል: ${item.phoneNumber}')),
-                                    );
-                                  },
+                                  onPressed: () => _makePhoneCall(item.phoneNumber),
                                 ),
                               ],
                             ),
                           ),
 
+                          // Bottom Right Add (+ Button)
                           Positioned(
                             right: 16,
                             bottom: 40,
@@ -572,6 +636,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   },
                 ),
 
+          // Top Header (Search & Category Filters)
           Positioned(
             top: 45,
             left: 12,
