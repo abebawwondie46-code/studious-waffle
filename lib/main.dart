@@ -56,6 +56,13 @@ class FeedItem {
   });
 }
 
+class CategoryData {
+  final String title;
+  final IconData icon;
+
+  const CategoryData(this.title, this.icon);
+}
+
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
 
@@ -89,6 +96,16 @@ class _FeedScreenState extends State<FeedScreen> {
     ),
   ];
 
+  final List<CategoryData> _categories = const [
+    CategoryData('ሁሉም', Icons.grid_view_rounded),
+    CategoryData('ንግድ', Icons.shopping_bag_rounded),
+    CategoryData('ፖለቲካ', Icons.gavel_rounded),
+    CategoryData('ዜና', Icons.newspaper_rounded),
+    CategoryData('ቪዲዮ', Icons.play_circle_fill_rounded),
+    CategoryData('ጥቅስ', Icons.format_quote_rounded),
+    CategoryData('ቴክኖሎጂ', Icons.memory_rounded),
+  ];
+
   String _selectedCategoryFilter = 'ሁሉም';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -103,7 +120,6 @@ class _FeedScreenState extends State<FeedScreen> {
     }).toList();
   }
 
-  // Delete Post Dialog (Shown only on Long Press)
   void _confirmDeletePost(FeedItem item) {
     showDialog(
       context: context,
@@ -140,7 +156,6 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  // Direct Call Function
   Future<void> _makePhoneCall(String phoneNumber) async {
     if (phoneNumber.isEmpty) return;
     final Uri launchUri = Uri(
@@ -158,7 +173,6 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  // Share Content Function
   void _shareContent(FeedItem item) {
     String shareText = item.title;
     if (item.username.isNotEmpty) {
@@ -338,11 +352,12 @@ class _FeedScreenState extends State<FeedScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: ['ንግድ', 'ፖለቲካ', 'ዜና', 'ቪዲዮ', 'ጥቅስ', 'ቴክኖሎጂ'].map((cat) {
-                        final isSelected = selectedCategory == cat;
+                      children: _categories.where((c) => c.title != 'ሁሉም').map((cat) {
+                        final isSelected = selectedCategory == cat.title;
                         return ChoiceChip(
+                          avatar: Icon(cat.icon, size: 16, color: isSelected ? Colors.black : Colors.amber),
                           label: Text(
-                            cat,
+                            cat.title,
                             style: TextStyle(
                               color: isSelected ? Colors.black : Colors.white,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -353,7 +368,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           backgroundColor: const Color(0xFF2A2A2A),
                           onSelected: (val) {
                             setModalState(() {
-                              selectedCategory = cat;
+                              selectedCategory = cat.title;
                             });
                           },
                         );
@@ -549,7 +564,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   },
                 ),
 
-          // Header Search Bar & Category Chips
+          // Header Search Bar & Category Chips with Icons
           Positioned(
             top: 45,
             left: 12,
@@ -607,16 +622,17 @@ class _FeedScreenState extends State<FeedScreen> {
                 const SizedBox(height: 10),
 
                 SizedBox(
-                  height: 36,
+                  height: 38,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
-                    children: ['ሁሉም', 'ንግድ', 'ፖለቲካ', 'ዜና', 'ቪዲዮ', 'ጥቅስ', 'ቴክኖሎጂ'].map((cat) {
-                      final isSelected = _selectedCategoryFilter == cat;
+                    children: _categories.map((cat) {
+                      final isSelected = _selectedCategoryFilter == cat.title;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
                         child: ChoiceChip(
+                          avatar: Icon(cat.icon, size: 16, color: isSelected ? Colors.black : Colors.amber),
                           label: Text(
-                            cat,
+                            cat.title,
                             style: TextStyle(
                               color: isSelected ? Colors.black : Colors.white,
                               fontSize: 12,
@@ -628,7 +644,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           backgroundColor: Colors.black.withOpacity(0.5),
                           onSelected: (val) {
                             setState(() {
-                              _selectedCategoryFilter = cat;
+                              _selectedCategoryFilter = cat.title;
                             });
                           },
                         ),
@@ -672,6 +688,7 @@ class FeedCardItem extends StatefulWidget {
 class _FeedCardItemState extends State<FeedCardItem> {
   VideoPlayerController? _videoController;
   bool _isMuted = false;
+  bool _showPlayPauseOverlay = false;
 
   @override
   void initState() {
@@ -692,13 +709,34 @@ class _FeedCardItemState extends State<FeedCardItem> {
     super.dispose();
   }
 
+  void _togglePlayPause() {
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      setState(() {
+        if (_videoController!.value.isPlaying) {
+          _videoController!.pause();
+        } else {
+          _videoController!.play();
+        }
+        _showPlayPauseOverlay = true;
+      });
+
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (mounted) {
+          setState(() {
+            _showPlayPauseOverlay = false;
+          });
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
     final bool hasMedia = item.mediaType != MediaType.none && item.mediaPath != null;
 
     return GestureDetector(
-      onLongPress: widget.onDelete, // Long Press triggers Delete Dialog
+      onLongPress: widget.onDelete,
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -712,11 +750,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
             // Background Video Player
             if (item.mediaType == MediaType.video && _videoController != null && _videoController!.value.isInitialized)
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _videoController!.value.isPlaying ? _videoController!.pause() : _videoController!.play();
-                  });
-                },
+                onTap: _togglePlayPause,
                 child: SizedBox.expand(
                   child: FittedBox(
                     fit: BoxFit.cover,
@@ -737,14 +771,36 @@ class _FeedCardItemState extends State<FeedCardItem> {
                 ),
               ),
 
-            // Gradient Overlay
+            // Subtle Gradient Shadow for Top and Bottom readability
             if (hasMedia)
               Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black45, Colors.transparent, Colors.black87],
+                    colors: [Colors.black38, Colors.transparent, Colors.black54],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+
+            // Tap Play/Pause Animated Icon
+            if (_showPlayPauseOverlay && _videoController != null)
+              Center(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 300),
+                  opacity: _showPlayPauseOverlay ? 1.0 : 0.0,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.amber, width: 2),
+                    ),
+                    child: Icon(
+                      _videoController!.value.isPlaying ? Icons.play_arrow : Icons.pause,
+                      size: 48,
+                      color: Colors.amber,
+                    ),
                   ),
                 ),
               ),
@@ -793,7 +849,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
                 ),
               ),
 
-            // Video Progress Timeline Indicator
+            // Interactive Video Progress Timeline Indicator
             if (item.mediaType == MediaType.video && _videoController != null && _videoController!.value.isInitialized)
               Positioned(
                 bottom: 0,
@@ -804,8 +860,8 @@ class _FeedCardItemState extends State<FeedCardItem> {
                   allowScrubbing: true,
                   colors: const VideoProgressColors(
                     playedColor: Colors.amber,
-                    bufferedColor: Colors.white24,
-                    backgroundColor: Colors.white10,
+                    bufferedColor: Colors.white38,
+                    backgroundColor: Colors.white12,
                   ),
                 ),
               ),
@@ -813,7 +869,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
             // Right Action Buttons
             Positioned(
               right: 16,
-              bottom: 120,
+              bottom: 110,
               child: Column(
                 children: [
                   if (item.mediaType == MediaType.video) ...[
@@ -862,91 +918,87 @@ class _FeedCardItemState extends State<FeedCardItem> {
               ),
             ),
 
-            // Bottom Left Content Details
+            // Clean Transparent Bottom Left Content Details
             Positioned(
               left: 16,
               right: 90,
-              bottom: 45,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: hasMedia ? Colors.black.withOpacity(0.35) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Category Chip
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.amber,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '# ${item.category}',
-                        style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold),
+              bottom: 35,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Category Chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '# ${item.category}',
+                      style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Title Overlay (No Dark Box Backdrop)
+                  if (hasMedia && item.title.isNotEmpty)
+                    Text(
+                      item.title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                        shadows: [
+                          Shadow(blurRadius: 10, color: Colors.black, offset: Offset(1, 1)),
+                          Shadow(blurRadius: 10, color: Colors.black, offset: Offset(-1, -1)),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-                    // Title Overlay
-                    if (hasMedia && item.title.isNotEmpty)
-                      Text(
-                        item.title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
-                          shadows: [Shadow(blurRadius: 8, color: Colors.black, offset: Offset(1, 1))],
-                        ),
+                  // Username
+                  if (item.username.isNotEmpty)
+                    Text(
+                      item.username,
+                      style: const TextStyle(
+                        color: Colors.amberAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        shadows: [Shadow(blurRadius: 10, color: Colors.black)],
                       ),
+                    ),
+                  
+                  // Phone Call Button
+                  if (item.phoneNumber.isNotEmpty) ...[
                     const SizedBox(height: 8),
-
-                    // Username
-                    if (item.username.isNotEmpty)
-                      Text(
-                        item.username,
-                        style: const TextStyle(
-                          color: Colors.amberAccent,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal[600],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
-                    
-                    // Phone Call Button
-                    if (item.phoneNumber.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal[600],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        ),
-                        icon: const Icon(Icons.phone, color: Colors.white, size: 16),
-                        label: Text(
-                          'ይደውሉ: ${item.phoneNumber}',
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                        onPressed: widget.onCall,
+                      icon: const Icon(Icons.phone, color: Colors.white, size: 16),
+                      label: Text(
+                        'ይደውሉ: ${item.phoneNumber}',
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
-                    ],
+                      onPressed: widget.onCall,
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
 
             // Bottom Right Floating Add Button
             Positioned(
               right: 16,
-              bottom: 45,
+              bottom: 35,
               child: FloatingActionButton(
                 mini: false,
                 backgroundColor: Colors.amber[700],
