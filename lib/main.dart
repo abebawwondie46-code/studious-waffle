@@ -23,9 +23,9 @@ class FeedItem {
   final String title;
   final String username;
   final String phoneNumber;
-  final String category; // ንግድ, ፖለቲካ, ዜና, ቪዲዮ, ጥቅስ
+  final String category;
   final List<Color> gradientColors;
-  final String? mediaUrl;
+  final String? mediaFileName;
   int likes;
   int commentsCount;
   int views;
@@ -38,7 +38,7 @@ class FeedItem {
     required this.phoneNumber,
     required this.category,
     required this.gradientColors,
-    this.mediaUrl,
+    this.mediaFileName,
     required this.likes,
     this.commentsCount = 0,
     this.views = 120,
@@ -63,7 +63,7 @@ class _FeedScreenState extends State<FeedScreen> {
       category: 'ቴክኖሎጂ',
       gradientColors: [const Color(0xFF0F2027), const Color(0xFF203A43), const Color(0xFF2C5364)],
       likes: 1800,
-      commentsCount: 45,
+      commentsCount: 48,
       views: 3200,
     ),
     FeedItem(
@@ -90,7 +90,6 @@ class _FeedScreenState extends State<FeedScreen> {
     ),
   ];
 
-  // Show Comments Modal
   void _showCommentsModal(FeedItem item) {
     final commentController = TextEditingController();
     showModalBottomSheet(
@@ -155,20 +154,28 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  // Bottom Sheet for Design & Post Creation
   void _showAddContentBottomSheet() {
     final titleController = TextEditingController();
     final usernameController = TextEditingController();
     final phoneController = TextEditingController();
-    final mediaUrlController = TextEditingController();
 
     String selectedCategory = 'ንግድ';
-    List<Color> selectedGradient = [const Color(0xFF11998E), const Color(0xFF38EF7D)];
+    String? selectedFileName;
+    
+    // Preset Gradient Themes
+    final List<List<Color>> gradientPresets = [
+      [const Color(0xFF0F2027), const Color(0xFF203A43), const Color(0xFF2C5364)],
+      [const Color(0xFF3A1C71), const Color(0xFFD76D77), const Color(0xFFFFAF7B)],
+      [const Color(0xFF11998E), const Color(0xFF38EF7D)],
+      [const Color(0xFF8E2DE2), const Color(0xFF4A00E0)],
+      [const Color(0xFF2C3E50), const Color(0xFF000000)],
+    ];
+    List<Color> selectedGradient = gradientPresets[0];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: const Color(0xFF181818),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
@@ -177,7 +184,7 @@ class _FeedScreenState extends State<FeedScreen> {
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
               padding: EdgeInsets.only(
-                top: 20,
+                top: 24,
                 left: 20,
                 right: 20,
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
@@ -187,23 +194,40 @@ class _FeedScreenState extends State<FeedScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'አዲስ ይዘት ያዘጋጁ እና ያጋሩ 🚀',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.amber),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'አዲስ ይዘት ያዘጋጁ እና ያጋሩ 🚀',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(ctx),
+                        )
+                      ],
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 12),
                     
                     // Category Selection
-                    const Text('ምድብ ይምረጡ:', style: TextStyle(color: Colors.grey)),
+                    const Text('ምድብ ይምረጡ:', style: TextStyle(color: Colors.white70, fontSize: 13)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 8,
                       children: ['ንግድ', 'ፖለቲካ', 'ዜና', 'ቪዲዮ', 'ጥቅስ', 'ቴክኖሎጂ'].map((cat) {
                         final isSelected = selectedCategory == cat;
                         return ChoiceChip(
-                          label: Text(cat),
+                          label: Text(
+                            cat,
+                            style: TextStyle(
+                              color: isSelected ? Colors.black : Colors.white,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
                           selected: isSelected,
                           selectedColor: Colors.amber,
+                          backgroundColor: const Color(0xFF2A2A2A),
                           onSelected: (val) {
                             setModalState(() {
                               selectedCategory = cat;
@@ -212,40 +236,105 @@ class _FeedScreenState extends State<FeedScreen> {
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 16),
 
+                    // Theme Color Selection
+                    const Text('የጀርባ ቀለም ዲዛይን ይምረጡ:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: gradientPresets.map((gradient) {
+                        final isSelected = selectedGradient == gradient;
+                        return GestureDetector(
+                          onTap: () {
+                            setModalState(() {
+                              selectedGradient = gradient;
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(colors: gradient),
+                              border: Border.all(
+                                color: isSelected ? Colors.amber : Colors.transparent,
+                                width: 3,
+                              ),
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check, size: 18, color: Colors.white)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Inputs
                     TextField(
                       controller: titleController,
                       maxLines: 3,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.description, color: Colors.amber),
                         labelText: 'መረጃ / ፅሁፍ / መልእክት',
-                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFF242424),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
+
                     TextField(
                       controller: usernameController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.alternate_email, color: Colors.amber),
                         labelText: 'የተጠቃሚ ስም (ምሳሌ @my_brand)',
-                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFF242424),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
+
                     TextField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.phone, color: Colors.amber),
                         labelText: 'የስልክ ቁጥር (ከተፈለገ)',
-                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFF242424),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: mediaUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'የቪዲዮ ወይም የምስል ሊንክ (አማራጭ)',
-                        border: OutlineInputBorder(),
+                    const SizedBox(height: 14),
+
+                    // Upload Video / Media Button
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        side: const BorderSide(color: Colors.amber, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
+                      icon: const Icon(Icons.video_library, color: Colors.amber),
+                      label: Text(
+                        selectedFileName ?? 'ቪዲዮ ወይም ምስል ይምረጡ (Upload Media)',
+                        style: const TextStyle(color: Colors.amber),
+                      ),
+                      onPressed: () {
+                        setModalState(() {
+                          selectedFileName = "my_video_sample.mp4";
+                        });
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -276,9 +365,7 @@ class _FeedScreenState extends State<FeedScreen> {
                                       : phoneController.text,
                                   category: selectedCategory,
                                   gradientColors: selectedGradient,
-                                  mediaUrl: mediaUrlController.text.isEmpty
-                                      ? null
-                                      : mediaUrlController.text,
+                                  mediaFileName: selectedFileName,
                                   likes: 0,
                                 ),
                               );
@@ -354,15 +441,28 @@ class _FeedScreenState extends State<FeedScreen> {
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                    child: Text(
-                      item.title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.4,
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          item.title,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            height: 1.4,
+                          ),
+                        ),
+                        if (item.mediaFileName != null) ...[
+                          const SizedBox(height: 15),
+                          Chip(
+                            avatar: const Icon(Icons.play_circle_fill, color: Colors.amber),
+                            label: Text(item.mediaFileName!),
+                            backgroundColor: Colors.black54,
+                          )
+                        ]
+                      ],
                     ),
                   ),
                 ),
@@ -373,7 +473,6 @@ class _FeedScreenState extends State<FeedScreen> {
                   bottom: 110,
                   child: Column(
                     children: [
-                      // Like
                       IconButton(
                         iconSize: 34,
                         icon: Icon(
@@ -390,7 +489,6 @@ class _FeedScreenState extends State<FeedScreen> {
                       Text('${item.likes}', style: const TextStyle(color: Colors.white, fontSize: 12)),
                       const SizedBox(height: 18),
 
-                      // Comment
                       IconButton(
                         iconSize: 32,
                         icon: const Icon(Icons.comment, color: Colors.white),
@@ -399,7 +497,6 @@ class _FeedScreenState extends State<FeedScreen> {
                       Text('${item.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 12)),
                       const SizedBox(height: 18),
 
-                      // Remix
                       IconButton(
                         iconSize: 30,
                         icon: const Icon(Icons.auto_awesome, color: Colors.amber),
@@ -408,7 +505,6 @@ class _FeedScreenState extends State<FeedScreen> {
                       const Text('Remix', style: TextStyle(color: Colors.white, fontSize: 11)),
                       const SizedBox(height: 18),
 
-                      // Share
                       IconButton(
                         iconSize: 30,
                         icon: const Icon(Icons.share, color: Colors.white),
