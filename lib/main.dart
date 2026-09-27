@@ -1,13 +1,5 @@
 import 'package:flutter/material.dart';
-// url_launcher ሳያስፈልግ ቀላል Snackbar ወይም Custom Action
-  void _makePhoneCall(String phoneNumber) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('ስልክ ቁጥር: $phoneNumber'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+
 void main() {
   runApp(const MyApp());
 }
@@ -81,18 +73,15 @@ class _FeedScreenState extends State<FeedScreen> {
     ),
   ];
 
-  // Call launcher function
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: phoneNumber,
+  void _makePhoneCall(String phoneNumber) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('የተመረጠው ስልክ ቁጥር: $phoneNumber'),
+        duration: const Duration(seconds: 2),
+      ),
     );
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    }
   }
 
-  // Bottom sheet for adding new content
   void _showAddContentBottomSheet() {
     final titleController = TextEditingController();
     final usernameController = TextEditingController();
@@ -134,7 +123,7 @@ class _FeedScreenState extends State<FeedScreen> {
               TextField(
                 controller: usernameController,
                 decoration: const InputDecoration(
-                  labelText: 'የተጠቃሚ ስም (उदा. @my_brand)',
+                  labelText: 'የተጠቃሚ ስም (ምሳሌ @my_brand)',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -199,7 +188,6 @@ class _FeedScreenState extends State<FeedScreen> {
             color: item.backgroundColor,
             child: Stack(
               children: [
-                // Main Content Text
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -215,14 +203,11 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                   ),
                 ),
-
-                // Right Action Buttons
                 Positioned(
                   right: 16,
                   bottom: 120,
                   child: Column(
                     children: [
-                      // Like Button
                       IconButton(
                         iconSize: 36,
                         icon: Icon(
@@ -241,8 +226,6 @@ class _FeedScreenState extends State<FeedScreen> {
                         style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                       const SizedBox(height: 20),
-
-                      // Remix Button
                       IconButton(
                         iconSize: 32,
                         icon: const Icon(Icons.auto_awesome, color: Colors.amber),
@@ -257,8 +240,6 @@ class _FeedScreenState extends State<FeedScreen> {
                         style: TextStyle(color: Colors.white, fontSize: 12),
                       ),
                       const SizedBox(height: 20),
-
-                      // Share Button
                       IconButton(
                         iconSize: 32,
                         icon: const Icon(Icons.share, color: Colors.white),
@@ -271,8 +252,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ],
                   ),
                 ),
-
-                // Bottom Left Username & Call Button
                 Positioned(
                   left: 16,
                   bottom: 40,
@@ -309,8 +288,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ],
                   ),
                 ),
-
-                // Floating Plus Button (Add New Post)
                 Positioned(
                   right: 16,
                   bottom: 40,
