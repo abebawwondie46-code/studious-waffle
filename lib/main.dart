@@ -103,7 +103,7 @@ class _FeedScreenState extends State<FeedScreen> {
     }).toList();
   }
 
-  // Delete Post Dialog
+  // Delete Post Dialog (Shown only on Long Press)
   void _confirmDeletePost(FeedItem item) {
     showDialog(
       context: context,
@@ -532,27 +532,24 @@ class _FeedScreenState extends State<FeedScreen> {
                   itemCount: itemsToDisplay.length,
                   itemBuilder: (context, index) {
                     final item = itemsToDisplay[index];
-                    return GestureDetector(
-                      onLongPress: () => _confirmDeletePost(item),
-                      child: FeedCardItem(
-                        item: item,
-                        onLike: () {
-                          setState(() {
-                            item.isLiked = !item.isLiked;
-                            item.isLiked ? item.likes++ : item.likes--;
-                          });
-                        },
-                        onComment: () => _showCommentsModal(item),
-                        onShare: () => _shareContent(item),
-                        onCall: () => _makePhoneCall(item.phoneNumber),
-                        onAdd: _showAddContentBottomSheet,
-                        onDelete: () => _confirmDeletePost(item),
-                      ),
+                    return FeedCardItem(
+                      item: item,
+                      onLike: () {
+                        setState(() {
+                          item.isLiked = !item.isLiked;
+                          item.isLiked ? item.likes++ : item.likes--;
+                        });
+                      },
+                      onComment: () => _showCommentsModal(item),
+                      onShare: () => _shareContent(item),
+                      onCall: () => _makePhoneCall(item.phoneNumber),
+                      onAdd: _showAddContentBottomSheet,
+                      onDelete: () => _confirmDeletePost(item),
                     );
                   },
                 ),
 
-          // Header Search Bar & Filter Chips
+          // Header Search Bar & Category Chips
           Positioned(
             top: 45,
             left: 12,
@@ -700,246 +697,265 @@ class _FeedCardItemState extends State<FeedCardItem> {
     final item = widget.item;
     final bool hasMedia = item.mediaType != MediaType.none && item.mediaPath != null;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: item.gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return GestureDetector(
+      onLongPress: widget.onDelete, // Long Press triggers Delete Dialog
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: item.gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          // Background Video Player
-          if (item.mediaType == MediaType.video && _videoController != null && _videoController!.value.isInitialized)
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _videoController!.value.isPlaying ? _videoController!.pause() : _videoController!.play();
-                });
-              },
-              child: SizedBox.expand(
-                child: FittedBox(
+        child: Stack(
+          children: [
+            // Background Video Player
+            if (item.mediaType == MediaType.video && _videoController != null && _videoController!.value.isInitialized)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _videoController!.value.isPlaying ? _videoController!.pause() : _videoController!.play();
+                  });
+                },
+                child: SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _videoController!.value.size.width,
+                      height: _videoController!.value.size.height,
+                      child: VideoPlayer(_videoController!),
+                    ),
+                  ),
+                ),
+              )
+            // Background Image
+            else if (item.mediaType == MediaType.image && item.mediaPath != null)
+              SizedBox.expand(
+                child: Image.file(
+                  File(item.mediaPath!),
                   fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: _videoController!.value.size.width,
-                    height: _videoController!.value.size.height,
-                    child: VideoPlayer(_videoController!),
+                ),
+              ),
+
+            // Gradient Overlay
+            if (hasMedia)
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.black45, Colors.transparent, Colors.black87],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
                 ),
               ),
-            )
-          // Background Image
-          else if (item.mediaType == MediaType.image && item.mediaPath != null)
-            SizedBox.expand(
-              child: Image.file(
-                File(item.mediaPath!),
-                fit: BoxFit.cover,
-              ),
-            ),
 
-          // Gradient Overlay Bottom Shadow
-          if (hasMedia)
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.black54, Colors.transparent, Colors.black87],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+            // Text Only Card (When No Media Uploaded)
+            if (!hasMedia && item.title.isNotEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.65),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white24, width: 1),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: Colors.amber),
+                          ),
+                          child: Text(
+                            '# ${item.category}',
+                            style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        Text(
+                          item.title,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
 
-          // Text Only Card (When No Media Uploaded)
-          if (!hasMedia && item.title.isNotEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Container(
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.55),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white24, width: 1),
+            // Video Progress Timeline Indicator
+            if (item.mediaType == MediaType.video && _videoController != null && _videoController!.value.isInitialized)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: VideoProgressIndicator(
+                  _videoController!,
+                  allowScrubbing: true,
+                  colors: const VideoProgressColors(
+                    playedColor: Colors.amber,
+                    bufferedColor: Colors.white24,
+                    backgroundColor: Colors.white10,
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: Colors.amber),
-                        ),
-                        child: Text(
-                          '# ${item.category}',
-                          style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
+                ),
+              ),
+
+            // Right Action Buttons
+            Positioned(
+              right: 16,
+              bottom: 120,
+              child: Column(
+                children: [
+                  if (item.mediaType == MediaType.video) ...[
+                    IconButton(
+                      iconSize: 28,
+                      icon: Icon(
+                        _isMuted ? Icons.volume_off : Icons.volume_up,
+                        color: _isMuted ? Colors.amber : Colors.white,
                       ),
-                      const SizedBox(height: 15),
-                      Text(
-                        item.title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+                      onPressed: () {
+                        setState(() {
+                          _isMuted = !_isMuted;
+                          _videoController?.setVolume(_isMuted ? 0 : 1);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
-          // Right Action Buttons (TikTok / Reels Vertical Alignment)
-          Positioned(
-            right: 16,
-            bottom: 110,
-            child: Column(
-              children: [
-                if (item.mediaType == MediaType.video) ...[
+                  IconButton(
+                    iconSize: 32,
+                    icon: Icon(
+                      item.isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: item.isLiked ? Colors.red : Colors.white,
+                    ),
+                    onPressed: widget.onLike,
+                  ),
+                  Text('${item.likes}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                  const SizedBox(height: 16),
+
+                  IconButton(
+                    iconSize: 30,
+                    icon: const Icon(Icons.comment, color: Colors.white),
+                    onPressed: widget.onComment,
+                  ),
+                  Text('${item.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                  const SizedBox(height: 16),
+
                   IconButton(
                     iconSize: 28,
-                    icon: Icon(
-                      _isMuted ? Icons.volume_off : Icons.volume_up,
-                      color: Colors.white,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isMuted = !_isMuted;
-                        _videoController?.setVolume(_isMuted ? 0 : 1);
-                      });
-                    },
+                    icon: const Icon(Icons.share, color: Colors.white),
+                    onPressed: widget.onShare,
                   ),
-                  const SizedBox(height: 12),
+                  const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11)),
                 ],
-
-                IconButton(
-                  iconSize: 32,
-                  icon: Icon(
-                    item.isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: item.isLiked ? Colors.red : Colors.white,
-                  ),
-                  onPressed: widget.onLike,
-                ),
-                Text('${item.likes}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                const SizedBox(height: 16),
-
-                IconButton(
-                  iconSize: 30,
-                  icon: const Icon(Icons.comment, color: Colors.white),
-                  onPressed: widget.onComment,
-                ),
-                Text('${item.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                const SizedBox(height: 16),
-
-                IconButton(
-                  iconSize: 28,
-                  icon: const Icon(Icons.share, color: Colors.white),
-                  onPressed: widget.onShare,
-                ),
-                const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11)),
-                const SizedBox(height: 16),
-
-                IconButton(
-                  iconSize: 28,
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                  onPressed: widget.onDelete,
-                ),
-                const Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 11)),
-              ],
+              ),
             ),
-          ),
 
-          // Bottom Left Content Details (TikTok Style Text Alignment)
-          Positioned(
-            left: 16,
-            right: 90,
-            bottom: 35,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Category Chip
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '# ${item.category}',
-                    style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
+            // Bottom Left Content Details
+            Positioned(
+              left: 16,
+              right: 90,
+              bottom: 45,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: hasMedia ? Colors.black.withOpacity(0.35) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(height: 8),
-
-                // Title Overlay if Media Present
-                if (hasMedia && item.title.isNotEmpty)
-                  Text(
-                    item.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      height: 1.3,
-                      shadows: [Shadow(blurRadius: 8, color: Colors.black87, offset: Offset(1, 1))],
-                    ),
-                  ),
-                const SizedBox(height: 8),
-
-                // Username
-                if (item.username.isNotEmpty)
-                  Text(
-                    item.username,
-                    style: const TextStyle(
-                      color: Colors.amberAccent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      shadows: [Shadow(blurRadius: 8, color: Colors.black)],
-                    ),
-                  ),
-                
-                // Phone Call Button
-                if (item.phoneNumber.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal[600],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Category Chip
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Text(
+                        '# ${item.category}',
+                        style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    icon: const Icon(Icons.phone, color: Colors.white, size: 16),
-                    label: Text(
-                      'ይደውሉ: ${item.phoneNumber}',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                    onPressed: widget.onCall,
-                  ),
-                ],
-              ],
-            ),
-          ),
+                    const SizedBox(height: 8),
 
-          // Bottom Right Floating Add Button (+ Button)
-          Positioned(
-            right: 16,
-            bottom: 35,
-            child: FloatingActionButton(
-              mini: false,
-              backgroundColor: Colors.amber[700],
-              onPressed: widget.onAdd,
-              child: const Icon(Icons.add, color: Colors.black, size: 30),
+                    // Title Overlay
+                    if (hasMedia && item.title.isNotEmpty)
+                      Text(
+                        item.title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                          shadows: [Shadow(blurRadius: 8, color: Colors.black, offset: Offset(1, 1))],
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+
+                    // Username
+                    if (item.username.isNotEmpty)
+                      Text(
+                        item.username,
+                        style: const TextStyle(
+                          color: Colors.amberAccent,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                        ),
+                      ),
+                    
+                    // Phone Call Button
+                    if (item.phoneNumber.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal[600],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                        icon: const Icon(Icons.phone, color: Colors.white, size: 16),
+                        label: Text(
+                          'ይደውሉ: ${item.phoneNumber}',
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                        onPressed: widget.onCall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+
+            // Bottom Right Floating Add Button
+            Positioned(
+              right: 16,
+              bottom: 45,
+              child: FloatingActionButton(
+                mini: false,
+                backgroundColor: Colors.amber[700],
+                onPressed: widget.onAdd,
+                child: const Icon(Icons.add, color: Colors.black, size: 30),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
