@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-
+// url_launcher ሳያስፈልግ ቀላል Snackbar ወይም Custom Action
+  void _makePhoneCall(String phoneNumber) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('ስልክ ቁጥር: $phoneNumber'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 void main() {
   runApp(const MyApp());
 }
