@@ -689,7 +689,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
   VideoPlayerController? _videoController;
   bool _isMuted = false;
   bool _showPlayPauseOverlay = false;
-  IconData _lastActionIcon = Icons.pause;
+  bool _isCurrentlyPlaying = true;
 
   @override
   void initState() {
@@ -697,7 +697,9 @@ class _FeedCardItemState extends State<FeedCardItem> {
     if (widget.item.mediaType == MediaType.video && widget.item.mediaPath != null) {
       _videoController = VideoPlayerController.file(File(widget.item.mediaPath!))
         ..initialize().then((_) {
-          setState(() {});
+          setState(() {
+            _isCurrentlyPlaying = true;
+          });
           _videoController!.setLooping(true);
           _videoController!.play();
         });
@@ -716,21 +718,23 @@ class _FeedCardItemState extends State<FeedCardItem> {
       setState(() {
         if (isPlaying) {
           _videoController!.pause();
-          _lastActionIcon = Icons.pause;
+          _isCurrentlyPlaying = false;
         } else {
           _videoController!.play();
-          _lastActionIcon = Icons.play_arrow;
+          _isCurrentlyPlaying = true;
         }
         _showPlayPauseOverlay = true;
       });
 
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted) {
-          setState(() {
-            _showPlayPauseOverlay = false;
-          });
-        }
-      });
+      if (_isCurrentlyPlaying) {
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) {
+            setState(() {
+              _showPlayPauseOverlay = false;
+            });
+          }
+        });
+      }
     }
   }
 
@@ -786,8 +790,8 @@ class _FeedCardItemState extends State<FeedCardItem> {
                 ),
               ),
 
-            // Animated Play / Pause Center Icon Overlay
-            if (_showPlayPauseOverlay)
+            // Play / Pause Overlay Icon (Fixed Logic)
+            if (!_isCurrentlyPlaying || _showPlayPauseOverlay)
               Center(
                 child: Container(
                   padding: const EdgeInsets.all(20),
@@ -797,7 +801,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
                     border: Border.all(color: Colors.amber, width: 2),
                   ),
                   child: Icon(
-                    _lastActionIcon,
+                    _isCurrentlyPlaying ? Icons.pause : Icons.play_arrow,
                     size: 50,
                     color: Colors.amber,
                   ),
