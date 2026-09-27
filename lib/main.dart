@@ -689,6 +689,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
   VideoPlayerController? _videoController;
   bool _isMuted = false;
   bool _showPlayPauseOverlay = false;
+  IconData _lastActionIcon = Icons.pause;
 
   @override
   void initState() {
@@ -711,16 +712,19 @@ class _FeedCardItemState extends State<FeedCardItem> {
 
   void _togglePlayPause() {
     if (_videoController != null && _videoController!.value.isInitialized) {
+      final isPlaying = _videoController!.value.isPlaying;
       setState(() {
-        if (_videoController!.value.isPlaying) {
+        if (isPlaying) {
           _videoController!.pause();
+          _lastActionIcon = Icons.pause;
         } else {
           _videoController!.play();
+          _lastActionIcon = Icons.play_arrow;
         }
         _showPlayPauseOverlay = true;
       });
 
-      Future.delayed(const Duration(milliseconds: 700), () {
+      Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted) {
           setState(() {
             _showPlayPauseOverlay = false;
@@ -736,7 +740,9 @@ class _FeedCardItemState extends State<FeedCardItem> {
     final bool hasMedia = item.mediaType != MediaType.none && item.mediaPath != null;
 
     return GestureDetector(
+      onTap: _togglePlayPause,
       onLongPress: widget.onDelete,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -749,16 +755,13 @@ class _FeedCardItemState extends State<FeedCardItem> {
           children: [
             // Background Video Player
             if (item.mediaType == MediaType.video && _videoController != null && _videoController!.value.isInitialized)
-              GestureDetector(
-                onTap: _togglePlayPause,
-                child: SizedBox.expand(
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: _videoController!.value.size.width,
-                      height: _videoController!.value.size.height,
-                      child: VideoPlayer(_videoController!),
-                    ),
+              SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _videoController!.value.size.width,
+                    height: _videoController!.value.size.height,
+                    child: VideoPlayer(_videoController!),
                   ),
                 ),
               )
@@ -771,7 +774,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
                 ),
               ),
 
-            // Subtle Gradient Shadow for Top and Bottom readability
+            // Subtle Gradient Overlay
             if (hasMedia)
               Container(
                 decoration: const BoxDecoration(
@@ -783,27 +786,48 @@ class _FeedCardItemState extends State<FeedCardItem> {
                 ),
               ),
 
-            // Tap Play/Pause Animated Icon
-            if (_showPlayPauseOverlay && _videoController != null)
+            // Animated Play / Pause Center Icon Overlay
+            if (_showPlayPauseOverlay)
               Center(
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 300),
-                  opacity: _showPlayPauseOverlay ? 1.0 : 0.0,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.amber, width: 2),
-                    ),
-                    child: Icon(
-                      _videoController!.value.isPlaying ? Icons.play_arrow : Icons.pause,
-                      size: 48,
-                      color: Colors.amber,
-                    ),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.amber, width: 2),
+                  ),
+                  child: Icon(
+                    _lastActionIcon,
+                    size: 50,
+                    color: Colors.amber,
                   ),
                 ),
               ),
+
+            // Views Counter Badge
+            Positioned(
+              top: 100,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.remove_red_eye, color: Colors.white70, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${item.views}',
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
             // Text Only Card (When No Media Uploaded)
             if (!hasMedia && item.title.isNotEmpty)
@@ -918,7 +942,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
               ),
             ),
 
-            // Clean Transparent Bottom Left Content Details
+            // Clean Bottom Left Content Details
             Positioned(
               left: 16,
               right: 90,
@@ -941,7 +965,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Title Overlay (No Dark Box Backdrop)
+                  // Title Overlay
                   if (hasMedia && item.title.isNotEmpty)
                     Text(
                       item.title,
@@ -995,7 +1019,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
               ),
             ),
 
-            // Bottom Right Floating Add Button
+            // Bottom Right Floating Add Button (+ Button)
             Positioned(
               right: 16,
               bottom: 35,
