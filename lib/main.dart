@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -93,7 +94,6 @@ class _FeedScreenState extends State<FeedScreen> {
 
   String _selectedCategoryFilter = 'ሁሉም';
   String _searchQuery = '';
-  bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
 
   List<FeedItem> get _filteredFeedItems {
@@ -235,7 +235,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Category Selection
                     const Text('ምድብ ይምረጡ:', style: TextStyle(color: Colors.white70, fontSize: 13)),
                     const SizedBox(height: 8),
                     Wrap(
@@ -264,7 +263,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Theme Color Selection
                     const Text('የጀርባ ቀለም ዲዛይን ይምረጡ:', style: TextStyle(color: Colors.white70, fontSize: 13)),
                     const SizedBox(height: 8),
                     Row(
@@ -297,7 +295,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Inputs
                     TextField(
                       controller: titleController,
                       maxLines: 3,
@@ -342,7 +339,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Upload Video / Media Button with Gallery Integration
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
@@ -361,7 +357,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Publish Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -419,7 +414,6 @@ class _FeedScreenState extends State<FeedScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Main Content Feed
           itemsToDisplay.isEmpty
               ? const Center(
                   child: Text(
@@ -442,7 +436,6 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                       child: Stack(
                         children: [
-                          // Main Text / Content
                           Center(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 28.0),
@@ -475,7 +468,6 @@ class _FeedScreenState extends State<FeedScreen> {
                             ),
                           ),
 
-                          // Right Interactive Actions
                           Positioned(
                             right: 16,
                             bottom: 110,
@@ -527,7 +519,6 @@ class _FeedScreenState extends State<FeedScreen> {
                             ),
                           ),
 
-                          // Bottom Left User Info & Call Button
                           Positioned(
                             left: 16,
                             bottom: 40,
@@ -566,7 +557,6 @@ class _FeedScreenState extends State<FeedScreen> {
                             ),
                           ),
 
-                          // Bottom Right Add (+ Button)
                           Positioned(
                             right: 16,
                             bottom: 40,
@@ -582,14 +572,12 @@ class _FeedScreenState extends State<FeedScreen> {
                   },
                 ),
 
-          // Top Navigation Header (Search Bar & Category Filters)
           Positioned(
             top: 45,
             left: 12,
             right: 12,
             child: Column(
               children: [
-                // Top Search Bar Row
                 Row(
                   children: [
                     Expanded(
@@ -640,7 +628,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // Horizontal Category Filter Bar
                 SizedBox(
                   height: 36,
                   child: ListView(
