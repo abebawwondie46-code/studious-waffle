@@ -30,18 +30,14 @@ jobs:
 
       - name: Re-create Clean Android Project Structure
         run: |
-          # የድሮውን የተበላሸ android ፎልደር ሙሉ በሙሉ ማፅዳት
           rm -rf android
-          
-          # Flutter ከባዶ አዲስ ፅዱ የ Android ፕሮጀክት በ v2 embedding እንዲፈጥር ማድረግ
-          flutter create . --platforms=android --org=com.example
+          flutter create . --platforms=android --org=com.example --project-name=kuanyngne
 
       - name: Get Dependencies
         run: flutter pub get
 
       - name: Enable MultiDex in build.gradle
         run: |
-          # MultiDex ን በራስ-ሰር ማበራት
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle
           sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle
 
