@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
   runApp(const MyApp());
@@ -25,7 +26,7 @@ class FeedItem {
   final String phoneNumber;
   final String category;
   final List<Color> gradientColors;
-  final String? mediaFileName;
+  final String? mediaPath;
   int likes;
   int commentsCount;
   int views;
@@ -38,7 +39,7 @@ class FeedItem {
     required this.phoneNumber,
     required this.category,
     required this.gradientColors,
-    this.mediaFileName,
+    this.mediaPath,
     required this.likes,
     this.commentsCount = 0,
     this.views = 120,
@@ -54,7 +55,7 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  final List<FeedItem> _feedItems = [
+  final List<FeedItem> _allFeedItems = [
     FeedItem(
       id: '1',
       title: 'አዳዲስ የይዘት\nፈጠራዎችን እዚህ ያግኙ!',
@@ -89,6 +90,21 @@ class _FeedScreenState extends State<FeedScreen> {
       views: 12400,
     ),
   ];
+
+  String _selectedCategoryFilter = 'ሁሉም';
+  String _searchQuery = '';
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  List<FeedItem> get _filteredFeedItems {
+    return _allFeedItems.where((item) {
+      final matchesCategory = _selectedCategoryFilter == 'ሁሉም' || item.category == _selectedCategoryFilter;
+      final matchesSearch = _searchQuery.isEmpty ||
+          item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          item.username.toLowerCase().contains(_searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    }).toList();
+  }
 
   void _showCommentsModal(FeedItem item) {
     final commentController = TextEditingController();
@@ -160,9 +176,8 @@ class _FeedScreenState extends State<FeedScreen> {
     final phoneController = TextEditingController();
 
     String selectedCategory = 'ንግድ';
-    String? selectedFileName;
+    String? selectedFilePath;
     
-    // Preset Gradient Themes
     final List<List<Color>> gradientPresets = [
       [const Color(0xFF0F2027), const Color(0xFF203A43), const Color(0xFF2C5364)],
       [const Color(0xFF3A1C71), const Color(0xFFD76D77), const Color(0xFFFFAF7B)],
@@ -182,6 +197,17 @@ class _FeedScreenState extends State<FeedScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            
+            Future<void> pickMedia() async {
+              final ImagePicker picker = ImagePicker();
+              final XFile? media = await picker.pickVideo(source: ImageSource.gallery);
+              if (media != null) {
+                setModalState(() {
+                  selectedFilePath = media.name;
+                });
+              }
+            }
+
             return Padding(
               padding: EdgeInsets.only(
                 top: 24,
@@ -316,7 +342,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Upload Video / Media Button
+                    // Upload Video / Media Button with Gallery Integration
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
@@ -327,14 +353,11 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                       icon: const Icon(Icons.video_library, color: Colors.amber),
                       label: Text(
-                        selectedFileName ?? 'ቪዲዮ ወይም ምስል ይምረጡ (Upload Media)',
+                        selectedFilePath ?? 'ቪዲዮ ወይም ምስል ይምረጡ (Upload Media)',
                         style: const TextStyle(color: Colors.amber),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      onPressed: () {
-                        setModalState(() {
-                          selectedFileName = "my_video_sample.mp4";
-                        });
-                      },
+                      onPressed: pickMedia,
                     ),
                     const SizedBox(height: 20),
 
@@ -352,7 +375,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         onPressed: () {
                           if (titleController.text.isNotEmpty) {
                             setState(() {
-                              _feedItems.insert(
+                              _allFeedItems.insert(
                                 0,
                                 FeedItem(
                                   id: DateTime.now().toString(),
@@ -365,7 +388,7 @@ class _FeedScreenState extends State<FeedScreen> {
                                       : phoneController.text,
                                   category: selectedCategory,
                                   gradientColors: selectedGradient,
-                                  mediaFileName: selectedFileName,
+                                  mediaPath: selectedFilePath,
                                   likes: 0,
                                 ),
                               );
@@ -391,187 +414,267 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final itemsToDisplay = _filteredFeedItems;
+
     return Scaffold(
-      body: PageView.builder(
-        scrollDirection: Axis.vertical,
-        itemCount: _feedItems.length,
-        itemBuilder: (context, index) {
-          final item = _feedItems[index];
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: item.gradientColors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Stack(
-              children: [
-                // Top Category Badge & Views
-                Positioned(
-                  top: 50,
-                  left: 20,
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.black45,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.amber, width: 1),
-                        ),
-                        child: Text(
-                          '# ${item.category}',
-                          style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+      body: Stack(
+        children: [
+          // Main Content Feed
+          itemsToDisplay.isEmpty
+              ? const Center(
+                  child: Text(
+                    'ምንም የተገኘ ይዘት የለም!',
+                    style: TextStyle(fontSize: 16, color: Colors.white60),
+                  ),
+                )
+              : PageView.builder(
+                  scrollDirection: Axis.vertical,
+                  itemCount: itemsToDisplay.length,
+                  itemBuilder: (context, index) {
+                    final item = itemsToDisplay[index];
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: item.gradientColors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Row(
+                      child: Stack(
                         children: [
-                          const Icon(Icons.remove_red_eye, size: 16, color: Colors.white70),
-                          const SizedBox(width: 4),
-                          Text('${item.views}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          // Main Text / Content
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    item.title,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  if (item.mediaPath != null) ...[
+                                    const SizedBox(height: 15),
+                                    Chip(
+                                      avatar: const Icon(Icons.play_circle_fill, color: Colors.amber),
+                                      label: Text(
+                                        item.mediaPath!,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      backgroundColor: Colors.black54,
+                                    )
+                                  ]
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          // Right Interactive Actions
+                          Positioned(
+                            right: 16,
+                            bottom: 110,
+                            child: Column(
+                              children: [
+                                IconButton(
+                                  iconSize: 34,
+                                  icon: Icon(
+                                    item.isLiked ? Icons.favorite : Icons.favorite_border,
+                                    color: item.isLiked ? Colors.red : Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      item.isLiked = !item.isLiked;
+                                      item.isLiked ? item.likes++ : item.likes--;
+                                    });
+                                  },
+                                ),
+                                Text('${item.likes}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                const SizedBox(height: 18),
+
+                                IconButton(
+                                  iconSize: 32,
+                                  icon: const Icon(Icons.comment, color: Colors.white),
+                                  onPressed: () => _showCommentsModal(item),
+                                ),
+                                Text('${item.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                const SizedBox(height: 18),
+
+                                IconButton(
+                                  iconSize: 30,
+                                  icon: const Icon(Icons.auto_awesome, color: Colors.amber),
+                                  onPressed: () {},
+                                ),
+                                const Text('Remix', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                const SizedBox(height: 18),
+
+                                IconButton(
+                                  iconSize: 30,
+                                  icon: const Icon(Icons.share, color: Colors.white),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('ሊንኩ ተቀድቷል (Link Copied)')),
+                                    );
+                                  },
+                                ),
+                                const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11)),
+                              ],
+                            ),
+                          ),
+
+                          // Bottom Left User Info & Call Button
+                          Positioned(
+                            left: 16,
+                            bottom: 40,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.username,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.teal,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                  ),
+                                  icon: const Icon(Icons.phone, color: Colors.white, size: 18),
+                                  label: Text(
+                                    'ይደውሉ: ${item.phoneNumber}',
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  ),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('ደውል: ${item.phoneNumber}')),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Bottom Right Add (+ Button)
+                          Positioned(
+                            right: 16,
+                            bottom: 40,
+                            child: FloatingActionButton(
+                              backgroundColor: Colors.amber[700],
+                              child: const Icon(Icons.add, color: Colors.black, size: 32),
+                              onPressed: _showAddContentBottomSheet,
+                            ),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
 
-                // Main Text / Content
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          item.title,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            height: 1.4,
-                          ),
+          // Top Navigation Header (Search Bar & Category Filters)
+          Positioned(
+            top: 45,
+            left: 12,
+            right: 12,
+            child: Column(
+              children: [
+                // Top Search Bar Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 42,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: Colors.white24),
                         ),
-                        if (item.mediaFileName != null) ...[
-                          const SizedBox(height: 15),
-                          Chip(
-                            avatar: const Icon(Icons.play_circle_fill, color: Colors.amber),
-                            label: Text(item.mediaFileName!),
-                            backgroundColor: Colors.black54,
-                          )
-                        ]
-                      ],
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search, color: Colors.amber, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                style: const TextStyle(fontSize: 14, color: Colors.white),
+                                decoration: const InputDecoration(
+                                  hintText: 'በፅሁፍ ወይም በስም ፈልግ...',
+                                  hintStyle: TextStyle(color: Colors.white54, fontSize: 13),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _searchQuery = val;
+                                  });
+                                },
+                              ),
+                            ),
+                            if (_searchQuery.isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _searchController.clear();
+                                    _searchQuery = '';
+                                  });
+                                },
+                                child: const Icon(Icons.close, color: Colors.grey, size: 18),
+                              )
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
+                const SizedBox(height: 10),
 
-                // Right Interactive Actions
-                Positioned(
-                  right: 16,
-                  bottom: 110,
-                  child: Column(
-                    children: [
-                      IconButton(
-                        iconSize: 34,
-                        icon: Icon(
-                          item.isLiked ? Icons.favorite : Icons.favorite_border,
-                          color: item.isLiked ? Colors.red : Colors.white,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            item.isLiked = !item.isLiked;
-                            item.isLiked ? item.likes++ : item.likes--;
-                          });
-                        },
-                      ),
-                      Text('${item.likes}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      const SizedBox(height: 18),
-
-                      IconButton(
-                        iconSize: 32,
-                        icon: const Icon(Icons.comment, color: Colors.white),
-                        onPressed: () => _showCommentsModal(item),
-                      ),
-                      Text('${item.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      const SizedBox(height: 18),
-
-                      IconButton(
-                        iconSize: 30,
-                        icon: const Icon(Icons.auto_awesome, color: Colors.amber),
-                        onPressed: () {},
-                      ),
-                      const Text('Remix', style: TextStyle(color: Colors.white, fontSize: 11)),
-                      const SizedBox(height: 18),
-
-                      IconButton(
-                        iconSize: 30,
-                        icon: const Icon(Icons.share, color: Colors.white),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('ሊንኩ ተቀድቷል (Link Copied)')),
-                          );
-                        },
-                      ),
-                      const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11)),
-                    ],
-                  ),
-                ),
-
-                // Bottom Left User Info & Call Button
-                Positioned(
-                  left: 16,
-                  bottom: 40,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.username,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
+                // Horizontal Category Filter Bar
+                SizedBox(
+                  height: 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: ['ሁሉም', 'ንግድ', 'ፖለቲካ', 'ዜና', 'ቪዲዮ', 'ጥቅስ', 'ቴክኖሎጂ'].map((cat) {
+                      final isSelected = _selectedCategoryFilter == cat;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ChoiceChip(
+                          label: Text(
+                            cat,
+                            style: TextStyle(
+                              color: isSelected ? Colors.black : Colors.white,
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          selected: isSelected,
+                          selectedColor: Colors.amber,
+                          backgroundColor: Colors.black.withOpacity(0.5),
+                          onSelected: (val) {
+                            setState(() {
+                              _selectedCategoryFilter = cat;
+                            });
+                          },
                         ),
-                        icon: const Icon(Icons.phone, color: Colors.white, size: 18),
-                        label: Text(
-                          'ይደውሉ: ${item.phoneNumber}',
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('ደውል: ${item.phoneNumber}')),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Bottom Right Add (+ Button)
-                Positioned(
-                  right: 16,
-                  bottom: 40,
-                  child: FloatingActionButton(
-                    backgroundColor: Colors.amber[700],
-                    child: const Icon(Icons.add, color: Colors.black, size: 32),
-                    onPressed: _showAddContentBottomSheet,
+                      );
+                    }).toList(),
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
