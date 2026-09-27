@@ -790,7 +790,7 @@ class _FeedCardItemState extends State<FeedCardItem> {
                 ),
               ),
 
-            // Play / Pause Overlay Icon (Fixed Logic)
+            // Play / Pause Overlay Icon
             if (!_isCurrentlyPlaying || _showPlayPauseOverlay)
               Center(
                 child: Container(
@@ -936,9 +936,10 @@ class _FeedCardItemState extends State<FeedCardItem> {
                   Text('${item.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 12)),
                   const SizedBox(height: 16),
 
+                  // TikTok Style Curved Share Arrow Icon
                   IconButton(
-                    iconSize: 28,
-                    icon: const Icon(Icons.share, color: Colors.white),
+                    iconSize: 32,
+                    icon: const Icon(Icons.shortcut_rounded, color: Colors.white),
                     onPressed: widget.onShare,
                   ),
                   const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11)),
