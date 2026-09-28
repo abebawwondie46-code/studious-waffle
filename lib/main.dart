@@ -535,7 +535,7 @@ class _FeedScreenState extends State<FeedScreen> {
                                     setModalState(() => isUploading = false);
                                     if (mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('ስህተት ተፈጥሯል: $e')),
+                                        SnackBar(content: Text('ስህተት ተፈጥሯል: እባክዎን ኢንተርኔትዎን ያረጋግጡ ($e)')),
                                       );
                                     }
                                   }
