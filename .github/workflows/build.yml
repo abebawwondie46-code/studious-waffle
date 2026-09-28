@@ -30,8 +30,7 @@ jobs:
 
       - name: Re-create Clean Android Project Structure
         run: |
-          rm -rf android
-          flutter create . --platforms=android --org=com.example --project-name=kuanyngne
+         flutter create . --platforms=android --org=com.example --project-name=kuanyngne
 
       - name: Get Dependencies
         run: flutter pub get
