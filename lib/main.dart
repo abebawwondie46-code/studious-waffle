@@ -4,9 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
 
-// የ Supabase አድራሻ እና ቁልፍ
+// 1. የ Supabase አድራሻ እና አዲሱ Key
 const String supabaseUrl = 'https://ycvycgdnnmlfaebtxvfl.supabase.co';
-const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljdnljZ2Rubm1sZmFlYnR4dmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTk2MjAsImV4cCI6MjA5Njg3NTYyMH0.Os73HGXe4EOijqpBVHk9Bcm6uzZXkgZjWRoroV1m2gE';
+const String supabaseAnonKey = 'sb_publishable_jEgLbgOCrBU3NZ0pM_lWlw_rJjyRbBp';
 
 final supabase = Supabase.instance.client;
 
@@ -106,7 +106,7 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
     _fetchFeedFromSupabase();
   }
 
-  // 1. ቪዲዮዎችን ከ Supabase ዳታቤዝ መሳብ
+  // 1. ቪዲዮዎችን ከ Supabase መሳብ
   Future<void> _fetchFeedFromSupabase() async {
     setState(() => _isLoading = true);
     try {
