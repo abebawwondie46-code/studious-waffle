@@ -123,7 +123,7 @@ class _FeedScreenState extends State<FeedScreen> {
   final List<FeedItem> _defaultItems = [
     FeedItem(
       id: '1',
-      title: 'እንኳን ወደ CultureNegne Hub በሰላም መጡ! አዳዲስ የይዘት ፈጠራዎችን እዚህ ያግኙ።',
+      title: 'እንኳን ወደ CultureNegne Hub በሰላም መጡ! አዳዲስ ይዘቶችን እዚህ ያግኙ።',
       username: '@culture_ethio',
       phoneNumber: '0911000000',
       category: 'ንግድ',
@@ -146,7 +146,7 @@ class _FeedScreenState extends State<FeedScreen> {
   Future<void> _fetchVideosFromSupabase() async {
     setState(() => _isLoading = true);
     try {
-      final response = await supabase.from('videos').select().order('created_at', ascending: false);
+      final response = await supabase.from('videos').select().order('id', ascending: false);
       final List<dynamic> data = response as List<dynamic>;
       
       if (data.isNotEmpty) {
@@ -529,25 +529,16 @@ class _FeedScreenState extends State<FeedScreen> {
                                     });
 
                                     await _fetchVideosFromSupabase();
+                                    if (mounted) Navigator.pop(ctx);
                                   } catch (e) {
                                     debugPrint('Upload Error: $e');
-                                    setState(() {
-                                      _allFeedItems.insert(
-                                        0,
-                                        FeedItem(
-                                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                                          title: inputTitle,
-                                          username: inputUsername.isEmpty ? '@user_ethio' : inputUsername,
-                                          phoneNumber: inputPhone,
-                                          category: selectedCategory,
-                                          mediaUrl: selectedMediaFile?.path,
-                                          mediaType: selectedMediaType,
-                                          likes: 0,
-                                        ),
+                                    setModalState(() => isUploading = false);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('ስህተት ተፈጥሯል: $e')),
                                       );
-                                    });
+                                    }
                                   }
-                                  if (mounted) Navigator.pop(ctx);
                                 }
                               },
                         child: isUploading
