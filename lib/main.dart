@@ -163,7 +163,9 @@ class _FeedScreenState extends State<FeedScreen> {
     } catch (e) {
       debugPrint('Error fetching videos: $e');
       setState(() {
-        _allFeedItems = List.from(_defaultItems);
+        if (_allFeedItems.isEmpty) {
+          _allFeedItems = List.from(_defaultItems);
+        }
         _isLoading = false;
       });
     }
@@ -504,6 +506,9 @@ class _FeedScreenState extends State<FeedScreen> {
                                   String? mediaUrl;
                                   String mTypeString = 'none';
 
+                                  String finalUsername = inputUsername.isEmpty ? '@user_ethio' : inputUsername;
+                                  if (!finalUsername.startsWith('@')) finalUsername = '@$finalUsername';
+
                                   try {
                                     if (selectedMediaFile != null) {
                                       final fileName = '${DateTime.now().millisecondsSinceEpoch}_${selectedMediaFile!.path.split('/').last}';
@@ -512,9 +517,6 @@ class _FeedScreenState extends State<FeedScreen> {
 
                                       mTypeString = selectedMediaType == MediaType.video ? 'video' : 'image';
                                     }
-
-                                    String finalUsername = inputUsername.isEmpty ? '@user_ethio' : inputUsername;
-                                    if (!finalUsername.startsWith('@')) finalUsername = '@$finalUsername';
 
                                     await supabase.from('videos').insert({
                                       'title': inputTitle,
@@ -529,16 +531,27 @@ class _FeedScreenState extends State<FeedScreen> {
                                     });
 
                                     await _fetchVideosFromSupabase();
-                                    if (mounted) Navigator.pop(ctx);
                                   } catch (e) {
                                     debugPrint('Upload Error: $e');
-                                    setModalState(() => isUploading = false);
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('ስህተት ተፈጥሯል: እባክዎን ኢንተርኔትዎን ያረጋግጡ ($e)')),
+                                    // Fallback: If network fails, add to local list directly
+                                    setState(() {
+                                      _allFeedItems.insert(
+                                        0,
+                                        FeedItem(
+                                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                          title: inputTitle,
+                                          username: finalUsername,
+                                          phoneNumber: inputPhone,
+                                          category: selectedCategory,
+                                          mediaUrl: selectedMediaFile?.path,
+                                          mediaType: selectedMediaType,
+                                          likes: 0,
+                                        ),
                                       );
-                                    }
+                                    });
                                   }
+
+                                  if (mounted) Navigator.pop(ctx);
                                 }
                               },
                         child: isUploading
