@@ -4,19 +4,24 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
 
-// 1. የ Supabase አድራሻ እና አዲሱ Key
+// 1. የተስተካከለው የ Supabase አድራሻ እና አዲሱ Anon Key
 const String supabaseUrl = 'https://ycvycgdnnmlfaebtxvfl.supabase.co';
-const String supabaseAnonKey = 'sb_publishable_jEgLbgOCrBU3NZ0pM_lWlw_rJjyRbBp';
+const String supabaseAnonKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljdnljZ2Rubm1sZmFlYnR4dmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTk2MjAsImV4cCI6MjA5Njg3NTYyMH0.Os73HGXe4EOijqpBVHk9Bcm6uzZXkgZjWRoroV1m2gE';
 
 final supabase = Supabase.instance.client;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey,
-  );
+
+  try {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    );
+  } catch (e) {
+    debugPrint('Supabase Init Error: $e');
+  }
 
   runApp(const MyApp());
 }
@@ -97,6 +102,7 @@ class MainFeedScreen extends StatefulWidget {
 class _MainFeedScreenState extends State<MainFeedScreen> {
   List<FeedItem> _feedItems = [];
   bool _isLoading = true;
+  String? _errorMessage;
   String _selectedCategory = 'ሁሉም';
   final List<String> _categories = ['ሁሉም', 'ንግድ', 'ፖለቲካ', 'ዜና', 'ቪዲዮ'];
 
@@ -106,9 +112,13 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
     _fetchFeedFromSupabase();
   }
 
-  // 1. ቪዲዮዎችን ከ Supabase መሳብ
+  // 1. ቪዲዮዎችን ከ Supabase መሳብ (በደህነኛ የመከላከያ ዘዴ)
   Future<void> _fetchFeedFromSupabase() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     try {
       final response = await supabase
           .from('videos')
@@ -120,21 +130,24 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
         _feedItems = data.map((item) => FeedItem.fromMap(item)).toList();
         _isLoading = false;
       });
+    } on SocketException catch (_) {
+      setState(() {
+        _errorMessage = 'የኢንተርኔት ግንኙነት የለም። እባክዎን ኢንተርኔትዎን አብረው እንደገና ይሞክሩ።';
+        _isLoading = false;
+      });
     } catch (e) {
-      debugPrint('Error fetching videos: $e');
-      setState(() => _isLoading = false);
+      setState(() {
+        _errorMessage = 'መረጃዎችን መጫን አልተቻለም። ($e)';
+        _isLoading = false;
+      });
     }
   }
 
-  // 2. ላይክ ማድረግ (Like Sync)
+  // 2. ላይክ ማድረግ
   Future<void> _toggleLike(FeedItem item) async {
     setState(() {
       item.isLiked = !item.isLiked;
-      if (item.isLiked) {
-        item.likes++;
-      } else {
-        item.likes--;
-      }
+      item.likes += item.isLiked ? 1 : -1;
     });
 
     try {
@@ -146,7 +159,7 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
     }
   }
 
-  // 3. አስተያየት መስጫ ሞዳል (Comment Sync)
+  // 3. አስተያየት መስጫ ሞዳል
   void _showCommentsModal(FeedItem item) {
     final commentController = TextEditingController();
     bool isPosting = false;
@@ -214,13 +227,11 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
                                   setModalState(() => isPosting = true);
 
                                   try {
-                                    // A. comment ን መፃፍ
                                     await supabase.from('comments').insert({
                                       'video_id': int.parse(item.id),
                                       'comment': text,
                                     });
 
-                                    // B. comments_count ን ማሳደግ
                                     final newCount = item.commentsCount + 1;
                                     await supabase.from('videos').update({
                                       'comments_count': newCount,
@@ -238,12 +249,11 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
                                       );
                                     }
                                   } catch (e) {
-                                    debugPrint('Comment Error: $e');
                                     setModalState(() => isPosting = false);
                                     if (mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text('ስህተት: $e'),
+                                          content: Text('ስህተት፡ $e'),
                                           backgroundColor: Colors.red,
                                         ),
                                       );
@@ -263,7 +273,7 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
     );
   }
 
-  // 4. አዲስ ቪዲዮ/ጽሑፍ መጫኛ (Upload & Database Sync)
+  // 4. አዲስ ቪዲዮ መጫኛ (Upload to MEDIA Bucket)
   void _showAddContentBottomSheet() {
     final titleController = TextEditingController();
     final usernameController = TextEditingController();
@@ -398,13 +408,13 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
                                 }
 
                                 try {
-                                  // 1. Storage Upload
                                   if (selectedMediaFile != null) {
                                     final fileName =
                                         '${DateTime.now().millisecondsSinceEpoch}.mp4';
 
+                                    // Storage upload ወደ 'MEDIA' Bucket
                                     await supabase.storage
-                                        .from('media')
+                                        .from('MEDIA')
                                         .upload(
                                           fileName,
                                           selectedMediaFile!,
@@ -414,7 +424,7 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
                                         );
 
                                     mediaUrl = supabase.storage
-                                        .from('media')
+                                        .from('MEDIA')
                                         .getPublicUrl(fileName);
                                     mTypeString =
                                         selectedMediaType == MediaType.video
@@ -422,7 +432,6 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
                                             : 'image';
                                   }
 
-                                  // 2. Database Insert
                                   await supabase.from('videos').insert({
                                     'title': inputTitle,
                                     'username': finalUsername,
@@ -435,7 +444,6 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
                                     'views': 0,
                                   });
 
-                                  // 3. ዳታን እንደገና መሳብ
                                   await _fetchFeedFromSupabase();
 
                                   if (mounted) {
@@ -446,7 +454,6 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
                                     );
                                   }
                                 } catch (e) {
-                                  debugPrint('Upload Error: $e');
                                   setModalState(() => isUploading = false);
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -523,20 +530,48 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(color: Colors.amber))
-                : RefreshIndicator(
-                    onRefresh: _fetchFeedFromSupabase,
-                    child: ListView.builder(
-                      itemCount: filteredList.length,
-                      itemBuilder: (context, index) {
-                        final item = filteredList[index];
-                        return FeedCard(
-                          item: item,
-                          onLike: () => _toggleLike(item),
-                          onComment: () => _showCommentsModal(item),
-                        );
-                      },
-                    ),
-                  ),
+                : _errorMessage != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.wifi_off,
+                                  size: 60, color: Colors.amber),
+                              const SizedBox(height: 10),
+                              Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 16),
+                              ),
+                              const SizedBox(height: 15),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.amber),
+                                onPressed: _fetchFeedFromSupabase,
+                                child: const Text('እንደገና ይሞክሩ',
+                                    style: TextStyle(color: Colors.black)),
+                              )
+                            ],
+                          ),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _fetchFeedFromSupabase,
+                        child: ListView.builder(
+                          itemCount: filteredList.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredList[index];
+                            return FeedCard(
+                              item: item,
+                              onLike: () => _toggleLike(item),
+                              onComment: () => _showCommentsModal(item),
+                            );
+                          },
+                        ),
+                      ),
           ),
         ],
       ),
@@ -568,19 +603,34 @@ class FeedCard extends StatefulWidget {
 
 class _FeedCardState extends State<FeedCard> {
   VideoPlayerController? _videoController;
+  bool _isInitializing = false;
 
   @override
   void initState() {
     super.initState();
+    _initializeVideo();
+  }
+
+  void _initializeVideo() {
     if (widget.item.mediaType == MediaType.video &&
         widget.item.mediaUrl != null &&
         widget.item.mediaUrl!.isNotEmpty) {
-      _videoController =
-          VideoPlayerController.networkUrl(Uri.parse(widget.item.mediaUrl!))
-            ..initialize().then((_) {
-              setState(() {});
-              _videoController?.setLooping(true);
+      setState(() => _isInitializing = true);
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.item.mediaUrl!),
+      )..initialize().then((_) {
+          if (mounted) {
+            setState(() {
+              _isInitializing = false;
             });
+            _videoController?.setLooping(true);
+          }
+        }).catchError((error) {
+          debugPrint('Video player error: $error');
+          if (mounted) {
+            setState(() => _isInitializing = false);
+          }
+        });
     }
   }
 
@@ -599,75 +649,129 @@ class _FeedCardState extends State<FeedCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ቪዲዮው ካለ ማሳያ
-          if (widget.item.mediaType == MediaType.video &&
-              _videoController != null &&
-              _videoController!.value.isInitialized)
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _videoController!.value.isPlaying
-                      ? _videoController!.pause()
-                      : _videoController!.play();
-                });
-              },
-              child: AspectRatio(
-                aspectRatio: _videoController!.value.aspectRatio,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    VideoPlayer(_videoController!),
-                    if (!_videoController!.value.isPlaying)
-                      const Icon(Icons.play_circle_fill,
-                          size: 60, color: Colors.amber),
-                  ],
-                ),
-              ),
-            )
-          else if (widget.item.mediaType == MediaType.video)
-            const SizedBox(
-              height: 200,
-              child: Center(
-                  child: CircularProgressIndicator(color: Colors.amber)),
-            ),
+          // ቪዲዮ ማሳያ
+          if (widget.item.mediaType == MediaType.video)
+            _videoController != null && _videoController!.value.isInitialized
+                ? AspectRatio(
+                    aspectRatio: _videoController!.value.aspectRatio,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        VideoPlayer(_videoController!),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _videoController!.value.isPlaying
+                                  ? _videoController!.pause()
+                                  : _videoController!.play();
+                            });
+                          },
+                          child: Container(
+                            color: Colors.transparent,
+                            child: Center(
+                              child: Icon(
+                                _videoController!.value.isPlaying
+                                    ? Icons.pause_circle_outline
+                                    : Icons.play_circle_fill,
+                                size: 60,
+                                color: Colors.amber.withOpacity(0.8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : SizedBox(
+                    height: 220,
+                    child: Center(
+                      child: _isInitializing
+                          ? const CircularProgressIndicator(color: Colors.amber)
+                          : const Icon(Icons.error_outline,
+                              color: Colors.red, size: 40),
+                    ),
+                  ),
 
+          // የጽሁፍ እና የአዝራሮች (Buttons) ማሳያ
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.item.username,
-                    style: const TextStyle(
-                        color: Colors.amber, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 5),
-                Text(widget.item.title,
-                    style: const TextStyle(color: Colors.white, fontSize: 16)),
-                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      widget.item.username,
+                      style: const TextStyle(
+                        color: Colors.amber,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.item.category,
+                        style: const TextStyle(
+                            color: Colors.amber, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.item.title,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: Colors.white24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    IconButton(
-                      icon: Icon(
-                        widget.item.isLiked
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: widget.item.isLiked ? Colors.red : Colors.white,
-                      ),
-                      onPressed: widget.onLike,
+                    // Like Button
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            widget.item.isLiked
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color:
+                                widget.item.isLiked ? Colors.red : Colors.white,
+                          ),
+                          onPressed: widget.onLike,
+                        ),
+                        Text(
+                          '${widget.item.likes}',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ],
                     ),
-                    Text('${widget.item.likes}',
-                        style: const TextStyle(color: Colors.white)),
-                    IconButton(
-                      icon: const Icon(Icons.comment, color: Colors.white),
-                      onPressed: widget.onComment,
+
+                    // Comment Button
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.comment, color: Colors.white),
+                          onPressed: widget.onComment,
+                        ),
+                        Text(
+                          '${widget.item.commentsCount}',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ],
                     ),
-                    Text('${widget.item.commentsCount}',
-                        style: const TextStyle(color: Colors.white)),
                   ],
-                )
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
