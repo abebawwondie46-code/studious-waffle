@@ -11,9 +11,54 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
+    url: 'https://ycvycgdnrmlfaebtxvfl.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljdnljZ2Rubm1sZmFlYnR4dmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTk2MjAsImV4cCI6MjA5Njg3NTYyMH0.Os73HGXe4EOijqpBVHk9Bcm6uzZXkgZjWRoroV1m2gE',
+  );
+
+  runApp(const KuanYngneApp());
+}
+
+class KuanYngneApp extends StatelessWidget {
+  const KuanYngneApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'KuanYngne',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.black,
+        primaryColor: Colors.amber,
+      ),
+      home: const MainNavigationScreen(),
+    );
+  }
+}
+
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
+
+  @override
+  State<MainNavigationScreen>ይኸው ኤረሩ (`CrossAlignment.start` የነበረው ወደ `CrossAxisAlignment.start` የተስተካከለበት) ሙሉው **`lib/main.dart`** ኮድ፦
+
+```dart
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:video_player/video_player.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
   url: 'https://ትክክለኛው-የእኛ-project-id.supabase.co',
   anonKey: '...',
 );
+
   runApp(const KuanYngneApp());
 }
 
@@ -206,7 +251,7 @@ class _VideoCardState extends State<VideoCard> {
           left: 15,
           right: 70,
           child: Column(
-            crossAxisAlignment: CrossAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 widget.videoData['title'] ?? '',
@@ -225,7 +270,7 @@ class _VideoCardState extends State<VideoCard> {
                     ),
                   if (widget.videoData['telegram_username'] != null)
                     ElevatedButton.icon(
-                      onPressed: () => launchUrl(Uri.parse('https://t.me/${widget.videoData['telegram_username']}')),
+                      onPressed: () => launchUrl(Uri.parse('[https://t.me/$](https://t.me/$){widget.videoData['telegram_username']}')),
                       icon: const Icon(Icons.send, size: 16),
                       label: const Text('Telegram'),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
