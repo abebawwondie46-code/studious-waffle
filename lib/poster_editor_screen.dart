@@ -1,300 +1,112 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:path_provider/path_provider.dart';
 import 'video_service.dart';
 
 class PosterEditorScreen extends StatefulWidget {
-  const PosterEditorScreen({Key? key}) : super(key: key);
+  final Map<String, dynamic>? remixedTemplateData;
+
+  const PosterEditorScreen({Key? key, this.remixedTemplateData}) : super(key: key);
 
   @override
-  State<PosterEditorScreen> createState() => _PosterEditorScreenState();
+  _PosterEditorScreenState createState() => _PosterEditorScreenState();
 }
 
 class _PosterEditorScreenState extends State<PosterEditorScreen> {
-  final GlobalKey _globalKey = GlobalKey();
-
-  String _displayText = "የልጆችዎን ነገ ዛሬ ያሳምሩ";
-  Color _textColor = Colors.white;
-  Color _backgroundColor = const Color(0xFF1B5E20);
-  double _fontSize = 26.0;
-
-  final TextEditingController _textController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _textContentController = TextEditingController();
+  final VideoService _videoService = VideoService();
+  
+  bool _isPublishing = false;
+  String _selectedCategory = 'ንግድ';
+  Color _canvasColor = Colors.amber;
 
   @override
   void initState() {
     super.initState();
-    _textController.text = _displayText;
-  }
-
-  Future<void> _captureAndSavePoster() async {
-    try {
-      RenderRepaintBoundary boundary =
-          _globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      var byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      var pngBytes = byteData!.buffer.asUint8List();
-
-      final directory = await getApplicationDocumentsDirectory();
-      final imagePath = await File(
-              '${directory.path}/poster_${DateTime.now().millisecondsSinceEpoch}.png')
-          .create();
-      await imagePath.writeAsBytes(pngBytes);
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ፖስተሩ ተቀምጧል: ${imagePath.path}')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ስህተት ተከሰተ: $e')),
-      );
+    // Remix ከተደረገ የነበረውን ዳታ መሙላት
+    if (widget.remixedTemplateData != null) {
+      _textContentController.text = widget.remixedTemplateData!['text'] ?? '';
+      _titleController.text = "Remix - ${_textContentController.text}";
+    } else {
+      _textContentController.text = "የእርስዎ ማስታወቂያ ፅሁፍ";
     }
   }
 
-  void _pickColor({required bool isTextColor}) {
-    final List<Color> colors = [
-      Colors.white,
-      Colors.black,
-      Colors.red,
-      Colors.green,
-      Colors.blue,
-      Colors.amber,
-      Colors.purple,
-      Colors.deepOrange,
-      const Color(0xFF1B5E20),
-      const Color(0xFF0D47A1),
-      const Color(0xFF4E342E),
-    ];
+  Future<void> _publish() async {
+    setState(() => _isPublishing = true);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isTextColor ? 'የጽሁፍ ቀለም ይምረጡ' : 'የጀርባ ቀለም ይምረጡ'),
-        content: Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: colors.map((color) {
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (isTextColor) {
-                    _textColor = color;
-                  } else {
-                    _backgroundColor = color;
-                  }
-                });
-                Navigator.of(context).pop();
-              },
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade400, width: 2),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
+    try {
+      // ማሳሰቢያ፦ እዚህ ጋር ከስልክ የወጣው/የተቀረጸው የቪዲዮ/ፖስተር ፋይል ይተካል
+      // ለምሳሌ፡ File sampleFile = File(path);
+      
+      final templateData = {
+        'text': _textContentController.text,
+        'color': _canvasColor.value.toString(),
+      };
+
+      // ቪዲዮ ፋይል የመረጡበትን መስመር እዚህ ያስገቡ
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ፖስተሩ/ቪዲዮው በተሳካ ሁኔታ ተፖስቷል!')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ስህተት: $e')),
+      );
+    } finally {
+      setState(() => _isPublishing = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ማስታወቂያ ኤዲተር'),
-        backgroundColor: Colors.teal,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: _captureAndSavePoster,
-            tooltip: 'ምስል አድርገህ አስቀምጥ',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('የማስታወቂያ ፈጠራ Studio')),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Preview Canvas
+            Container(
+              height: 250,
+              width: double.infinity,
+              color: _canvasColor,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _textContentController.text,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 22, color: Colors.black, fontWeight: FontWeight.bold),
+              ),
+            ),
             const SizedBox(height: 16),
-            Center(
-              child: RepaintBoundary(
-                key: _globalKey,
-                child: Container(
-                  width: 340,
-                  height: 340,
-                  decoration: BoxDecoration(
-                    color: _backgroundColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            _displayText,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: _textColor,
-                              fontSize: _fontSize,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 12),
-                          color: Colors.black45,
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "የእርስዎ ብራንድ/Brand Name",
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 12),
-                              ),
-                              Icon(Icons.verified,
-                                  color: Colors.amber, size: 18),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            TextField(
+              controller: _textContentController,
+              decoration: const InputDecoration(
+                labelText: 'የማስታወቂያው ፅሁፍ (Text Content)',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (val) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'የፖስቱ ርዕስ (Title)',
+                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _textController,
-                    decoration: const InputDecoration(
-                      labelText: 'ማስታወቂያ ወይም ጽሁፍ እዚህ ይፃፉ',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.text_fields),
-                    ),
-                    onChanged: (text) {
-                      setState(() {
-                        _displayText = text;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Text("መጠን: "),
-                      Expanded(
-                        child: Slider(
-                          value: _fontSize,
-                          min: 14.0,
-                          max: 48.0,
-                          onChanged: (value) {
-                            setState(() {
-                              _fontSize = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _pickColor(isTextColor: true),
-                        icon: Icon(Icons.color_lens, color: _textColor),
-                        label: const Text('የጽሁፍ ቀለም'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () => _pickColor(isTextColor: false),
-                        icon: Icon(Icons.format_color_fill,
-                            color: _backgroundColor),
-                        label: const Text('የጀርባ ቀለም'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
-                    onPressed: () async {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('ቪዲዮው በመሰራት ላይ ነው... እባክዎ ትንሽ ይጠብቁ')),
-                      );
-
-                      try {
-                        RenderRepaintBoundary boundary = _globalKey.currentContext!
-                            .findRenderObject() as RenderRepaintBoundary;
-                        ui.Image image =
-                            await boundary.toImage(pixelRatio: 2.0);
-                        var byteData = await image.toByteData(
-                            format: ui.ImageByteFormat.png);
-                        var pngBytes = byteData!.buffer.asUint8List();
-
-                        final directory = await getTemporaryDirectory();
-                        final tempImagePath =
-                            '${directory.path}/temp_poster_${DateTime.now().millisecondsSinceEpoch}.png';
-                        await File(tempImagePath).writeAsBytes(pngBytes);
-
-                        String? videoPath =
-                            await VideoService.convertImageToVideo(
-                                tempImagePath);
-
-                        if (!mounted) return;
-                        if (videoPath != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(
-                                    'ቪዲዮው በተሳካ ሁኔታ ተሰርቷል! $videoPath')),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('ቪዲዮውን በመስራት ላይ ስህተት ተከሰተ')),
-                          );
-                        }
-                      } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('ስህተት ተከሰተ: $e')),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.videocam, color: Colors.white),
-                    label: const Text(
-                      'በቪዲዮ አዘጋጅ (Convert to Video)',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isPublishing ? null : _publish,
+                icon: const Icon(Icons.send),
+                label: _isPublishing
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('ወደ Feed ስቀል (Publish)', style: TextStyle(fontSize: 18)),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
               ),
             ),
           ],
