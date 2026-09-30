@@ -1,6 +1,5 @@
-import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
@@ -24,11 +23,56 @@ class KuanYngneApp extends StatelessWidget {
       title: 'KuanYngne',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const VideoFeedScreen(),
+      home: const MainNavigationScreen(),
     );
   }
 }
 
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
+
+  @override
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    const VideoFeedScreen(),
+    const AdEditorScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        backgroundColor: Colors.black,
+        selectedItemColor: Colors.redAccent,
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.movie),
+            label: 'Feed',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_box, size: 30),
+            label: 'Create Ad',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== 1. FEED SCREEN (የቪዲዮ እና የቴምፕሌት ፍሰት) ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -40,7 +84,6 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final supabase = Supabase.instance.client;
   List<dynamic> videos = [];
   bool isLoading = true;
-  bool isUploading = false;
 
   @override
   void initState() {
@@ -62,79 +105,224 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
     }
   }
 
-  // ከስልክ ቪዲዮ መርጦ ወደ Supabase Storage እና Database መጫኛ ፋንክሽን
-  Future<void> _pickAndUploadVideo() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? videoFile = await picker.pickVideo(source: ImageSource.gallery);
-
-    if (videoFile == null) return;
-
-    final TextEditingController titleController = TextEditingController();
-
-    if (!mounted) return;
-
-    // የቪዲዮ ርዕስ መቀበያ Dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('የቪዲዮ ርዕስ ያስገቡ'),
-        content: TextField(
-          controller: titleController,
-          decoration: const InputDecoration(hintText: 'ርዕስ...'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ሰርዝ'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              _uploadToSupabase(File(videoFile.path), titleController.text.trim());
-            },
-            child: const Text('አፕሎድ አድርግ'),
-          ),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('KuanYngne Feed'),
+        centerTitle: true,
+        backgroundColor: Colors.black,
       ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : videos.isEmpty
+              ? const Center(child: Text('ምንም ማስታወቂያ አልተገኘም። "Create Ad" ገፅ ላይ ገብተው ይፍጠሩ!'))
+              : PageView.builder(
+                  scrollDirection: Axis.vertical,
+                  itemCount: videos.length,
+                  itemBuilder: (context, index) {
+                    final item = videos[index];
+                    return AdCard(adData: item);
+                  },
+                ),
     );
   }
+}
 
-  Future<void> _uploadToSupabase(File file, String title) async {
+class AdCard extends StatelessWidget {
+  final dynamic adData;
+  const AdCard({super.key, required this.adData});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = adData['title'] ?? 'ማስታወቂያ';
+    final templateJson = adData['template_json'];
+    final videoUrl = adData['video_url'] ?? '';
+
+    // የቴምፕሌት ዳታ ካለ በፖስተር መልክ ያሳያል
+    Map<String, dynamic>? templateData;
+    if (templateJson != null) {
+      if (templateJson is String) {
+        templateData = jsonDecode(templateJson);
+      } else {
+        templateData = Map<String, dynamic>.from(templateJson);
+      }
+    }
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: templateData != null
+              ? Container(
+                  color: Color(templateData['bgColor'] ?? Colors.indigo.value),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (templateData['sticker'] != null && templateData['sticker'].isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                templateData['sticker'],
+                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+                              ),
+                            ),
+                          const SizedBox(height: 30),
+                          Text(
+                            templateData['text'] ?? '',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                          const SizedBox(height: 20),
+                          if (templateData['phone'] != null && templateData['phone'].isNotEmpty)
+                            Chip(
+                              avatar: const Icon(Icons.phone, color: Colors.white),
+                              label: Text(templateData['phone'], style: const TextStyle(color: Colors.white)),
+                              backgroundColor: Colors.green,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : videoUrl.isNotEmpty
+                  ? NetworkVideoPlayer(videoUrl: videoUrl)
+                  : Container(color: Colors.black),
+        ),
+        // Remix Button
+        Positioned(
+          bottom: 40,
+          right: 20,
+          child: Column(
+            children: [
+              if (templateData != null)
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdEditorScreen(initialTemplate: templateData),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.auto_awesome, color: Colors.white),
+                  label: const Text('Remix This', style: TextStyle(color: Colors.white)),
+                ),
+            ],
+          ),
+        ),
+        Positioned(
+          bottom: 40,
+          left: 20,
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ==================== 2. AD/POSTER EDITOR SCREEN (ማስታወቂያ መስሪያ) ====================
+class AdEditorScreen extends StatefulWidget {
+  final Map<String, dynamic>? initialTemplate;
+  const AdEditorScreen({super.key, this.initialTemplate});
+
+  @override
+  State<AdEditorScreen> createState() => _AdEditorScreenState();
+}
+
+class _AdEditorScreenState extends State<AdEditorScreen> {
+  final supabase = Supabase.instance.client;
+  final TextEditingController _textController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+
+  Color _selectedBgColor = Colors.indigo;
+  String _selectedSticker = 'Telebirr Accepted';
+  bool _isPublishing = false;
+
+  final List<Color> _colors = [
+    Colors.indigo,
+    Colors.deepPurple,
+    Colors.teal,
+    Colors.darkBlue,
+    Colors.brown,
+    Colors.redHeadline,
+  ];
+
+  final List<String> _stickers = [
+    'Telebirr Accepted',
+    'CBE Birr',
+    '50% DISCOUNT',
+    'SPECIAL OFFER',
+    'CALL NOW',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialTemplate != null) {
+      _textController.text = widget.initialTemplate!['text'] ?? '';
+      _phoneController.text = widget.initialTemplate!['phone'] ?? '';
+      _selectedSticker = widget.initialTemplate!['sticker'] ?? _stickers.first;
+      if (widget.initialTemplate!['bgColor'] != null) {
+        _selectedBgColor = Color(widget.initialTemplate!['bgColor']);
+      }
+    } else {
+      _textController.text = 'የእርስዎ ማስታወቂያ ፅሁፍ እዚህ ይፃፉ...';
+    }
+  }
+
+  Future<void> _publishAd() async {
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎን ለማስታወቂያው ርዕስ ያስገቡ!')),
+      );
+      return;
+    }
+
     setState(() {
-      isUploading = true;
+      _isPublishing = true;
     });
 
+    final templateMap = {
+      'text': _textController.text,
+      'phone': _phoneController.text,
+      'sticker': _selectedSticker,
+      'bgColor': _selectedBgColor.value,
+    };
+
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
-      
-      // 1. Storage Bucket ውስጥ መጫን
-      await supabase.storage.from('videos').upload(fileName, file);
-
-      // 2. የቪዲዮውን Public URL ማግኘት
-      final videoUrl = supabase.storage.from('videos').getPublicUrl(fileName);
-
-      // 3. Database Table ውስጥ ማስመዝገብ
       await supabase.from('videos').insert({
-        'title': title.isEmpty ? 'ያለ ርዕስ' : title,
-        'video_url': videoUrl,
+        'title': _titleController.text.trim(),
+        'video_url': '', // ቴምፕሌት ስለሆነ
+        'template_json': templateMap,
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ቪዲዮው በትክክል ተጭኗል!')),
+          const SnackBar(content: Text('ማስታወቂያዎ በትክክል ተለጥፏል!')),
         );
+        _titleController.clear();
       }
-
-      _fetchVideos(); // ዝርዝሩን ማደስ
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('አፕሎድ ማድረግ አልተቻለም: $e')),
+          SnackBar(content: Text('መለጠፍ አልተቻለም: $e')),
         );
       }
     } finally {
       setState(() {
-        isUploading = false;
+        _isPublishing = false;
       });
     }
   }
@@ -142,49 +330,185 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.redAccent,
-        onPressed: isUploading ? null : _pickAndUploadVideo,
-        child: isUploading
-            ? const CircularProgressIndicator(color: Colors.white)
-            : const Icon(Icons.add, size: 30, color: Colors.white),
+      appBar: AppBar(
+        title: const Text('Ad & Poster Canvas'),
+        backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check, color: Colors.green, size: 30),
+            onPressed: _isPublishing ? null : _publishAd,
+          )
+        ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : videos.isEmpty
-              ? const Center(child: Text('ምንም ቪዲዮ አልተገኘም። (+) ተጭነው ቪዲዮ ይጫኑ!'))
-              : PageView.builder(
-                  scrollDirection: Axis.vertical,
-                  itemCount: videos.length,
-                  itemBuilder: (context, index) {
-                    final video = videos[index];
-                    return VideoCard(videoData: video);
-                  },
-                ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Preview Canvas Area
+            Container(
+              height: 320,
+              width: double.infinity,
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _selectedBgColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10)],
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_selectedSticker.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _selectedSticker,
+                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          const SizedBox(height: 20),
+                          Text(
+                            _textController.text,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                          const SizedBox(height: 15),
+                          if (_phoneController.text.isNotEmpty)
+                            Chip(
+                              avatar: const Icon(Icons.phone, size: 16, color: Colors.white),
+                              label: Text(_phoneController.text, style: const TextStyle(color: Colors.white)),
+                              backgroundColor: Colors.green,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Controls Area
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'የማስታወቂያው ርዕስ (Title)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _textController,
+                    maxLines: 2,
+                    onChanged: (val) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'የማስታወቂያ መልዕክት/ፅሁፍ',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    onChanged: (val) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'የስልክ ቁጥር (Contact)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  const Text('የጀርባ ከለር ይምረጡ:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 45,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _colors.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedBgColor = _colors[index];
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            width: 45,
+                            decoration: BoxDecoration(
+                              color: _colors[index],
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _selectedBgColor == _colors[index] ? Colors.white : Colors.transparent,
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  const Text('ስቲከር / ባጅ ይምረጡ:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: _stickers.map((sticker) {
+                      final isSelected = _selectedSticker == sticker;
+                      return ChoiceChip(
+                        label: Text(sticker),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedSticker = sticker;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
     );
   }
 }
 
-class VideoCard extends StatefulWidget {
-  final dynamic videoData;
-  const VideoCard({super.key, required this.videoData});
+// ቪዲዮ ማጫወቻ ረዳት ዊጄት
+class NetworkVideoPlayer extends StatefulWidget {
+  final String videoUrl;
+  const NetworkVideoPlayer({super.key, required this.videoUrl});
 
   @override
-  State<VideoCard> createState() => _VideoCardState();
+  State<NetworkVideoPlayer> createState() => _NetworkVideoPlayerState();
 }
 
-class _VideoCardState extends State<VideoCard> {
+class _NetworkVideoPlayerState extends State<NetworkVideoPlayer> {
   late VideoPlayerController _controller;
-  bool _isInitialized = false;
+  bool _isInit = false;
 
   @override
   void initState() {
     super.initState();
-    final videoUrl = widget.videoData['video_url'] ?? '';
-    _controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl))
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
       ..initialize().then((_) {
         setState(() {
-          _isInitialized = true;
+          _isInit = true;
         });
         _controller.play();
         _controller.setLooping(true);
@@ -197,190 +521,13 @@ class _VideoCardState extends State<VideoCard> {
     super.dispose();
   }
 
-  void _showCommentsBottomSheet(BuildContext context, int videoId) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.grey[900],
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return CommentsWidget(videoId: videoId);
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final videoId = widget.videoData['id'];
-    final title = widget.videoData['title'] ?? '';
-
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: _isInitialized
-              ? GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _controller.value.isPlaying ? _controller.pause() : _controller.play();
-                    });
-                  },
-                  child: AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio,
-                    child: VideoPlayer(_controller),
-                  ),
-                )
-              : const Center(child: CircularProgressIndicator()),
-        ),
-        Positioned(
-          bottom: 30,
-          left: 20,
-          right: 80,
-          child: Text(
-            title,
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        Positioned(
-          bottom: 40,
-          right: 20,
-          child: Column(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.comment, color: Colors.white, size: 35),
-                onPressed: () {
-                  if (videoId != null) {
-                    _showCommentsBottomSheet(context, videoId);
-                  }
-                },
-              ),
-              const Text('Comments', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class CommentsWidget extends StatefulWidget {
-  final int videoId;
-  const CommentsWidget({super.key, required this.videoId});
-
-  @override
-  State<CommentsWidget> createState() => _CommentsWidgetState();
-}
-
-class _CommentsWidgetState extends State<CommentsWidget> {
-  final supabase = Supabase.instance.client;
-  final TextEditingController _commentController = TextEditingController();
-  List<dynamic> comments = [];
-  bool isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchComments();
-  }
-
-  Future<void> _fetchComments() async {
-    try {
-      final response = await supabase
-          .from('comments')
-          .select()
-          .eq('video_id', widget.videoId)
-          .order('created_at', ascending: false);
-
-      setState(() {
-        comments = response;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _addComment() async {
-    final text = _commentController.text.trim();
-    if (text.isEmpty) return;
-
-    _commentController.clear();
-
-    try {
-      await supabase.from('comments').insert({
-        'video_id': widget.videoId,
-        'comment_text': text,
-        'user_name': 'Guest User',
-      });
-
-      _fetchComments();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('አስተያየት መላክ አልተቻለም: $e')),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        height: 450,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              'Comments',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const Divider(),
-            Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : comments.isEmpty
-                      ? const Center(child: Text('ምንም አስተያየት የለም። የመጀመሪያው ይሁኑ!', style: TextStyle(color: Colors.grey)))
-                      : ListView.builder(
-                          itemCount: comments.length,
-                          itemBuilder: (context, index) {
-                            final comment = comments[index];
-                            return ListTile(
-                              leading: const CircleAvatar(child: Icon(Icons.person)),
-                              title: Text(comment['user_name'] ?? 'User', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                              subtitle: Text(comment['comment_text'] ?? '', style: const TextStyle(color: Colors.white70)),
-                            );
-                          },
-                        ),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'አስተያየት ይፃፉ...',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.blue),
-                  onPressed: _addComment,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+    return _isInit
+        ? AspectRatio(
+            aspectRatio: _controller.value.aspectRatio,
+            child: VideoPlayer(_controller),
+          )
+        : const Center(child: CircularProgressIndicator());
   }
 }
