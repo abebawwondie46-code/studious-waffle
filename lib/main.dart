@@ -9,5 +9,23 @@ void main() async {
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzemtvbmhocHJ3dGF2eHl3Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjQxNDksImV4cCI6MjEwNjM0MDE0OX0.TXL0yzOlI3Kx5CyW6CvOsWMMc_wRafTVt7CcTxYev7E',
   );
 
-  runApp(const MyApp());
+  runApp(const KuanYngneApp()); // <--- እዚህ ላይ MyApp የሚለውን በ KuanYngneApp ተካው
+}
+
+class KuanYngneApp extends StatelessWidget {
+  const KuanYngneApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'KuanYngne',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
+      home: const Scaffold(
+        body: Center(
+          child: Text('KuanYngne App Loaded Successfully!'),
+        ),
+      ),
+    );
+  }
 }
