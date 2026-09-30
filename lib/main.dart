@@ -145,7 +145,8 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
         elevation: 0,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.redAccent))
           : videos.isEmpty
               ? const Center(
                   child: Text(
@@ -204,8 +205,10 @@ class _AdCardState extends State<AdCard> {
       }
     }
 
-    final int startColorVal = templateData?['colorStart'] ?? Colors.indigo.value;
-    final int endColorVal = templateData?['colorEnd'] ?? Colors.blueAccent.value;
+    final int startColorVal =
+        templateData?['colorStart'] ?? Colors.indigo.value;
+    final int endColorVal =
+        templateData?['colorEnd'] ?? Colors.blueAccent.value;
     final String phone = templateData?['phone'] ?? '';
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
@@ -246,7 +249,7 @@ class _AdCardState extends State<AdCard> {
                           sticker,
                           style: const TextStyle(
                             color: Colors.black,
-                            fontWeight: FontWeight.black,
+                            fontWeight: FontWeight.w900, // የተስተካከለ
                             fontSize: 16,
                           ),
                         ),
