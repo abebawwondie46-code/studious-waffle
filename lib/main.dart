@@ -8,7 +8,8 @@ void main() async {
 
   await Supabase.initialize(
     url: 'https://yszkonhhprwtavxywchz.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzemtvbmhocHJ3dGF2eHl3Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjQxNDksImV4cCI6MjEwNjM0MDE0OX0.TXL0yzOlI3Kx5CyW6CvOsWMMc_wRafTVt7CcTxYev7E',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzemtvbmhocHJ3dGF2eHl3Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjQxNDksImV4cCI6MjEwNjM0MDE0OX0.TXL0yzOlI3Kx5CyW6CvOsWMMc_wRafTVt7CcTxYev7E',
   );
 
   runApp(const KuanYngneApp());
@@ -22,7 +23,14 @@ class KuanYngneApp extends StatelessWidget {
     return MaterialApp(
       title: 'KuanYngne',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        cardColor: const Color(0xFF1E1E1E),
+        colorScheme: const ColorScheme.dark(
+          primary: Colors.redAccent,
+          secondary: Colors.amber,
+        ),
+      ),
       home: const MainNavigationScreen(),
     );
   }
@@ -49,9 +57,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF1A1A1A),
         selectedItemColor: Colors.redAccent,
         unselectedItemColor: Colors.grey,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
@@ -59,11 +68,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.movie),
+            icon: Icon(Icons.style_outlined),
+            activeIcon: Icon(Icons.style),
             label: 'Feed',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_box, size: 30),
+            icon: Icon(Icons.add_circle_outline, size: 28),
+            activeIcon: Icon(Icons.add_circle, size: 28),
             label: 'Create Ad',
           ),
         ],
@@ -72,7 +83,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. FEED SCREEN (የቪዲዮ እና የቴምፕሌት ፍሰት) ====================
+// ==================== 1. FEED SCREEN ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -93,7 +104,10 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 
   Future<void> _fetchVideos() async {
     try {
-      final response = await supabase.from('videos').select().order('id', ascending: false);
+      final response = await supabase
+          .from('videos')
+          .select()
+          .order('id', ascending: false);
       setState(() {
         videos = response;
         isLoading = false;
@@ -109,14 +123,23 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('KuanYngne Feed'),
+        title: const Text(
+          'KuanYngne Feed',
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1),
+        ),
         centerTitle: true,
         backgroundColor: Colors.black,
+        elevation: 0,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : videos.isEmpty
-              ? const Center(child: Text('ምንም ማስታወቂያ አልተገኘም። "Create Ad" ገፅ ላይ ገብተው ይፍጠሩ!'))
+              ? const Center(
+                  child: Text(
+                    'ምንም ማስታወቂያ አልተገኘም። "Create Ad" ላይ ገብተው ይፍጠሩ!',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
               : PageView.builder(
                   scrollDirection: Axis.vertical,
                   itemCount: videos.length,
@@ -139,7 +162,6 @@ class AdCard extends StatelessWidget {
     final templateJson = adData['template_json'];
     final videoUrl = adData['video_url'] ?? '';
 
-    // የቴምፕሌት ዳታ ካለ በፖስተር መልክ ያሳያል
     Map<String, dynamic>? templateData;
     if (templateJson != null) {
       if (templateJson is String) {
@@ -154,37 +176,82 @@ class AdCard extends StatelessWidget {
         Positioned.fill(
           child: templateData != null
               ? Container(
-                  color: Color(templateData['bgColor'] ?? Colors.indigo.value),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(templateData['bgColor'] ?? Colors.indigo.value),
+                        Color(templateData['bgColor'] ?? Colors.indigo.value)
+                            .withOpacity(0.7),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(20.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if (templateData['sticker'] != null && templateData['sticker'].isNotEmpty)
+                          if (templateData['sticker'] != null &&
+                              templateData['sticker'].toString().isNotEmpty)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 18, vertical: 8),
                               decoration: BoxDecoration(
                                 color: Colors.amber,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: const [
+                                  BoxShadow(
+                                      color: Colors.black26, blurRadius: 8)
+                                ],
                               ),
                               child: Text(
                                 templateData['sticker'],
-                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
                           const SizedBox(height: 30),
                           Text(
                             templateData['text'] ?? '',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.3,
+                            ),
                           ),
-                          const SizedBox(height: 20),
-                          if (templateData['phone'] != null && templateData['phone'].isNotEmpty)
-                            Chip(
-                              avatar: const Icon(Icons.phone, color: Colors.white),
-                              label: Text(templateData['phone'], style: const TextStyle(color: Colors.white)),
-                              backgroundColor: Colors.green,
+                          const SizedBox(height: 25),
+                          if (templateData['phone'] != null &&
+                              templateData['phone'].toString().isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade700,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.phone,
+                                      color: Colors.white, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    templateData['phone'],
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                         ],
                       ),
@@ -203,17 +270,30 @@ class AdCard extends StatelessWidget {
             children: [
               if (templateData != null)
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 5,
+                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AdEditorScreen(initialTemplate: templateData),
+                        builder: (context) =>
+                            AdEditorScreen(initialTemplate: templateData),
                       ),
                     );
                   },
                   icon: const Icon(Icons.auto_awesome, color: Colors.white),
-                  label: const Text('Remix This', style: TextStyle(color: Colors.white)),
+                  label: const Text(
+                    'Remix This',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
             ],
           ),
@@ -223,7 +303,12 @@ class AdCard extends StatelessWidget {
           left: 20,
           child: Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+            ),
           ),
         ),
       ],
@@ -231,7 +316,7 @@ class AdCard extends StatelessWidget {
   }
 }
 
-// ==================== 2. AD/POSTER EDITOR SCREEN (ማስታወቂያ መስሪያ) ====================
+// ==================== 2. PRO AD/POSTER EDITOR SCREEN ====================
 class AdEditorScreen extends StatefulWidget {
   final Map<String, dynamic>? initialTemplate;
   const AdEditorScreen({super.key, this.initialTemplate});
@@ -246,17 +331,18 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
 
-  Color _selectedBgColor = Colors.indigo;
+  Color _selectedBgColor = const Color(0xFF3F51B5);
   String _selectedSticker = 'Telebirr Accepted';
   bool _isPublishing = false;
 
   final List<Color> _colors = [
-    Colors.indigo,
-    Colors.deepPurple,
-    Colors.teal,
-    Colors.blue,
-    Colors.brown,
-    Colors.red,
+    const Color(0xFF3F51B5), // Indigo
+    const Color(0xFF673AB7), // Deep Purple
+    const Color(0xFF009688), // Teal
+    const Color(0xFF1E88E5), // Blue
+    const Color(0xFFD81B60), // Pink/Red
+    const Color(0xFF43A047), // Green
+    const Color(0xFF37474F), // Dark Slate
   ];
 
   final List<String> _stickers = [
@@ -278,7 +364,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
         _selectedBgColor = Color(widget.initialTemplate!['bgColor']);
       }
     } else {
-      _textController.text = 'የእርስዎ ማስታወቂያ ፅሁፍ እዚህ ይፃፉ...';
+      _textController.text = 'የማስታወቂያ መልዕክትዎን እዚህ ይፃፉ...';
     }
   }
 
@@ -304,7 +390,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
     try {
       await supabase.from('videos').insert({
         'title': _titleController.text.trim(),
-        'video_url': '', // ቴምፕሌት ስለሆነ
+        'video_url': '',
         'template_json': templateMap,
       });
 
@@ -331,158 +417,316 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ad & Poster Canvas'),
-        backgroundColor: Colors.black,
+        title: const Text(
+          'Create Poster Ad',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        backgroundColor: const Color(0xFF1A1A1A),
+        elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.check, color: Colors.green, size: 30),
-            onPressed: _isPublishing ? null : _publishAd,
-          )
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Preview Canvas Area
-            Container(
-              height: 320,
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _selectedBgColor,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10)],
-              ),
-              child: Stack(
-                children: [
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (_selectedSticker.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.amber,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _selectedSticker,
-                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          const SizedBox(height: 20),
-                          Text(
-                            _textController.text,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                          const SizedBox(height: 15),
-                          if (_phoneController.text.isNotEmpty)
-                            Chip(
-                              avatar: const Icon(Icons.phone, size: 16, color: Colors.white),
-                              label: Text(_phoneController.text, style: const TextStyle(color: Colors.white)),
-                              backgroundColor: Colors.green,
-                            ),
-                        ],
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: _isPublishing
+                ? const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.green),
+                    ),
+                  )
+                : TextButton.icon(
+                    onPressed: _publishAd,
+                    icon: const Icon(Icons.send_rounded,
+                        color: Colors.greenAccent, size: 20),
+                    label: const Text(
+                      'Publish',
+                      style: TextStyle(
+                        color: Colors.greenAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // Controls Area
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'የማስታወቂያው ርዕስ (Title)',
-                      border: OutlineInputBorder(),
-                    ),
+          )
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Canvas Live Preview Area
+              Container(
+                width: double.infinity,
+                height: 250,
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _selectedBgColor,
+                      _selectedBgColor.withOpacity(0.75),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _textController,
-                    maxLines: 2,
-                    onChanged: (val) => setState(() {}),
-                    decoration: const InputDecoration(
-                      labelText: 'የማስታወቂያ መልዕክት/ፅሁፍ',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    onChanged: (val) => setState(() {}),
-                    decoration: const InputDecoration(
-                      labelText: 'የስልክ ቁጥር (Contact)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  const Text('የጀርባ ከለር ይምረጡ:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 45,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _colors.length,
-                      itemBuilder: (context, index) {
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedBgColor = _colors[index];
-                            });
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            width: 45,
-                            decoration: BoxDecoration(
-                              color: _colors[index],
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: _selectedBgColor == _colors[index] ? Colors.white : Colors.transparent,
-                                width: 3,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _selectedBgColor.withOpacity(0.4),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    )
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0, vertical: 15.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (_selectedSticker.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber,
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                        color: Colors.black26, blurRadius: 4)
+                                  ],
+                                ),
+                                child: Text(
+                                  _selectedSticker,
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 15),
+                            Text(
+                              _textController.text.isEmpty
+                                  ? 'የማስታወቂያ ጽሁፍ...'
+                                  : _textController.text,
+                              textAlign: TextAlign.center,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                height: 1.2,
                               ),
                             ),
-                          ),
-                        );
-                      },
+                            if (_phoneController.text.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade700,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.phone,
+                                        size: 14, color: Colors.white),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _phoneController.text,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  const Text('ስቲከር / ባጅ ይምረጡ:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: _stickers.map((sticker) {
-                      final isSelected = _selectedSticker == sticker;
-                      return ChoiceChip(
-                        label: Text(sticker),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedSticker = sticker;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 30),
-                ],
+                    const Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Chip(
+                        label: Text('LIVE PREVIEW',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                        backgroundColor: Colors.black38,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    )
+                  ],
+                ),
               ),
-            )
-          ],
+
+              // 2. Control Forms Area
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _titleController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'የማስታወቂያው ርዕስ (Title)',
+                        prefixIcon: const Icon(Icons.title, color: Colors.grey),
+                        filled: true,
+                        fillColor: const Color(0xFF1E1E1E),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _textController,
+                      maxLines: 2,
+                      style: const TextStyle(color: Colors.white),
+                      onChanged: (val) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'የማስታወቂያ መልዕክት/ፅሁፍ',
+                        prefixIcon:
+                            const Icon(Icons.edit_note, color: Colors.grey),
+                        filled: true,
+                        fillColor: const Color(0xFF1E1E1E),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      style: const TextStyle(color: Colors.white),
+                      onChanged: (val) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'የስልክ ቁጥር (Contact)',
+                        prefixIcon: const Icon(Icons.phone_android,
+                            color: Colors.grey),
+                        filled: true,
+                        fillColor: const Color(0xFF1E1E1E),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      'የጀርባ ከለር ይምረጡ:',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                          fontSize: 14),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 50,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _colors.length,
+                        itemBuilder: (context, index) {
+                          final color = _colors[index];
+                          final isSelected = _selectedBgColor == color;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedBgColor = color;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.only(right: 12),
+                              width: isSelected ? 48 : 40,
+                              height: isSelected ? 48 : 40,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                  width: 3,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                            color: color.withOpacity(0.6),
+                                            blurRadius: 8)
+                                      ]
+                                    : [],
+                              ),
+                              child: isSelected
+                                  ? const Icon(Icons.check,
+                                      color: Colors.white, size: 20)
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      'ስቲከር / ባጅ ይምረጡ:',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                          fontSize: 14),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _stickers.map((sticker) {
+                        final isSelected = _selectedSticker == sticker;
+                        return ChoiceChip(
+                          label: Text(sticker),
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.black : Colors.white,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                          selected: isSelected,
+                          selectedColor: Colors.amber,
+                          backgroundColor: const Color(0xFF2C2C2C),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedSticker = sticker;
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
