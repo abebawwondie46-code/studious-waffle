@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:video_player/video_player.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -89,7 +92,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. ENHANCED FEED SCREEN ====================
+// ==================== 1. ENHANCED FEED SCREEN (VIDEO + POSTER) ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -145,8 +148,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
         elevation: 0,
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.redAccent))
+          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
           : videos.isEmpty
               ? const Center(
                   child: Text(
@@ -177,8 +179,34 @@ class AdCard extends StatefulWidget {
 }
 
 class _AdCardState extends State<AdCard> {
+  VideoPlayerController? _videoController;
   bool isLiked = false;
   int likeCount = 12;
+  bool isVideoInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final String videoUrl = widget.adData['video_url'] ?? '';
+    if (videoUrl.isNotEmpty) {
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl))
+        ..initialize().then((_) {
+          if (mounted) {
+            setState(() {
+              isVideoInitialized = true;
+            });
+            _videoController!.setLooping(true);
+            _videoController!.play();
+          }
+        });
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
@@ -194,6 +222,7 @@ class _AdCardState extends State<AdCard> {
   @override
   Widget build(BuildContext context) {
     final title = widget.adData['title'] ?? 'ማስታወቂያ';
+    final videoUrl = widget.adData['video_url'] ?? '';
     final templateJson = widget.adData['template_json'];
 
     Map<String, dynamic>? templateData;
@@ -205,101 +234,130 @@ class _AdCardState extends State<AdCard> {
       }
     }
 
-    final int startColorVal =
-        templateData?['colorStart'] ?? Colors.indigo.value;
-    final int endColorVal =
-        templateData?['colorEnd'] ?? Colors.blueAccent.value;
+    final int startColorVal = templateData?['colorStart'] ?? Colors.indigo.value;
+    final int endColorVal = templateData?['colorEnd'] ?? Colors.blueAccent.value;
     final String phone = templateData?['phone'] ?? '';
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
 
     return Stack(
       children: [
-        // Background Gradient
+        // 1. Background Media (Video OR Gradient Poster)
         Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(startColorVal), Color(endColorVal)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (sticker.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: const [
-                            BoxShadow(
-                                color: Colors.black38,
-                                blurRadius: 10,
-                                offset: Offset(0, 4))
-                          ],
-                        ),
-                        child: Text(
-                          sticker,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.w900, // የተስተካከለ
-                            fontSize: 16,
-                          ),
-                        ),
+          child: videoUrl.isNotEmpty
+              ? (isVideoInitialized && _videoController != null
+                  ? GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _videoController!.value.isPlaying
+                              ? _videoController!.pause()
+                              : _videoController!.play();
+                        });
+                      },
+                      child: AspectRatio(
+                        aspectRatio: _videoController!.value.aspectRatio,
+                        child: VideoPlayer(_videoController!),
                       ),
-                    const SizedBox(height: 30),
-                    Text(
-                      text,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.3,
-                        shadows: [
-                          Shadow(
-                              color: Colors.black45,
-                              blurRadius: 10,
-                              offset: Offset(0, 3))
+                    )
+                  : const Center(
+                      child: CircularProgressIndicator(color: Colors.redAccent)))
+              : Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(startColorVal), Color(endColorVal)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (sticker.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                borderRadius: BorderRadius.circular(25),
+                                boxShadow: const [
+                                  BoxShadow(
+                                      color: Colors.black38,
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4))
+                                ],
+                              ),
+                              child: Text(
+                                sticker,
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 30),
+                          Text(
+                            text,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.3,
+                              shadows: [
+                                Shadow(
+                                    color: Colors.black45,
+                                    blurRadius: 10,
+                                    offset: Offset(0, 3))
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          if (phone.isNotEmpty)
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green.shade600,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 22, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                elevation: 8,
+                              ),
+                              onPressed: () => _makePhoneCall(phone),
+                              icon: const Icon(Icons.phone, color: Colors.white),
+                              label: Text(
+                                phone,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 30),
-                    if (phone.isNotEmpty)
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade600,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 22, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          elevation: 8,
-                        ),
-                        onPressed: () => _makePhoneCall(phone),
-                        icon: const Icon(Icons.phone, color: Colors.white),
-                        label: Text(
-                          phone,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
+                ),
+        ),
+
+        // Dark overlay gradient for readable text when video plays
+        if (videoUrl.isNotEmpty)
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black54, Colors.transparent, Colors.black87],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
             ),
           ),
-        ),
 
         // Bottom Left Info Area
         Positioned(
@@ -319,15 +377,23 @@ class _AdCardState extends State<AdCard> {
                 ),
               ),
               const SizedBox(height: 6),
+              if (text.isNotEmpty && videoUrl.isNotEmpty)
+                Text(
+                  text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              const SizedBox(height: 4),
               const Text(
                 'በ KuanYngne የተዘጋጀ ማስታወቂያ',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
+                style: TextStyle(color: Colors.white54, fontSize: 11),
               ),
             ],
           ),
         ),
 
-        // Right Action Bar (Like, Share, Remix Buttons)
+        // Right Action Bar (Like, Share, Call, Remix Buttons)
         Positioned(
           bottom: 40,
           right: 16,
@@ -352,6 +418,14 @@ class _AdCardState extends State<AdCard> {
                     color: Colors.white, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 18),
+              if (phone.isNotEmpty && videoUrl.isNotEmpty) ...[
+                IconButton(
+                  iconSize: 32,
+                  icon: const Icon(Icons.phone_active, color: Colors.greenAccent),
+                  onPressed: () => _makePhoneCall(phone),
+                ),
+                const SizedBox(height: 18),
+              ],
               IconButton(
                 iconSize: 30,
                 icon: const Icon(Icons.share_rounded, color: Colors.white),
@@ -380,7 +454,7 @@ class _AdCardState extends State<AdCard> {
   }
 }
 
-// ==================== 2. PRO AD CREATOR / EDITOR SCREEN ====================
+// ==================== 2. CREATOR / EDITOR WITH VIDEO UPLOAD ====================
 class AdEditorScreen extends StatefulWidget {
   final Map<String, dynamic>? initialTemplate;
   const AdEditorScreen({super.key, this.initialTemplate});
@@ -394,6 +468,9 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
+
+  File? _selectedVideoFile;
+  VideoPlayerController? _previewVideoController;
 
   int _selectedPresetIndex = 0;
   String _selectedSticker = 'Telebirr Accepted';
@@ -453,6 +530,31 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _previewVideoController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickVideo() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? video = await picker.pickVideo(source: ImageSource.gallery);
+
+    if (video != null) {
+      setState(() {
+        _selectedVideoFile = File(video.path);
+      });
+
+      _previewVideoController?.dispose();
+      _previewVideoController = VideoPlayerController.file(_selectedVideoFile!)
+        ..initialize().then((_) {
+          setState(() {});
+          _previewVideoController!.setLooping(true);
+          _previewVideoController!.play();
+        });
+    }
+  }
+
   Future<void> _publishAd() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -468,19 +570,33 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
       _isPublishing = true;
     });
 
-    final selectedPreset = _colorPresets[_selectedPresetIndex];
-    final templateMap = {
-      'text': _textController.text,
-      'phone': _phoneController.text,
-      'sticker': _selectedSticker,
-      'colorStart': selectedPreset['start'],
-      'colorEnd': selectedPreset['end'],
-    };
+    String uploadedVideoUrl = '';
 
     try {
+      // 1. Upload video file to Supabase Storage if picked
+      if (_selectedVideoFile != null) {
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+        await supabase.storage
+            .from('videos')
+            .upload(fileName, _selectedVideoFile!);
+
+        uploadedVideoUrl =
+            supabase.storage.from('videos').getPublicUrl(fileName);
+      }
+
+      final selectedPreset = _colorPresets[_selectedPresetIndex];
+      final templateMap = {
+        'text': _textController.text,
+        'phone': _phoneController.text,
+        'sticker': _selectedSticker,
+        'colorStart': selectedPreset['start'],
+        'colorEnd': selectedPreset['end'],
+      };
+
+      // 2. Insert Record
       await supabase.from('videos').insert({
         'title': _titleController.text.trim(),
-        'video_url': '',
+        'video_url': uploadedVideoUrl,
         'template_json': templateMap,
       });
 
@@ -492,6 +608,11 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
           ),
         );
         _titleController.clear();
+        setState(() {
+          _selectedVideoFile = null;
+          _previewVideoController?.dispose();
+          _previewVideoController = null;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -513,7 +634,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Create Poster Ad',
+          'Create Poster / Video Ad',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         backgroundColor: const Color(0xFF16161E),
@@ -553,119 +674,113 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Interactive Live Canvas Preview
+              // 1. Video Upload Box / Preview Canvas
               Container(
                 width: double.infinity,
                 height: 260,
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(activePreset['start']),
-                      Color(activePreset['end']),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: _selectedVideoFile == null
+                      ? LinearGradient(
+                          colors: [
+                            Color(activePreset['start']),
+                            Color(activePreset['end']),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: Color(activePreset['start']).withOpacity(0.5),
+                      color: Color(activePreset['start']).withOpacity(0.4),
                       blurRadius: 18,
                       offset: const Offset(0, 8),
                     )
                   ],
                 ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20.0, vertical: 15.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (_selectedSticker.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                        color: Colors.black26, blurRadius: 6)
-                                  ],
-                                ),
-                                child: Text(
-                                  _selectedSticker,
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(height: 15),
-                            Text(
-                              _textController.text.isEmpty
-                                  ? 'የማስታወቂያ ጽሁፍ...'
-                                  : _textController.text,
-                              textAlign: TextAlign.center,
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                height: 1.25,
-                              ),
-                            ),
-                            if (_phoneController.text.isNotEmpty) ...[
-                              const SizedBox(height: 14),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade600,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.phone,
-                                        size: 14, color: Colors.white),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _phoneController.text,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Stack(
+                    children: [
+                      if (_selectedVideoFile != null &&
+                          _previewVideoController != null &&
+                          _previewVideoController!.value.isInitialized)
+                        Center(
+                          child: AspectRatio(
+                            aspectRatio:
+                                _previewVideoController!.value.aspectRatio,
+                            child: VideoPlayer(_previewVideoController!),
+                          ),
+                        )
+                      else
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20.0, vertical: 15.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (_selectedSticker.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Text(
+                                      _selectedSticker,
                                       style: const TextStyle(
-                                        color: Colors.white,
+                                        color: Colors.black,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
                                       ),
                                     ),
-                                  ],
+                                  ),
+                                const SizedBox(height: 15),
+                                Text(
+                                  _textController.text.isEmpty
+                                      ? 'የማስታወቂያ ጽሁፍ...'
+                                      : _textController.text,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    height: 1.25,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ],
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Chip(
-                        label: Text('LIVE CANVA',
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                        backgroundColor: Colors.black45,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    )
-                  ],
+
+                      // Floating Button to Upload Video
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black87,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onPressed: _pickVideo,
+                          icon: const Icon(Icons.video_call,
+                              color: Colors.redAccent),
+                          label: Text(_selectedVideoFile == null
+                              ? 'ቪዲዮ ምረጥ'
+                              : 'ቪዲዮ ቀይር'),
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
 
@@ -728,66 +843,60 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                     ),
                     const SizedBox(height: 22),
 
-                    // Background Gradient Selection
-                    const Text(
-                      'የጀርባ ዲዛይን/ከለር ይምረጡ:',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white70,
-                          fontSize: 14),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 52,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _colorPresets.length,
-                        itemBuilder: (context, index) {
-                          final preset = _colorPresets[index];
-                          final isSelected = _selectedPresetIndex == index;
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedPresetIndex = index;
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              margin: const EdgeInsets.only(right: 12),
-                              width: isSelected ? 52 : 44,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(preset['start']),
-                                    Color(preset['end'])
-                                  ],
-                                ),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.transparent,
-                                  width: 3,
-                                ),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                            color: Color(preset['start'])
-                                                .withOpacity(0.6),
-                                            blurRadius: 10)
-                                      ]
-                                    : [],
-                              ),
-                              child: isSelected
-                                  ? const Icon(Icons.check,
-                                      color: Colors.white, size: 22)
-                                  : null,
-                            ),
-                          );
-                        },
+                    // Background Color Presets (If video is not selected)
+                    if (_selectedVideoFile == null) ...[
+                      const Text(
+                        'የጀርባ ዲዛይን/ከለር ይምረጡ:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white70,
+                            fontSize: 14),
                       ),
-                    ),
-                    const SizedBox(height: 22),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 52,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _colorPresets.length,
+                          itemBuilder: (context, index) {
+                            final preset = _colorPresets[index];
+                            final isSelected = _selectedPresetIndex == index;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedPresetIndex = index;
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsets.only(right: 12),
+                                width: isSelected ? 52 : 44,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Color(preset['start']),
+                                      Color(preset['end'])
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.transparent,
+                                    width: 3,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? const Icon(Icons.check,
+                                        color: Colors.white, size: 22)
+                                    : null,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                    ],
 
                     // Badge/Sticker Options
                     const Text(
