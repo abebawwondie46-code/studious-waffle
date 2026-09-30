@@ -421,7 +421,7 @@ class _AdCardState extends State<AdCard> {
               if (phone.isNotEmpty && videoUrl.isNotEmpty) ...[
                 IconButton(
                   iconSize: 32,
-                  icon: const Icon(Icons.phone_active, color: Colors.greenAccent),
+                  icon: const Icon(Icons.phone, color: Colors.greenAccent),
                   onPressed: () => _makePhoneCall(phone),
                 ),
                 const SizedBox(height: 18),
