@@ -28,6 +28,13 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Upgrade Android Project to v2 Embedding
+        run: flutter create --platforms=android .
+
+      - name: Ensure Internet Permission Exists
+        run: |
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' android/app/src/main/AndroidManifest.xml
+
       - name: Get Dependencies
         run: flutter pub get
 
