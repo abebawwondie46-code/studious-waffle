@@ -28,10 +28,12 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Upgrade Android Project to v2 Embedding
-        run: flutter create --platforms=android --project-name=studious_waffle .
+      - name: Rebuild Android Project with v2 Embedding
+        run: |
+          rm -rf android
+          flutter create --platforms=android --project-name=studious_waffle .
 
-      - name: Ensure Internet Permission Exists
+      - name: Inject Internet Permission
         run: |
           sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' android/app/src/main/AndroidManifest.xml
 
