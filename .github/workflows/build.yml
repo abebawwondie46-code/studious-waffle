@@ -22,7 +22,7 @@ jobs:
           java-version: '17'
 
       - name: Set up Flutter
-        uses: actions/subosito/flutter-action@v2
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.x'
           channel: 'stable'
