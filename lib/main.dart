@@ -11,7 +11,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: '[https://ycvycgdnrmlfaebtxvfl.supabase.co](https://ycvycgdnrmlfaebtxvfl.supabase.co)',
+    url: 'https://ycvycgdnrmlfaebtxvfl.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljdnljZ2Rubm1sZmFlYnR4dmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTk2MjAsImV4cCI6MjA5Njg3NTYyMH0.Os73HGXe4EOijqpBVHk9Bcm6uzZXkgZjWRoroV1m2gE',
   );
 
@@ -168,13 +168,15 @@ class _VideoCardState extends State<VideoCard> {
   @override
   void initState() {
     super.initState();
-    final url = widget.videoData['video_url'] ?? '';
+    final url = widget.videoData['video_url']?.toString() ?? '';
     if (url.isNotEmpty) {
       _controller = VideoPlayerController.networkUrl(Uri.parse(url))
         ..initialize().then((_) {
-          setState(() {});
-          _controller?.setLooping(true);
-          _controller?.play();
+          if (mounted) {
+            setState(() {});
+            _controller?.setLooping(true);
+            _controller?.play();
+          }
         });
     }
   }
@@ -187,6 +189,9 @@ class _VideoCardState extends State<VideoCard> {
 
   @override
   Widget build(BuildContext context) {
+    final phone = widget.videoData['phone_number']?.toString();
+    final telegram = widget.videoData['telegram_username']?.toString();
+
     return Stack(
       children: [
         _controller != null && _controller!.value.isInitialized
@@ -210,23 +215,23 @@ class _VideoCardState extends State<VideoCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.videoData['title'] ?? '',
+                widget.videoData['title']?.toString() ?? '',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 children: [
-                  if (widget.videoData['phone_number'] != null)
+                  if (phone != null && phone.isNotEmpty)
                     ElevatedButton.icon(
-                      onPressed: () => launchUrl(Uri.parse('tel:${widget.videoData['phone_number']}')),
+                      onPressed: () => launchUrl(Uri.parse('tel:$phone')),
                       icon: const Icon(Icons.phone, size: 16),
                       label: const Text('ደውል'),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                     ),
-                  if (widget.videoData['telegram_username'] != null)
+                  if (telegram != null && telegram.isNotEmpty)
                     ElevatedButton.icon(
-                      onPressed: () => launchUrl(Uri.parse('[https://t.me/$](https://t.me/$){widget.videoData['telegram_username']}')),
+                      onPressed: () => launchUrl(Uri.parse('https://t.me/$telegram')),
                       icon: const Icon(Icons.send, size: 16),
                       label: const Text('Telegram'),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
@@ -244,7 +249,12 @@ class _VideoCardState extends State<VideoCard> {
             children: [
               IconButton(
                 icon: const Icon(Icons.share, color: Colors.white, size: 30),
-                onPressed: () => Share.share(widget.videoData['video_url'] ?? ''),
+                onPressed: () {
+                  final videoUrl = widget.videoData['video_url']?.toString() ?? '';
+                  if (videoUrl.isNotEmpty) {
+                    Share.share(videoUrl);
+                  }
+                },
               ),
             ],
           ),
