@@ -13,7 +13,7 @@ void main() async {
   await Supabase.initialize(
     url: 'https://yszkonhhprwtavxywchz.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzemtvbmhocHJ3dGF2eHl3Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjQxNDksImV4cCI62106M401ND19.TXL0yzOlI3Kx5CyW6CvOsWMMc_wRafTVt7CcTxYev7E',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzemtvbmhocHJ3dGF2eHl3Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjQxNDksImV4cCI6MjEwNjM0MDE0OX0.TXL0yzOlI3Kx5CyW6CvOsWMMc_wRafTVt7CcTxYev7E',
   );
 
   runApp(const KuanYngneApp());
@@ -104,6 +104,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final supabase = Supabase.instance.client;
   List<dynamic> videos = [];
   bool isLoading = true;
+  String errorMessage = '';
 
   @override
   void initState() {
@@ -112,6 +113,10 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   }
 
   Future<void> _fetchVideos() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+    });
     try {
       final response = await supabase
           .from('videos')
@@ -124,6 +129,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
     } catch (e) {
       setState(() {
         isLoading = false;
+        errorMessage = 'መረጃዎችን ማምጣት አልተቻለም፡ $e';
       });
     }
   }
@@ -146,26 +152,68 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
         centerTitle: true,
         backgroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _fetchVideos,
+          )
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
-          : videos.isEmpty
-              ? const Center(
-                  child: Text(
-                    'ምንም ማስታወቂያ አልተገኘም። የመጀመሪያው ማስታወቂያ ይፍጠሩ!',
-                    style: TextStyle(color: Colors.grey),
+          : errorMessage.isNotEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline,
+                            color: Colors.redAccent, size: 48),
+                        const SizedBox(height: 12),
+                        Text(
+                          errorMessage,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _fetchVideos,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('እንደገና ሞክር'),
+                        )
+                      ],
+                    ),
                   ),
                 )
-              : RefreshIndicator(
-                  onRefresh: _fetchVideos,
-                  child: PageView.builder(
-                    scrollDirection: Axis.vertical,
-                    itemCount: videos.length,
-                    itemBuilder: (context, index) {
-                      return AdCard(adData: videos[index]);
-                    },
-                  ),
-                ),
+              : videos.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'ምንም ማስታወቂያ አልተገኘም። የመጀመሪያውን ማስታወቂያ ይፍጠሩ!',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _fetchVideos,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Refresh'),
+                          )
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _fetchVideos,
+                      child: PageView.builder(
+                        scrollDirection: Axis.vertical,
+                        itemCount: videos.length,
+                        itemBuilder: (context, index) {
+                          return AdCard(adData: videos[index]);
+                        },
+                      ),
+                    ),
     );
   }
 }
@@ -198,6 +246,8 @@ class _AdCardState extends State<AdCard> {
             _videoController!.setLooping(true);
             _videoController!.play();
           }
+        }).catchError((err) {
+          // Video Load Error handling
         });
     }
   }
@@ -244,7 +294,7 @@ class _AdCardState extends State<AdCard> {
 
     return Stack(
       children: [
-        // 1. Fullscreen Media (Video OR Poster)
+        // 1. Fullscreen Media
         Positioned.fill(
           child: videoUrl.isNotEmpty
               ? (isVideoInitialized && _videoController != null
@@ -353,7 +403,7 @@ class _AdCardState extends State<AdCard> {
                 ),
         ),
 
-        // Dark Overlay for readable text when playing video
+        // Dark Overlay when video plays
         if (videoUrl.isNotEmpty)
           Positioned.fill(
             child: Container(
