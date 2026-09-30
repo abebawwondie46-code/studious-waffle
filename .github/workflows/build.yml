@@ -29,7 +29,7 @@ jobs:
           cache: true
 
       - name: Upgrade Android Project to v2 Embedding
-        run: flutter create --platforms=android .
+        run: flutter create --platforms=android --project-name=studious_waffle .
 
       - name: Ensure Internet Permission Exists
         run: |
