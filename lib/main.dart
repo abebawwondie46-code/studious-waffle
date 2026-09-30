@@ -7,7 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // የ Supabase ፕሮጀክትህን በኢንተርኔት ማገናኘት
+  // Supabase Initialization
   await Supabase.initialize(
     url: 'https://ycvycgdnrmlfaebtxvfl.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljdnljZ2Rubm1sZmFlYnR4dmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTk2MjAsImV4cCI6MjA5Njg3NTYyMH0.Os73HGXe4EOijqpBVHk9Bcm6uzZXkgZjWRoroV1m2gE',
@@ -34,7 +34,7 @@ class KuanYngneApp extends StatelessWidget {
 }
 
 // ==========================================
-// 1. MAIN NAVIGATION (HOME, CREATE, PROFILE)
+// MAIN NAVIGATION
 // ==========================================
 class MainHomeScreen extends StatefulWidget {
   const MainHomeScreen({super.key});
@@ -76,7 +76,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 }
 
 // ==========================================
-// 2. VERTICAL TIKTOK-STYLE FEED (CONNECTED TO INTERNET)
+// VERTICAL VIDEO FEED
 // ==========================================
 class VerticalVideoFeed extends StatefulWidget {
   const VerticalVideoFeed({super.key});
@@ -99,7 +99,6 @@ class _VerticalVideoFeedState extends State<VerticalVideoFeed> {
     return Scaffold(
       body: Stack(
         children: [
-          // Realtime Stream ከ Supabase
           StreamBuilder<List<Map<String, dynamic>>>(
             stream: videoStream,
             builder: (context, snapshot) {
@@ -125,7 +124,6 @@ class _VerticalVideoFeedState extends State<VerticalVideoFeed> {
                 );
               }
 
-              // የምድብ (Category) ማጣሪያ
               final filteredPosts = _selectedCategory == "ሁሁሉም"
                   ? posts
                   : posts.where((p) => p["category"] == _selectedCategory).toList();
@@ -140,7 +138,7 @@ class _VerticalVideoFeedState extends State<VerticalVideoFeed> {
             },
           ),
 
-          // Top Category Filters overlay
+          // Top Categories Overlay
           Positioned(
             top: 50,
             left: 0,
@@ -177,7 +175,7 @@ class _VerticalVideoFeedState extends State<VerticalVideoFeed> {
 }
 
 // ==========================================
-// 3. FEED ITEM CARD (VIDEO PLAYER & CTA)
+// FEED ITEM CARD WITH VIDEO & TTS
 // ==========================================
 class FeedItemCard extends StatefulWidget {
   final Map<String, dynamic> postData;
@@ -244,7 +242,7 @@ class _FeedItemCardState extends State<FeedItemCard> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // 1. Background Video
+        // Background Video
         _controller.value.isInitialized
             ? SizedBox.expand(
                 child: FittedBox(
@@ -258,7 +256,7 @@ class _FeedItemCardState extends State<FeedItemCard> {
               )
             : const Center(child: CircularProgressIndicator(color: Colors.amber)),
 
-        // 2. Poster Text Overlay
+        // Text Overlay
         Positioned(
           top: 120,
           left: 20,
@@ -282,7 +280,7 @@ class _FeedItemCardState extends State<FeedItemCard> {
           ),
         ),
 
-        // 3. Side Actions (Like, AI Voice, Remix, Share)
+        // Action Buttons
         Positioned(
           right: 15,
           bottom: 110,
@@ -295,7 +293,6 @@ class _FeedItemCardState extends State<FeedItemCard> {
               Text("${widget.postData["likes"] ?? 0}", style: const TextStyle(color: Colors.white)),
               const SizedBox(height: 15),
 
-              // AI Voice TTS
               IconButton(
                 icon: const Icon(Icons.volume_up, color: Colors.amber, size: 32),
                 onPressed: () => _speakAmharic(widget.postData["overlay_text"] ?? ""),
@@ -303,7 +300,6 @@ class _FeedItemCardState extends State<FeedItemCard> {
               const Text("AI ድምፅ", style: TextStyle(color: Colors.white, fontSize: 10)),
               const SizedBox(height: 15),
 
-              // Remix Template
               IconButton(
                 icon: const Icon(Icons.auto_fix_high, color: Colors.lightBlueAccent, size: 32),
                 onPressed: () {
@@ -320,7 +316,7 @@ class _FeedItemCardState extends State<FeedItemCard> {
           ),
         ),
 
-        // 4. Business Card & Action Overlay (CTA)
+        // CTA Section
         Positioned(
           left: 15,
           right: 80,
@@ -378,7 +374,7 @@ class _FeedItemCardState extends State<FeedItemCard> {
 }
 
 // ==========================================
-// 4. REMIX & TEMPLATE EDITOR
+// TEMPLATE EDITOR SCREEN
 // ==========================================
 class TemplateEditorScreen extends StatefulWidget {
   final Map<String, dynamic>? templateData;
@@ -453,7 +449,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Live Preview
             Container(
               height: 160,
               width: double.infinity,
@@ -482,7 +477,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
             const SizedBox(height: 12),
             TextField(controller: _bankController, decoration: const InputDecoration(labelText: "የባንክ አካውንት", border: OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: _telegramController, decoration: const InputDecoration(labelText: "የቴሌግራም የተጠቃሚ ስም (Username)", border: OutlineInputBorder())),
+            TextField(controller: _telegramController, decoration: const InputDecoration(labelText: "የቴሌግራም Username", border: OutlineInputBorder())),
             const SizedBox(height: 20),
             
             const Text("የፅሁፍ ቀለም ይምረጡ፦"),
