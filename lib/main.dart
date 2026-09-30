@@ -254,9 +254,9 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
     Colors.indigo,
     Colors.deepPurple,
     Colors.teal,
-    Colors.darkBlue,
+    Colors.blue,
     Colors.brown,
-    Colors.redHeadline,
+    Colors.red,
   ];
 
   final List<String> _stickers = [
