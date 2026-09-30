@@ -1,5 +1,5 @@
 name: kuanyngne
-description: "Ad Creator, Poster Generator and TikTok-like Feed App"
+description: "Ad Creator, Poster Generator"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-    
+
   flutter_colorpicker: ^1.1.0
   path_provider: ^2.1.2
   video_player: ^2.8.2
@@ -19,6 +19,7 @@ dependencies:
   url_launcher: ^6.3.0
   share_plus: ^10.0.0
   supabase_flutter: ^2.8.0
+  flutter_tts: ^3.8.5
 
 dev_dependencies:
   flutter_test:
