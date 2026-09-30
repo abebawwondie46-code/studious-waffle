@@ -1,18 +1,48 @@
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VideoService {
-  /// Converts an image to a video path or returns the original image path as fallback.
-  static Future<String?> convertImageToVideo(String imagePath) async {
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  // 1. ቪዲዮዎችን ከ Supabase ማምጣት
+  Future<List<Map<String, dynamic>>> fetchVideos() async {
     try {
-      // ffmpeg ሳይያስፈልግ የምስሉን ፋይል መንገድ በቀጥታ ይመልሳል
-      final file = File(imagePath);
-      if (await file.exists()) {
-        return imagePath;
-      }
-      return null;
+      final response = await _supabase
+          .from('videos')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      return null;
+      rethrow;
+    }
+  }
+
+  // 2. ቪዲዮ እና የቴምፕሌት ዳታ መጫን (One-Tap Publish)
+  Future<void> publishVideoWithTemplate({
+    required File videoFile,
+    required String title,
+    required String category,
+    required Map<String, dynamic> templateData,
+  }) async {
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+
+      // ወደ Storage ማቀበል
+      await _supabase.storage.from('MEDIA').upload(fileName, videoFile);
+
+      // Public URL ማግኘት
+      final videoUrl = _supabase.storage.from('MEDIA').getPublicUrl(fileName);
+
+      // ወደ Database መዝገብ ማስገባት
+      await _supabase.from('videos').insert({
+        'title': title,
+        'category': category,
+        'video_url': videoUrl,
+        'is_template': true,
+        'template_data': templateData,
+      });
+    } catch (e) {
+      rethrow;
     }
   }
 }
