@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,8 +25,8 @@ class KuanYngneApp extends StatelessWidget {
       title: 'KuanYngne',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        cardColor: const Color(0xFF1E1E1E),
+        scaffoldBackgroundColor: const Color(0xFF101014),
+        cardColor: const Color(0xFF1C1C24),
         colorScheme: const ColorScheme.dark(
           primary: Colors.redAccent,
           secondary: Colors.amber,
@@ -55,35 +56,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        backgroundColor: const Color(0xFF1A1A1A),
-        selectedItemColor: Colors.redAccent,
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.style_outlined),
-            activeIcon: Icon(Icons.style),
-            label: 'Feed',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline, size: 28),
-            activeIcon: Icon(Icons.add_circle, size: 28),
-            label: 'Create Ad',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          backgroundColor: const Color(0xFF16161E),
+          selectedItemColor: Colors.redAccent,
+          unselectedItemColor: Colors.grey,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.style_outlined),
+              activeIcon: Icon(Icons.style),
+              label: 'Feed',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.add_circle_outline, size: 30),
+              activeIcon: Icon(Icons.add_circle, size: 30),
+              label: 'Create Ad',
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ==================== 1. FEED SCREEN ====================
+// ==================== 1. ENHANCED FEED SCREEN ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -123,44 +129,71 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'KuanYngne Feed',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.bolt, color: Colors.amber, size: 24),
+            SizedBox(width: 6),
+            Text(
+              'KuanYngne Ads',
+              style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1),
+            ),
+          ],
         ),
         centerTitle: true,
         backgroundColor: Colors.black,
         elevation: 0,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
           : videos.isEmpty
               ? const Center(
                   child: Text(
-                    'ምንም ማስታወቂያ አልተገኘም። "Create Ad" ላይ ገብተው ይፍጠሩ!',
+                    'ምንም ማስታወቂያ አልተገኘም። የመጀመሪያው ማስታወቂያ ይፍጠሩ!',
                     style: TextStyle(color: Colors.grey),
                   ),
                 )
-              : PageView.builder(
-                  scrollDirection: Axis.vertical,
-                  itemCount: videos.length,
-                  itemBuilder: (context, index) {
-                    final item = videos[index];
-                    return AdCard(adData: item);
-                  },
+              : RefreshIndicator(
+                  onRefresh: _fetchVideos,
+                  child: PageView.builder(
+                    scrollDirection: Axis.vertical,
+                    itemCount: videos.length,
+                    itemBuilder: (context, index) {
+                      return AdCard(adData: videos[index]);
+                    },
+                  ),
                 ),
     );
   }
 }
 
-class AdCard extends StatelessWidget {
+class AdCard extends StatefulWidget {
   final dynamic adData;
   const AdCard({super.key, required this.adData});
 
   @override
+  State<AdCard> createState() => _AdCardState();
+}
+
+class _AdCardState extends State<AdCard> {
+  bool isLiked = false;
+  int likeCount = 12;
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    }
+  }
+
+  void _shareAd(String title, String text) {
+    Share.share('$title\n\n$text\n\nየተፈጠረው በ KuanYngne App ነው!');
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final title = adData['title'] ?? 'ማስታወቂያ';
-    final templateJson = adData['template_json'];
-    final videoUrl = adData['video_url'] ?? '';
+    final title = widget.adData['title'] ?? 'ማስታወቂያ';
+    final templateJson = widget.adData['template_json'];
 
     Map<String, dynamic>? templateData;
     if (templateJson != null) {
@@ -171,144 +204,172 @@ class AdCard extends StatelessWidget {
       }
     }
 
+    final int startColorVal = templateData?['colorStart'] ?? Colors.indigo.value;
+    final int endColorVal = templateData?['colorEnd'] ?? Colors.blueAccent.value;
+    final String phone = templateData?['phone'] ?? '';
+    final String text = templateData?['text'] ?? '';
+    final String sticker = templateData?['sticker'] ?? '';
+
     return Stack(
       children: [
+        // Background Gradient
         Positioned.fill(
-          child: templateData != null
-              ? Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(templateData['bgColor'] ?? Colors.indigo.value),
-                        Color(templateData['bgColor'] ?? Colors.indigo.value)
-                            .withOpacity(0.7),
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (templateData['sticker'] != null &&
-                              templateData['sticker'].toString().isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 18, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.amber,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: const [
-                                  BoxShadow(
-                                      color: Colors.black26, blurRadius: 8)
-                                ],
-                              ),
-                              child: Text(
-                                templateData['sticker'],
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 30),
-                          Text(
-                            templateData['text'] ?? '',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              height: 1.3,
-                            ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(startColorVal), Color(endColorVal)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (sticker.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Colors.black38,
+                                blurRadius: 10,
+                                offset: Offset(0, 4))
+                          ],
+                        ),
+                        child: Text(
+                          sticker,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.black,
+                            fontSize: 16,
                           ),
-                          const SizedBox(height: 25),
-                          if (templateData['phone'] != null &&
-                              templateData['phone'].toString().isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade700,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.phone,
-                                      color: Colors.white, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    templateData['phone'],
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                        ),
+                      ),
+                    const SizedBox(height: 30),
+                    Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.3,
+                        shadows: [
+                          Shadow(
+                              color: Colors.black45,
+                              blurRadius: 10,
+                              offset: Offset(0, 3))
                         ],
                       ),
                     ),
-                  ),
-                )
-              : videoUrl.isNotEmpty
-                  ? NetworkVideoPlayer(videoUrl: videoUrl)
-                  : Container(color: Colors.black),
-        ),
-        // Remix Button
-        Positioned(
-          bottom: 40,
-          right: 20,
-          child: Column(
-            children: [
-              if (templateData != null)
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    elevation: 5,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            AdEditorScreen(initialTemplate: templateData),
+                    const SizedBox(height: 30),
+                    if (phone.isNotEmpty)
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade600,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 22, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 8,
+                        ),
+                        onPressed: () => _makePhoneCall(phone),
+                        icon: const Icon(Icons.phone, color: Colors.white),
+                        label: Text(
+                          phone,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.auto_awesome, color: Colors.white),
-                  label: const Text(
-                    'Remix This',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ),
+
+        // Bottom Left Info Area
         Positioned(
           bottom: 40,
           left: 20,
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              shadows: [Shadow(color: Colors.black, blurRadius: 6)],
-            ),
+          right: 90,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'በ KuanYngne የተዘጋጀ ማስታወቂያ',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+
+        // Right Action Bar (Like, Share, Remix Buttons)
+        Positioned(
+          bottom: 40,
+          right: 16,
+          child: Column(
+            children: [
+              IconButton(
+                iconSize: 32,
+                icon: Icon(
+                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: isLiked ? Colors.redAccent : Colors.white,
+                ),
+                onPressed: () {
+                  setState(() {
+                    isLiked = !isLiked;
+                    isLiked ? likeCount++ : likeCount--;
+                  });
+                },
+              ),
+              Text(
+                '$likeCount',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 18),
+              IconButton(
+                iconSize: 30,
+                icon: const Icon(Icons.share_rounded, color: Colors.white),
+                onPressed: () => _shareAd(title, text),
+              ),
+              const SizedBox(height: 18),
+              FloatingActionButton.small(
+                heroTag: null,
+                backgroundColor: Colors.redAccent,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AdEditorScreen(initialTemplate: templateData),
+                    ),
+                  );
+                },
+                child: const Icon(Icons.auto_awesome, color: Colors.white),
+              ),
+            ],
           ),
         ),
       ],
@@ -316,7 +377,7 @@ class AdCard extends StatelessWidget {
   }
 }
 
-// ==================== 2. PRO AD/POSTER EDITOR SCREEN ====================
+// ==================== 2. PRO AD CREATOR / EDITOR SCREEN ====================
 class AdEditorScreen extends StatefulWidget {
   final Map<String, dynamic>? initialTemplate;
   const AdEditorScreen({super.key, this.initialTemplate});
@@ -331,18 +392,41 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
 
-  Color _selectedBgColor = const Color(0xFF3F51B5);
+  int _selectedPresetIndex = 0;
   String _selectedSticker = 'Telebirr Accepted';
   bool _isPublishing = false;
 
-  final List<Color> _colors = [
-    const Color(0xFF3F51B5), // Indigo
-    const Color(0xFF673AB7), // Deep Purple
-    const Color(0xFF009688), // Teal
-    const Color(0xFF1E88E5), // Blue
-    const Color(0xFFD81B60), // Pink/Red
-    const Color(0xFF43A047), // Green
-    const Color(0xFF37474F), // Dark Slate
+  final List<Map<String, dynamic>> _colorPresets = [
+    {
+      'name': 'Dark Indigo',
+      'start': const Color(0xFF283593).value,
+      'end': const Color(0xFF1A237E).value
+    },
+    {
+      'name': 'Sunset Gold',
+      'start': const Color(0xFFFF8F00).value,
+      'end': const Color(0xFFFF3D00).value
+    },
+    {
+      'name': 'Emerald Green',
+      'start': const Color(0xFF00897B).value,
+      'end': const Color(0xFF004D40).value
+    },
+    {
+      'name': 'Neon Purple',
+      'start': const Color(0xFF8E24AA).value,
+      'end': const Color(0xFF4A148C).value
+    },
+    {
+      'name': 'Ocean Blue',
+      'start': const Color(0xFF0288D1).value,
+      'end': const Color(0xFF01579B).value
+    },
+    {
+      'name': 'Deep Crimson',
+      'start': const Color(0xFFC62828).value,
+      'end': const Color(0xFF880E4F).value
+    },
   ];
 
   final List<String> _stickers = [
@@ -351,6 +435,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
     '50% DISCOUNT',
     'SPECIAL OFFER',
     'CALL NOW',
+    'HOT DEAL 🔥',
   ];
 
   @override
@@ -360,9 +445,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
       _textController.text = widget.initialTemplate!['text'] ?? '';
       _phoneController.text = widget.initialTemplate!['phone'] ?? '';
       _selectedSticker = widget.initialTemplate!['sticker'] ?? _stickers.first;
-      if (widget.initialTemplate!['bgColor'] != null) {
-        _selectedBgColor = Color(widget.initialTemplate!['bgColor']);
-      }
     } else {
       _textController.text = 'የማስታወቂያ መልዕክትዎን እዚህ ይፃፉ...';
     }
@@ -371,7 +453,10 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   Future<void> _publishAd() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎን ለማስታወቂያው ርዕስ ያስገቡ!')),
+        const SnackBar(
+          content: Text('እባክዎን ለማስታወቂያው ርዕስ (Title) ያስገቡ!'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -380,11 +465,13 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
       _isPublishing = true;
     });
 
+    final selectedPreset = _colorPresets[_selectedPresetIndex];
     final templateMap = {
       'text': _textController.text,
       'phone': _phoneController.text,
       'sticker': _selectedSticker,
-      'bgColor': _selectedBgColor.value,
+      'colorStart': selectedPreset['start'],
+      'colorEnd': selectedPreset['end'],
     };
 
     try {
@@ -396,7 +483,10 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ማስታወቂያዎ በትክክል ተለጥፏል!')),
+          const SnackBar(
+            content: Text('🎉 ማስታወቂያዎ በትክክል ተለጥፏል!'),
+            backgroundColor: Colors.green,
+          ),
         );
         _titleController.clear();
       }
@@ -415,13 +505,15 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activePreset = _colorPresets[_selectedPresetIndex];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Create Poster Ad',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: const Color(0xFF16161E),
         elevation: 0,
         actions: [
           Padding(
@@ -429,10 +521,10 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
             child: _isPublishing
                 ? const Center(
                     child: SizedBox(
-                      width: 20,
-                      height: 20,
+                      width: 22,
+                      height: 22,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.green),
+                          strokeWidth: 2, color: Colors.greenAccent),
                     ),
                   )
                 : TextButton.icon(
@@ -458,25 +550,25 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Canvas Live Preview Area
+              // 1. Interactive Live Canvas Preview
               Container(
                 width: double.infinity,
-                height: 250,
+                height: 260,
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _selectedBgColor,
-                      _selectedBgColor.withOpacity(0.75),
+                      Color(activePreset['start']),
+                      Color(activePreset['end']),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: _selectedBgColor.withOpacity(0.4),
-                      blurRadius: 15,
+                      color: Color(activePreset['start']).withOpacity(0.5),
+                      blurRadius: 18,
                       offset: const Offset(0, 8),
                     )
                   ],
@@ -496,10 +588,10 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                                     horizontal: 14, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(15),
+                                  borderRadius: BorderRadius.circular(16),
                                   boxShadow: const [
                                     BoxShadow(
-                                        color: Colors.black26, blurRadius: 4)
+                                        color: Colors.black26, blurRadius: 6)
                                   ],
                                 ),
                                 child: Text(
@@ -523,16 +615,16 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
-                                height: 1.2,
+                                height: 1.25,
                               ),
                             ),
                             if (_phoneController.text.isNotEmpty) ...[
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 5),
+                                    horizontal: 14, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.shade700,
+                                  color: Colors.green.shade600,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
@@ -561,12 +653,12 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                       top: 12,
                       right: 12,
                       child: Chip(
-                        label: Text('LIVE PREVIEW',
+                        label: Text('LIVE CANVA',
                             style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white)),
-                        backgroundColor: Colors.black38,
+                        backgroundColor: Colors.black45,
                         visualDensity: VisualDensity.compact,
                       ),
                     )
@@ -574,7 +666,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                 ),
               ),
 
-              // 2. Control Forms Area
+              // 2. Control Inputs Area
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
@@ -585,11 +677,12 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         labelText: 'የማስታወቂያው ርዕስ (Title)',
-                        prefixIcon: const Icon(Icons.title, color: Colors.grey),
+                        prefixIcon:
+                            const Icon(Icons.title, color: Colors.redAccent),
                         filled: true,
-                        fillColor: const Color(0xFF1E1E1E),
+                        fillColor: const Color(0xFF1E1E28),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
                       ),
@@ -603,11 +696,11 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                       decoration: InputDecoration(
                         labelText: 'የማስታወቂያ መልዕክት/ፅሁፍ',
                         prefixIcon:
-                            const Icon(Icons.edit_note, color: Colors.grey),
+                            const Icon(Icons.edit_note, color: Colors.amber),
                         filled: true,
-                        fillColor: const Color(0xFF1E1E1E),
+                        fillColor: const Color(0xFF1E1E28),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
                       ),
@@ -621,46 +714,51 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                       decoration: InputDecoration(
                         labelText: 'የስልክ ቁጥር (Contact)',
                         prefixIcon: const Icon(Icons.phone_android,
-                            color: Colors.grey),
+                            color: Colors.greenAccent),
                         filled: true,
-                        fillColor: const Color(0xFF1E1E1E),
+                        fillColor: const Color(0xFF1E1E28),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 22),
 
+                    // Background Gradient Selection
                     const Text(
-                      'የጀርባ ከለር ይምረጡ:',
+                      'የጀርባ ዲዛይን/ከለር ይምረጡ:',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.white70,
                           fontSize: 14),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     SizedBox(
-                      height: 50,
+                      height: 52,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _colors.length,
+                        itemCount: _colorPresets.length,
                         itemBuilder: (context, index) {
-                          final color = _colors[index];
-                          final isSelected = _selectedBgColor == color;
+                          final preset = _colorPresets[index];
+                          final isSelected = _selectedPresetIndex == index;
                           return GestureDetector(
                             onTap: () {
                               setState(() {
-                                _selectedBgColor = color;
+                                _selectedPresetIndex = index;
                               });
                             },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               margin: const EdgeInsets.only(right: 12),
-                              width: isSelected ? 48 : 40,
-                              height: isSelected ? 48 : 40,
+                              width: isSelected ? 52 : 44,
                               decoration: BoxDecoration(
-                                color: color,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(preset['start']),
+                                    Color(preset['end'])
+                                  ],
+                                ),
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isSelected
@@ -671,22 +769,24 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                                 boxShadow: isSelected
                                     ? [
                                         BoxShadow(
-                                            color: color.withOpacity(0.6),
-                                            blurRadius: 8)
+                                            color: Color(preset['start'])
+                                                .withOpacity(0.6),
+                                            blurRadius: 10)
                                       ]
                                     : [],
                               ),
                               child: isSelected
                                   ? const Icon(Icons.check,
-                                      color: Colors.white, size: 20)
+                                      color: Colors.white, size: 22)
                                   : null,
                             ),
                           );
                         },
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 22),
 
+                    // Badge/Sticker Options
                     const Text(
                       'ስቲከር / ባጅ ይምረጡ:',
                       style: TextStyle(
@@ -697,7 +797,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
-                      runSpacing: 8,
+                      runSpacing: 10,
                       children: _stickers.map((sticker) {
                         final isSelected = _selectedSticker == sticker;
                         return ChoiceChip(
@@ -710,7 +810,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                           ),
                           selected: isSelected,
                           selectedColor: Colors.amber,
-                          backgroundColor: const Color(0xFF2C2C2C),
+                          backgroundColor: const Color(0xFF252532),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -730,48 +830,5 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
         ),
       ),
     );
-  }
-}
-
-// ቪዲዮ ማጫወቻ ረዳት ዊጄት
-class NetworkVideoPlayer extends StatefulWidget {
-  final String videoUrl;
-  const NetworkVideoPlayer({super.key, required this.videoUrl});
-
-  @override
-  State<NetworkVideoPlayer> createState() => _NetworkVideoPlayerState();
-}
-
-class _NetworkVideoPlayerState extends State<NetworkVideoPlayer> {
-  late VideoPlayerController _controller;
-  bool _isInit = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-      ..initialize().then((_) {
-        setState(() {
-          _isInit = true;
-        });
-        _controller.play();
-        _controller.setLooping(true);
-      });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _isInit
-        ? AspectRatio(
-            aspectRatio: _controller.value.aspectRatio,
-            child: VideoPlayer(_controller),
-          )
-        : const Center(child: CircularProgressIndicator());
   }
 }
