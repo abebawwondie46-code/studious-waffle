@@ -34,8 +34,9 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      // እውነተኛውን የስህተት ምክንያት በስክሪኑ ላይ ያሳያል
       setState(() {
-        _error = 'የኢንተርኔት ግንኙነት አልተገኘም:: እባክዎን ኔትወርክዎን ያረጋግጡ::';
+        _error = 'የመጣው ስህተት፦ $e';
         _isLoading = false;
       });
     }
@@ -70,25 +71,37 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
 
     if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.wifi_off, size: 70, color: Colors.amber),
-            const SizedBox(height: 16),
-            Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loadFeed,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
-              child: const Text('እንደገና ይሞክሩ'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 70, color: Colors.amber),
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _loadFeed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black,
+                ),
+                child: const Text('እንደገና ይሞክሩ'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_videos.isEmpty) {
-      return const Center(child: Text('ምንም ቪዲዮ/ማስታወቂያ አልተገኘም::', style: TextStyle(color: Colors.white)));
+      return const Center(
+        child: Text('ምንም ቪዲዮ/ማስታወቂያ አልተገኘም::', style: TextStyle(color: Colors.white)),
+      );
     }
 
     return PageView.builder(
@@ -98,7 +111,7 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
         final item = _videos[index];
         return Stack(
           children: [
-            // Video Background Placeholder
+            // Video Background
             Container(
               color: Colors.grey[900],
               child: Center(
@@ -125,7 +138,10 @@ class _TikTokFeedScreenState extends State<TikTokFeedScreen> {
                   );
                 },
                 icon: const Icon(Icons.auto_awesome, color: Colors.black),
-                label: const Text('Remix Template', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Remix Template',
+                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                ),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
               ),
             ),
