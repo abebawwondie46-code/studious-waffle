@@ -13,7 +13,7 @@ void main() async {
   await Supabase.initialize(
     url: 'https://yszkonhhprwtavxywchz.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzemtvbmhocHJ3dGF2eHl3Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjQxNDksImV4cCI6MjEwNjM0MDE0OX0.TXL0yzOlI3Kx5CyW6CvOsWMMc_wRafTVt7CcTxYev7E',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzemtvbmhocHJ3dGF2eHl3Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjQxNDksImV4cCI62106M401ND19.TXL0yzOlI3Kx5CyW6CvOsWMMc_wRafTVt7CcTxYev7E',
   );
 
   runApp(const KuanYngneApp());
@@ -92,7 +92,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. ENHANCED FEED SCREEN (VIDEO + POSTER) ====================
+// ==================== 1. ENHANCED FEED SCREEN ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -228,7 +228,9 @@ class _AdCardState extends State<AdCard> {
     Map<String, dynamic>? templateData;
     if (templateJson != null) {
       if (templateJson is String) {
-        templateData = jsonDecode(templateJson);
+        try {
+          templateData = jsonDecode(templateJson);
+        } catch (_) {}
       } else {
         templateData = Map<String, dynamic>.from(templateJson);
       }
@@ -242,7 +244,7 @@ class _AdCardState extends State<AdCard> {
 
     return Stack(
       children: [
-        // 1. Background Media (Video OR Gradient Poster)
+        // 1. Fullscreen Media (Video OR Poster)
         Positioned.fill(
           child: videoUrl.isNotEmpty
               ? (isVideoInitialized && _videoController != null
@@ -254,9 +256,15 @@ class _AdCardState extends State<AdCard> {
                               : _videoController!.play();
                         });
                       },
-                      child: AspectRatio(
-                        aspectRatio: _videoController!.value.aspectRatio,
-                        child: VideoPlayer(_videoController!),
+                      child: SizedBox.expand(
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width: _videoController!.value.size.width,
+                            height: _videoController!.value.size.height,
+                            child: VideoPlayer(_videoController!),
+                          ),
+                        ),
                       ),
                     )
                   : const Center(
@@ -345,13 +353,17 @@ class _AdCardState extends State<AdCard> {
                 ),
         ),
 
-        // Dark overlay gradient for readable text when video plays
+        // Dark Overlay for readable text when playing video
         if (videoUrl.isNotEmpty)
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.black54, Colors.transparent, Colors.black87],
+                  colors: [
+                    Colors.black26,
+                    Colors.transparent,
+                    Colors.black87,
+                  ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -359,14 +371,33 @@ class _AdCardState extends State<AdCard> {
             ),
           ),
 
-        // Bottom Left Info Area
+        // Bottom Left Info Overlay
         Positioned(
-          bottom: 40,
-          left: 20,
+          bottom: 30,
+          left: 16,
           right: 90,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              if (sticker.isNotEmpty && videoUrl.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    sticker,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               Text(
                 title,
                 style: const TextStyle(
@@ -380,22 +411,26 @@ class _AdCardState extends State<AdCard> {
               if (text.isNotEmpty && videoUrl.isNotEmpty)
                 Text(
                   text,
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+                  ),
                 ),
               const SizedBox(height: 4),
               const Text(
                 'በ KuanYngne የተዘጋጀ ማስታወቂያ',
-                style: TextStyle(color: Colors.white54, fontSize: 11),
+                style: TextStyle(color: Colors.white60, fontSize: 11),
               ),
             ],
           ),
         ),
 
-        // Right Action Bar (Like, Share, Call, Remix Buttons)
+        // Right Action Bar
         Positioned(
-          bottom: 40,
+          bottom: 30,
           right: 16,
           child: Column(
             children: [
@@ -418,7 +453,7 @@ class _AdCardState extends State<AdCard> {
                     color: Colors.white, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 18),
-              if (phone.isNotEmpty && videoUrl.isNotEmpty) ...[
+              if (phone.isNotEmpty) ...[
                 IconButton(
                   iconSize: 32,
                   icon: const Icon(Icons.phone, color: Colors.greenAccent),
@@ -454,7 +489,7 @@ class _AdCardState extends State<AdCard> {
   }
 }
 
-// ==================== 2. CREATOR / EDITOR WITH VIDEO UPLOAD ====================
+// ==================== 2. CREATOR / EDITOR SCREEN ====================
 class AdEditorScreen extends StatefulWidget {
   final Map<String, dynamic>? initialTemplate;
   const AdEditorScreen({super.key, this.initialTemplate});
@@ -573,7 +608,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
     String uploadedVideoUrl = '';
 
     try {
-      // 1. Upload video file to Supabase Storage if picked
       if (_selectedVideoFile != null) {
         final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
         await supabase.storage
@@ -593,7 +627,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
         'colorEnd': selectedPreset['end'],
       };
 
-      // 2. Insert Record
       await supabase.from('videos').insert({
         'title': _titleController.text.trim(),
         'video_url': uploadedVideoUrl,
@@ -674,7 +707,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Video Upload Box / Preview Canvas
+              // Preview Canvas
               Container(
                 width: double.infinity,
                 height: 260,
@@ -707,11 +740,15 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                       if (_selectedVideoFile != null &&
                           _previewVideoController != null &&
                           _previewVideoController!.value.isInitialized)
-                        Center(
-                          child: AspectRatio(
-                            aspectRatio:
-                                _previewVideoController!.value.aspectRatio,
-                            child: VideoPlayer(_previewVideoController!),
+                        SizedBox.expand(
+                          child: FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              width: _previewVideoController!.value.size.width,
+                              height:
+                                  _previewVideoController!.value.size.height,
+                              child: VideoPlayer(_previewVideoController!),
+                            ),
                           ),
                         )
                       else
@@ -758,8 +795,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                             ),
                           ),
                         ),
-
-                      // Floating Button to Upload Video
                       Positioned(
                         bottom: 12,
                         right: 12,
@@ -784,7 +819,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                 ),
               ),
 
-              // 2. Control Inputs Area
+              // Inputs Section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
@@ -842,8 +877,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                       ),
                     ),
                     const SizedBox(height: 22),
-
-                    // Background Color Presets (If video is not selected)
                     if (_selectedVideoFile == null) ...[
                       const Text(
                         'የጀርባ ዲዛይን/ከለር ይምረጡ:',
@@ -897,8 +930,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                       ),
                       const SizedBox(height: 22),
                     ],
-
-                    // Badge/Sticker Options
                     const Text(
                       'ስቲከር / ባጅ ይምረጡ:',
                       style: TextStyle(
