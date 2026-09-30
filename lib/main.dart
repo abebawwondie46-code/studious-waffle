@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
@@ -38,6 +40,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final supabase = Supabase.instance.client;
   List<dynamic> videos = [];
   bool isLoading = true;
+  bool isUploading = false;
 
   @override
   void initState() {
@@ -56,36 +59,108 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  // ከስልክ ቪዲዮ መርጦ ወደ Supabase Storage እና Database መጫኛ ፋንክሽን
+  Future<void> _pickAndUploadVideo() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? videoFile = await picker.pickVideo(source: ImageSource.gallery);
+
+    if (videoFile == null) return;
+
+    final TextEditingController titleController = TextEditingController();
+
+    if (!mounted) return;
+
+    // የቪዲዮ ርዕስ መቀበያ Dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('የቪዲዮ ርዕስ ያስገቡ'),
+        content: TextField(
+          controller: titleController,
+          decoration: const InputDecoration(hintText: 'ርዕስ...'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ሰርዝ'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              _uploadToSupabase(File(videoFile.path), titleController.text.trim());
+            },
+            child: const Text('አፕሎድ አድርግ'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _uploadToSupabase(File file, String title) async {
+    setState(() {
+      isUploading = true;
+    });
+
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+      
+      // 1. Storage Bucket ውስጥ መጫን
+      await supabase.storage.from('videos').upload(fileName, file);
+
+      // 2. የቪዲዮውን Public URL ማግኘት
+      final videoUrl = supabase.storage.from('videos').getPublicUrl(fileName);
+
+      // 3. Database Table ውስጥ ማስመዝገብ
+      await supabase.from('videos').insert({
+        'title': title.isEmpty ? 'ያለ ርዕስ' : title,
+        'video_url': videoUrl,
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ቪዲዮዎችን መጫን አልተቻለም: $e')),
+          const SnackBar(content: Text('ቪዲዮው በትክክል ተጭኗል!')),
         );
       }
+
+      _fetchVideos(); // ዝርዝሩን ማደስ
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('አፕሎድ ማድረግ አልተቻለም: $e')),
+        );
+      }
+    } finally {
+      setState(() {
+        isUploading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (videos.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('KuanYngne')),
-        body: const Center(child: Text('ምንም ቪዲዮ አልተገኘም')),
-      );
-    }
-
-    return PageView.builder(
-      scrollDirection: Axis.vertical,
-      itemCount: videos.length,
-      itemBuilder: (context, index) {
-        final video = videos[index];
-        return VideoCard(videoData: video);
-      },
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.redAccent,
+        onPressed: isUploading ? null : _pickAndUploadVideo,
+        child: isUploading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Icon(Icons.add, size: 30, color: Colors.white),
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : videos.isEmpty
+              ? const Center(child: Text('ምንም ቪዲዮ አልተገኘም። (+) ተጭነው ቪዲዮ ይጫኑ!'))
+              : PageView.builder(
+                  scrollDirection: Axis.vertical,
+                  itemCount: videos.length,
+                  itemBuilder: (context, index) {
+                    final video = videos[index];
+                    return VideoCard(videoData: video);
+                  },
+                ),
     );
   }
 }
@@ -105,7 +180,7 @@ class _VideoCardState extends State<VideoCard> {
   @override
   void initState() {
     super.initState();
-    final videoUrl = widget.videoData['video_url'] ?? widget.videoData['url'] ?? '';
+    final videoUrl = widget.videoData['video_url'] ?? '';
     _controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl))
       ..initialize().then((_) {
         setState(() {
@@ -139,7 +214,7 @@ class _VideoCardState extends State<VideoCard> {
   @override
   Widget build(BuildContext context) {
     final videoId = widget.videoData['id'];
-    final title = widget.videoData['title'] ?? widget.videoData['description'] ?? '';
+    final title = widget.videoData['title'] ?? '';
 
     return Stack(
       children: [
