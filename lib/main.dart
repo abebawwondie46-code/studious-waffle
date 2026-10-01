@@ -93,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. FEED SCREEN WITH VIDEO TIMELINE & AUTO-HIDE CONTROLS ====================
+// ==================== 1. FEED SCREEN (TIKTOK STYLE WITH TIMELINE & BUSINESS TOOLS) ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -227,18 +227,28 @@ class AdCard extends StatefulWidget {
   State<AdCard> createState() => _AdCardState();
 }
 
-class _AdCardState extends State<AdCard> {
+class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
   VideoPlayerController? _videoController;
   bool isLiked = false;
-  int likeCount = 24;
+  bool isSaved = false;
+  int likeCount = 44000;
+  int commentCount = 744;
+  int saveCount = 3062;
+  int shareCount = 1809;
   bool isVideoInitialized = false;
 
   bool showControls = false;
   Timer? _hideControlsTimer;
+  late AnimationController _discAnimController;
 
   @override
   void initState() {
     super.initState();
+    _discAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
+
     final String videoUrl = widget.adData['video_url'] ?? '';
     if (videoUrl.isNotEmpty) {
       _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl))
@@ -249,6 +259,9 @@ class _AdCardState extends State<AdCard> {
             });
             _videoController!.setLooping(true);
             _videoController!.play();
+            _videoController!.addListener(() {
+              if (mounted) setState(() {});
+            });
           }
         });
     }
@@ -256,6 +269,7 @@ class _AdCardState extends State<AdCard> {
 
   @override
   void dispose() {
+    _discAnimController.dispose();
     _hideControlsTimer?.cancel();
     _videoController?.dispose();
     super.dispose();
@@ -267,10 +281,12 @@ class _AdCardState extends State<AdCard> {
     setState(() {
       if (_videoController!.value.isPlaying) {
         _videoController!.pause();
+        _discAnimController.stop();
         showControls = true;
         _hideControlsTimer?.cancel();
       } else {
         _videoController!.play();
+        _discAnimController.repeat();
         showControls = true;
         _startHideControlsTimer();
       }
@@ -478,7 +494,7 @@ class _AdCardState extends State<AdCard> {
 
         // Bottom Left Info Area
         Positioned(
-          bottom: 30,
+          bottom: 25,
           left: 16,
           right: 90,
           child: Column(
@@ -560,16 +576,53 @@ class _AdCardState extends State<AdCard> {
           ),
         ),
 
-        // Right Action Bar
+        // Right TikTok-Style Action Side-Bar
         Positioned(
-          bottom: 30,
-          right: 16,
+          bottom: 25,
+          right: 12,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
+              // Profile Avatar with + Follow Button
+              Stack(
+                alignment: Alignment.bottomCenter,
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      image: const DecorationImage(
+                        image: NetworkImage(
+                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -8,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.add, size: 14, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Like Button
               IconButton(
-                iconSize: 32,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 34,
                 icon: Icon(
-                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  isLiked ? Icons.favorite : Icons.favorite,
                   color: isLiked ? Colors.redAccent : Colors.white,
                 ),
                 onPressed: () {
@@ -580,17 +633,74 @@ class _AdCardState extends State<AdCard> {
                 },
               ),
               Text(
-                '$likeCount',
+                '${(likeCount / 1000).toStringAsFixed(1)}K',
                 style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+
+              // Comment Button
               IconButton(
-                iconSize: 30,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32,
+                icon: const Icon(Icons.comment_rounded, color: Colors.white),
+                onPressed: () {},
+              ),
+              Text(
+                '$commentCount',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              // Bookmark / Save Button
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32,
+                icon: Icon(
+                  isSaved ? Icons.bookmark : Icons.bookmark,
+                  color: isSaved ? Colors.amber : Colors.white,
+                ),
+                onPressed: () {
+                  setState(() {
+                    isSaved = !isSaved;
+                    isSaved ? saveCount++ : saveCount--;
+                  });
+                },
+              ),
+              Text(
+                '$saveCount',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              // Share Button
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32,
                 icon: const Icon(Icons.share_rounded, color: Colors.white),
                 onPressed: () => _shareAd(title, text),
               ),
-              const SizedBox(height: 18),
+              Text(
+                '$shareCount',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              // Remix Template Button
               FloatingActionButton.small(
                 heroTag: null,
                 backgroundColor: Colors.redAccent,
@@ -605,23 +715,46 @@ class _AdCardState extends State<AdCard> {
                 },
                 child: const Icon(Icons.auto_awesome, color: Colors.white),
               ),
+              const SizedBox(height: 16),
+
+              // Rotating Business Audio Disc Overlay
+              RotationTransition(
+                turns: _discAnimController,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey.shade800, width: 6),
+                    image: const DecorationImage(
+                      image: NetworkImage(
+                          'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
 
-        // 2. Bottom Video Timeline Progress Bar
+        // 2. Video Progress Timeline Bar (Bottom)
         if (videoUrl.isNotEmpty && isVideoInitialized && _videoController != null)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: VideoProgressIndicator(
-              _videoController!,
-              allowScrubbing: true,
-              colors: const VideoProgressColors(
-                playedColor: Colors.redAccent,
-                bufferedColor: Colors.white24,
-                backgroundColor: Colors.white10,
+            child: SizedBox(
+              height: 4,
+              child: VideoProgressIndicator(
+                _videoController!,
+                allowScrubbing: true,
+                padding: EdgeInsets.zero,
+                colors: const VideoProgressColors(
+                  playedColor: Colors.redAccent,
+                  bufferedColor: Colors.white30,
+                  backgroundColor: Colors.white12,
+                ),
               ),
             ),
           ),
