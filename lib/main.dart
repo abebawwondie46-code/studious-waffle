@@ -12,7 +12,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://yszkonhhprwtavxywchz.supabase.co',
+    url: '[https://yszkonhhprwtavxywchz.supabase.co](https://yszkonhhprwtavxywchz.supabase.co)',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzemtvbmhocHJ3dGF2eHl3Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjQxNDksImV4cCI6MjEwNjM0MDE0OX0.TXL0yzOlI3Kx5CyW6CvOsWMMc_wRafTVt7CcTxYev7E',
   );
@@ -597,18 +597,9 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
 
-    // Precise timeline ratio
-    double progressRatio = 0.0;
-    if (_videoController != null &&
-        _videoController!.value.isInitialized &&
-        _videoController!.value.duration.inMilliseconds > 0) {
-      progressRatio = _videoController!.value.position.inMilliseconds /
-          _videoController!.value.duration.inMilliseconds;
-    }
-
     return Stack(
       children: [
-        // 1. Fullscreen Video / Poster Background
+        // 1. Fullscreen Video / Poster Background with Single Tap Pause/Play
         Positioned.fill(
           child: GestureDetector(
             onTap: _togglePlayPause,
@@ -877,7 +868,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                       border: Border.all(color: Colors.white, width: 2),
                       image: const DecorationImage(
                         image: NetworkImage(
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+                            '[https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150](https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150)'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -898,13 +889,13 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 18),
 
-              // Dynamic Red Like Button & Instant Increment/Decrement
+              // Like Button with Heart Outline / Filled Red Heart
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 iconSize: 36,
                 icon: Icon(
-                  Icons.favorite,
+                  isLiked ? Icons.favorite : Icons.favorite_border,
                   color: isLiked ? Colors.redAccent : Colors.white,
                 ),
                 onPressed: _toggleLike,
@@ -987,7 +978,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                     border: Border.all(color: Colors.grey.shade800, width: 6),
                     image: const DecorationImage(
                       image: NetworkImage(
-                          'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'),
+                          '[https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100](https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100)'),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -997,7 +988,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Real-time Synced Interactive Video Progress Timeline
+        // 2. Exact Video Progress Timeline Line
         if (videoUrl.isNotEmpty &&
             isVideoInitialized &&
             _videoController != null)
@@ -1005,16 +996,15 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              height: 3.5,
-              color: Colors.white24,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 100),
-                  width: MediaQuery.of(context).size.width *
-                      progressRatio.clamp(0.0, 1.0),
-                  color: Colors.redAccent,
+            child: SizedBox(
+              height: 2.5,
+              child: VideoProgressIndicator(
+                _videoController!,
+                allowScrubbing: true,
+                colors: const VideoProgressColors(
+                  playedColor: Colors.redAccent,
+                  bufferedColor: Colors.white24,
+                  backgroundColor: Colors.transparent,
                 ),
               ),
             ),
