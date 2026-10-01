@@ -563,6 +563,13 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     Share.share('$title\n\n$text\n\nየተፈጠረው በ KuanYngne App ነው!');
   }
 
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return '$count';
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = widget.adData['title'] ?? 'ማስታወቂያ';
@@ -588,17 +595,17 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
 
-    double progressRatio = 0.0;
+    double progressValue = 0.0;
     if (_videoController != null &&
         _videoController!.value.isInitialized &&
         _videoController!.value.duration.inMilliseconds > 0) {
-      progressRatio = _videoController!.value.position.inMilliseconds /
+      progressValue = _videoController!.value.position.inMilliseconds /
           _videoController!.value.duration.inMilliseconds;
     }
 
     return Stack(
       children: [
-        // 1. Fullscreen Video / Poster Background with Gesture Support
+        // 1. Fullscreen Video / Poster Background
         Positioned.fill(
           child: GestureDetector(
             onTap: _togglePlayPause,
@@ -847,14 +854,14 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // Right TikTok-Style Action Side-Bar
+        // Right Action Bar
         Positioned(
           bottom: 25,
           right: 12,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Profile Avatar
+              // Avatar
               Stack(
                 alignment: Alignment.bottomCenter,
                 clipBehavior: Clip.none,
@@ -888,7 +895,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 18),
 
-              // Dynamic Red Like Button
+              // Like Button & Counter
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -900,7 +907,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                 onPressed: _toggleLike,
               ),
               Text(
-                '${(likeCount / 1000).toStringAsFixed(1)}K',
+                _formatCount(likeCount),
                 style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -925,14 +932,14 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Flipped Bold TikTok-Style Right-Pointing Arrow Share Button
+              // Share Button
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 iconSize: 38,
                 icon: Transform(
                   alignment: Alignment.center,
-                  transform: Matrix4.rotationY(3.14159), // Flip horizontal
+                  transform: Matrix4.rotationY(3.14159),
                   child: const Icon(
                     Icons.reply_all_rounded,
                     color: Colors.white,
@@ -949,7 +956,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Remix Template Button
+              // Remix Button
               FloatingActionButton.small(
                 heroTag: null,
                 backgroundColor: Colors.redAccent,
@@ -966,7 +973,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Rotating Business Disc
+              // Disc Animation
               RotationTransition(
                 turns: _discAnimController,
                 child: Container(
@@ -987,7 +994,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Precise Video Timeline Bar
+        // 2. Real-time Video Progress Line (Accurate Timeline)
         if (videoUrl.isNotEmpty &&
             isVideoInitialized &&
             _videoController != null)
@@ -995,17 +1002,12 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              height: 3.5,
-              color: Colors.white24,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: progressRatio.clamp(0.0, 1.0),
-                  child: Container(
-                    color: Colors.redAccent,
-                  ),
-                ),
+            child: SizedBox(
+              height: 3,
+              child: LinearProgressIndicator(
+                value: progressValue.clamp(0.0, 1.0),
+                backgroundColor: Colors.white24,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.redAccent),
               ),
             ),
           ),
@@ -1014,7 +1016,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
   }
 }
 
-// ==================== 2. AD & POSTER CREATOR SCREEN ====================
+// ==================== 2. AD EDITOR SCREEN ====================
 class AdEditorScreen extends StatefulWidget {
   final Map<String, dynamic>? initialTemplate;
   const AdEditorScreen({super.key, this.initialTemplate});
