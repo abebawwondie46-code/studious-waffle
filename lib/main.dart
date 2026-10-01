@@ -93,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. FEED SCREEN WITH UNIVERSAL SEARCH ====================
+// ==================== 1. FEED SCREEN WITH DELETE & LOCATION ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -139,7 +139,6 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
     }
   }
 
-  // Universal Deep Search Method
   void _universalSearch(String query) {
     final cleanQuery = query.trim().toLowerCase();
     if (cleanQuery.isEmpty) {
@@ -160,6 +159,30 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
         return title.contains(cleanQuery) || templateStr.contains(cleanQuery);
       }).toList();
     });
+  }
+
+  void _deleteAd(int id) async {
+    try {
+      await supabase.from('videos').delete().eq('id', id);
+      setState(() {
+        allVideos.removeWhere((item) => item['id'] == id);
+        filteredVideos.removeWhere((item) => item['id'] == id);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ማስታወቂያው በትክክል ተሰርዟል!'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ማጥፋት አልተቻለም: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -267,8 +290,11 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                         itemCount: filteredVideos.length,
                         itemBuilder: (context, index) {
                           return AdCard(
-                              key: ValueKey(filteredVideos[index]['id']),
-                              adData: filteredVideos[index]);
+                            key: ValueKey(filteredVideos[index]['id']),
+                            adData: filteredVideos[index],
+                            onDelete: () =>
+                                _deleteAd(filteredVideos[index]['id']),
+                          );
                         },
                       ),
                     ),
@@ -278,7 +304,8 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
 
 class AdCard extends StatefulWidget {
   final dynamic adData;
-  const AdCard({super.key, required this.adData});
+  final VoidCallback onDelete;
+  const AdCard({super.key, required this.adData, required this.onDelete});
 
   @override
   State<AdCard> createState() => _AdCardState();
@@ -287,10 +314,8 @@ class AdCard extends StatefulWidget {
 class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
   VideoPlayerController? _videoController;
   bool isLiked = false;
-  bool isSaved = false;
   int likeCount = 44000;
   int commentCount = 744;
-  int saveCount = 3062;
   int shareCount = 1809;
   bool isVideoInitialized = false;
 
@@ -305,7 +330,8 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     'አድራሻችሁ የት ነው?',
     'አሪፍ አገልግሎት ነው በርቱ!'
   ];
-  final TextEditingController _commentInputController = TextEditingController();
+  final TextEditingController _commentInputController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -378,6 +404,31 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
         });
       }
     });
+  }
+
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E28),
+        title: const Text('ማስታወቂያውን ላጥፋው?'),
+        content: const Text('ይህንን ማስታወቂያ ሙሉ በሙሉ ማጥፋት ይፈልጋሉ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ተው', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              Navigator.pop(ctx);
+              widget.onDelete();
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _startHideControlsTimer() {
@@ -526,450 +577,454 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
 
-    return Stack(
-      children: [
-        // 1. Fullscreen Video / Poster Background
-        Positioned.fill(
-          child: videoUrl.isNotEmpty
-              ? (isVideoInitialized && _videoController != null
-                  ? GestureDetector(
-                      onTap: _togglePlayPause,
-                      onDoubleTap: _onDoubleTap,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox.expand(
-                            child: FittedBox(
-                              fit: BoxFit.cover,
-                              child: SizedBox(
-                                width: _videoController!.value.size.width,
-                                height: _videoController!.value.size.height,
-                                child: VideoPlayer(_videoController!),
-                              ),
-                            ),
-                          ),
-                          // Heart Popup Animation on Double Tap
-                          if (showHeartAnim)
-                            const Icon(
-                              Icons.favorite,
-                              color: Colors.redAccent,
-                              size: 110,
-                            ),
-                          if (showControls)
-                            AnimatedOpacity(
-                              duration: const Duration(milliseconds: 200),
-                              opacity: showControls ? 1.0 : 0.0,
-                              child: Container(
-                                padding: const EdgeInsets.all(18),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  _videoController!.value.isPlaying
-                                      ? Icons.pause
-                                      : Icons.play_arrow,
-                                  size: 55,
-                                  color: Colors.white,
+    // Precise Duration Progress Ratio
+    double progressRatio = 0.0;
+    if (_videoController != null &&
+        _videoController!.value.isInitialized &&
+        _videoController!.value.duration.inMilliseconds > 0) {
+      progressRatio = _videoController!.value.position.inMilliseconds /
+          _videoController!.value.duration.inMilliseconds;
+    }
+
+    return GestureDetector(
+      onLongPress: _showDeleteDialog,
+      child: Stack(
+        children: [
+          // 1. Fullscreen Video / Poster Background
+          Positioned.fill(
+            child: videoUrl.isNotEmpty
+                ? (isVideoInitialized && _videoController != null
+                    ? GestureDetector(
+                        onTap: _togglePlayPause,
+                        onDoubleTap: _onDoubleTap,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox.expand(
+                              child: FittedBox(
+                                fit: BoxFit.cover,
+                                child: SizedBox(
+                                  width: _videoController!.value.size.width,
+                                  height: _videoController!.value.size.height,
+                                  child: VideoPlayer(_videoController!),
                                 ),
                               ),
                             ),
-                        ],
+                            if (showHeartAnim)
+                              const Icon(
+                                Icons.favorite,
+                                color: Colors.redAccent,
+                                size: 110,
+                              ),
+                            if (showControls)
+                              AnimatedOpacity(
+                                duration: const Duration(milliseconds: 200),
+                                opacity: showControls ? 1.0 : 0.0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(18),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    _videoController!.value.isPlaying
+                                        ? Icons.pause
+                                        : Icons.play_arrow,
+                                    size: 55,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      )
+                    : const Center(
+                        child: CircularProgressIndicator(
+                            color: Colors.redAccent)))
+                : Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(startColorVal), Color(endColorVal)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    )
-                  : const Center(
-                      child: CircularProgressIndicator(
-                          color: Colors.redAccent)))
-              : Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(startColorVal), Color(endColorVal)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
                     ),
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (sticker.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.amber,
-                                borderRadius: BorderRadius.circular(25),
-                                boxShadow: const [
-                                  BoxShadow(
-                                      color: Colors.black38,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (sticker.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber,
+                                  borderRadius: BorderRadius.circular(25),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                        color: Colors.black38,
+                                        blurRadius: 10,
+                                        offset: Offset(0, 4))
+                                  ],
+                                ),
+                                child: Text(
+                                  sticker,
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 30),
+                            Text(
+                              text,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                height: 1.3,
+                                shadows: [
+                                  Shadow(
+                                      color: Colors.black45,
                                       blurRadius: 10,
-                                      offset: Offset(0, 4))
+                                      offset: Offset(0, 3))
                                 ],
                               ),
-                              child: Text(
-                                sticker,
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 16,
+                            ),
+                            const SizedBox(height: 30),
+                            if (phone.isNotEmpty)
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green.shade600,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  elevation: 8,
+                                ),
+                                onPressed: () => _makePhoneCall(phone),
+                                icon: const Icon(Icons.phone,
+                                    color: Colors.white),
+                                label: Text(
+                                  phone,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
                                 ),
                               ),
-                            ),
-                          const SizedBox(height: 30),
-                          Text(
-                            text,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              height: 1.3,
-                              shadows: [
-                                Shadow(
-                                    color: Colors.black45,
-                                    blurRadius: 10,
-                                    offset: Offset(0, 3))
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-                          if (phone.isNotEmpty)
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green.shade600,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                elevation: 8,
-                              ),
-                              onPressed: () => _makePhoneCall(phone),
-                              icon:
-                                  const Icon(Icons.phone, color: Colors.white),
-                              label: Text(
-                                phone,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-        ),
+          ),
 
-        // Gradient Overlay
-        if (videoUrl.isNotEmpty)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black26,
-                      Colors.transparent,
-                      Colors.black87,
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+          // Gradient Overlay
+          if (videoUrl.isNotEmpty)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.black26,
+                        Colors.transparent,
+                        Colors.black87,
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
-        // Bottom Left Info Area with Verified Business Badge
-        Positioned(
-          bottom: 25,
-          left: 16,
-          right: 90,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (sticker.isNotEmpty && videoUrl.isNotEmpty) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.amber,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black26, blurRadius: 4)
-                    ],
-                  ),
-                  child: Text(
-                    sticker,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              Row(
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 8)],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.verified, color: Colors.blueAccent, size: 18),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (text.isNotEmpty && videoUrl.isNotEmpty)
-                Text(
-                  text,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    shadows: [Shadow(color: Colors.black, blurRadius: 6)],
-                  ),
-                ),
-              const SizedBox(height: 6),
-              if (phone.isNotEmpty && videoUrl.isNotEmpty)
-                InkWell(
-                  onTap: () => _makePhoneCall(phone),
-                  child: Container(
+          // Bottom Left Info Area with Verified Business Badge
+          Positioned(
+            bottom: 25,
+            left: 16,
+            right: 90,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (sticker.isNotEmpty && videoUrl.isNotEmpty) ...[
+                  Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 6),
+                        horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade600,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.phone, size: 14, color: Colors.white),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Call Now: $phone',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black26, blurRadius: 4)
                       ],
                     ),
+                    child: Text(
+                      sticker,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 8),
+                ],
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.verified,
+                        color: Colors.blueAccent, size: 18),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 6),
+                if (text.isNotEmpty && videoUrl.isNotEmpty)
+                  Text(
+                    text,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+                    ),
+                  ),
+                const SizedBox(height: 6),
+                if (phone.isNotEmpty && videoUrl.isNotEmpty)
+                  InkWell(
+                    onTap: () => _makePhoneCall(phone),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade600,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.phone,
+                              size: 14, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Call Now: $phone',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
 
-        // Right TikTok-Style Action Side-Bar
-        Positioned(
-          bottom: 25,
-          right: 12,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Profile Avatar
-              Stack(
-                alignment: Alignment.bottomCenter,
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
+          // Right TikTok-Style Action Side-Bar
+          Positioned(
+            bottom: 25,
+            right: 12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Profile Avatar
+                Stack(
+                  alignment: Alignment.bottomCenter,
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        image: const DecorationImage(
+                          image: NetworkImage(
+                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        child:
+                            const Icon(Icons.add, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                // Like Button
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  iconSize: 34,
+                  icon: Icon(
+                    isLiked ? Icons.favorite : Icons.favorite,
+                    color: isLiked ? Colors.redAccent : Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      isLiked = !isLiked;
+                      isLiked ? likeCount++ : likeCount--;
+                    });
+                  },
+                ),
+                Text(
+                  '${(likeCount / 1000).toStringAsFixed(1)}K',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+
+                // Comment Button
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  iconSize: 32,
+                  icon: const Icon(Icons.comment_rounded, color: Colors.white),
+                  onPressed: _openCommentsBottomSheet,
+                ),
+                Text(
+                  '$commentCount',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+
+                // Location Pin Button (Replaced Bookmark Icon)
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  iconSize: 32,
+                  icon: const Icon(Icons.location_on_rounded,
+                      color: Colors.redAccent),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('📍 አድራሻ፡ አዲስ አበባ፣ ኢትዮጵያ'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                const Text(
+                  'Location',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11),
+                ),
+                const SizedBox(height: 16),
+
+                // Share Button
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  iconSize: 32,
+                  icon: const Icon(Icons.share_rounded, color: Colors.white),
+                  onPressed: () => _shareAd(title, text),
+                ),
+                Text(
+                  '$shareCount',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+
+                // Remix Template Button
+                FloatingActionButton.small(
+                  heroTag: null,
+                  backgroundColor: Colors.redAccent,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AdEditorScreen(initialTemplate: templateData),
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.auto_awesome, color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+
+                // Rotating Business Disc
+                RotationTransition(
+                  turns: _discAnimController,
+                  child: Container(
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: Colors.grey.shade800, width: 6),
                       image: const DecorationImage(
                         image: NetworkImage(
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+                            'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'),
                         fit: BoxFit.cover,
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: -8,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.add, size: 14, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // Like Button
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                iconSize: 34,
-                icon: Icon(
-                  isLiked ? Icons.favorite : Icons.favorite,
-                  color: isLiked ? Colors.redAccent : Colors.white,
                 ),
-                onPressed: () {
-                  setState(() {
-                    isLiked = !isLiked;
-                    isLiked ? likeCount++ : likeCount--;
-                  });
-                },
-              ),
-              Text(
-                '${(likeCount / 1000).toStringAsFixed(1)}K',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-
-              // Comment Interactive Button
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                iconSize: 32,
-                icon: const Icon(Icons.comment_rounded, color: Colors.white),
-                onPressed: _openCommentsBottomSheet,
-              ),
-              Text(
-                '$commentCount',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-
-              // Bookmark / Save Button
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                iconSize: 32,
-                icon: Icon(
-                  isSaved ? Icons.bookmark : Icons.bookmark,
-                  color: isSaved ? Colors.amber : Colors.white,
-                ),
-                onPressed: () {
-                  setState(() {
-                    isSaved = !isSaved;
-                    isSaved ? saveCount++ : saveCount--;
-                  });
-                },
-              ),
-              Text(
-                '$saveCount',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-
-              // Share Button
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                iconSize: 32,
-                icon: const Icon(Icons.share_rounded, color: Colors.white),
-                onPressed: () => _shareAd(title, text),
-              ),
-              Text(
-                '$shareCount',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-
-              // Remix Template Button
-              FloatingActionButton.small(
-                heroTag: null,
-                backgroundColor: Colors.redAccent,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          AdEditorScreen(initialTemplate: templateData),
-                    ),
-                  );
-                },
-                child: const Icon(Icons.auto_awesome, color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-
-              // Rotating Business Disc
-              RotationTransition(
-                turns: _discAnimController,
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade800, width: 6),
-                    image: const DecorationImage(
-                      image: NetworkImage(
-                          'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // 2. Dynamic Smooth Interactive Video Timeline (Bottom Slider)
-        if (videoUrl.isNotEmpty && isVideoInitialized && _videoController != null)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-                activeTrackColor: Colors.redAccent,
-                inactiveTrackColor: Colors.white24,
-                thumbColor: Colors.redAccent,
-              ),
-              child: Slider(
-                value: _videoController!.value.position.inMilliseconds.toDouble().clamp(
-                      0.0,
-                      _videoController!.value.duration.inMilliseconds.toDouble(),
-                    ),
-                min: 0.0,
-                max: _videoController!.value.duration.inMilliseconds.toDouble() > 0
-                    ? _videoController!.value.duration.inMilliseconds.toDouble()
-                    : 1.0,
-                onChanged: (double value) {
-                  setState(() {
-                    _videoController!.seekTo(Duration(milliseconds: value.toInt()));
-                  });
-                },
-              ),
+              ],
             ),
           ),
-      ],
+
+          // 2. Real-Time Dynamic Timeline Progress Line (Bottom)
+          if (videoUrl.isNotEmpty &&
+              isVideoInitialized &&
+              _videoController != null)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 3.5,
+                color: Colors.white12,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: progressRatio.clamp(0.0, 1.0),
+                    child: Container(
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
