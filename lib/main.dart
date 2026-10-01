@@ -889,25 +889,33 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 18),
 
-              // Like Button with Heart Outline / Filled Red Heart
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                iconSize: 36,
-                icon: Icon(
-                  isLiked ? Icons.favorite : Icons.favorite_border,
-                  color: isLiked ? Colors.redAccent : Colors.white,
+              // Responsive Interactive Heart Icon & Dynamic Counter
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _toggleLike,
+                child: Padding(
+                  padding: const EdgeInsets.all(6.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        color: isLiked ? Colors.redAccent : Colors.white,
+                        size: 38,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatCount(likeCount),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                onPressed: _toggleLike,
               ),
-              Text(
-                _formatCount(likeCount),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // Comment Button
               IconButton(
@@ -988,23 +996,24 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Exact Video Progress Timeline Line
+        // 2. Visible & Synced Video Progress Bar (መሬት ላይ የወረደና በግልጽ የሚታይ)
         if (videoUrl.isNotEmpty &&
             isVideoInitialized &&
             _videoController != null)
           Positioned(
-            bottom: 0,
+            bottom: 2,
             left: 0,
             right: 0,
             child: SizedBox(
-              height: 2.5,
+              height: 4,
               child: VideoProgressIndicator(
                 _videoController!,
                 allowScrubbing: true,
+                padding: EdgeInsets.zero,
                 colors: const VideoProgressColors(
                   playedColor: Colors.redAccent,
-                  bufferedColor: Colors.white24,
-                  backgroundColor: Colors.transparent,
+                  bufferedColor: Colors.white30,
+                  backgroundColor: Colors.white12,
                 ),
               ),
             ),
