@@ -371,6 +371,13 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+
   void _togglePlayPause() {
     if (_videoController == null || !_videoController!.value.isInitialized) return;
 
@@ -599,7 +606,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
 
     return Stack(
       children: [
-        // 1. Fullscreen Video Background with Single Tap Pause/Play
+        // 1. Fullscreen Video Background
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -759,7 +766,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
 
         // Bottom Left Info Area
         Positioned(
-          bottom: 28,
+          bottom: 50,
           left: 16,
           right: 90,
           child: Column(
@@ -851,7 +858,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
 
         // Right Action Bar
         Positioned(
-          bottom: 28,
+          bottom: 50,
           right: 12,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -997,26 +1004,72 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Clear & Fully Visible Timeline Indicator
+        // 2. የተስተካከለው የጊዜ መስመር (SLIDER & DURATION 0:08 / 0:20)
         if (videoUrl.isNotEmpty &&
             isVideoInitialized &&
             _videoController != null)
           Positioned(
-            bottom: 0,
+            bottom: 2,
             left: 0,
             right: 0,
-            child: SizedBox(
-              height: 5,
-              child: VideoProgressIndicator(
-                _videoController!,
-                allowScrubbing: true,
-                padding: EdgeInsets.zero,
-                colors: const VideoProgressColors(
-                  playedColor: Colors.redAccent,
-                  bufferedColor: Colors.white30,
-                  backgroundColor: Colors.white12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _formatDuration(_videoController!.value.position),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                        ),
+                      ),
+                      Text(
+                        _formatDuration(_videoController!.value.duration),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 2.5,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
+                    activeTrackColor: Colors.white,
+                    inactiveTrackColor: Colors.white30,
+                    thumbColor: Colors.white,
+                  ),
+                  child: Slider(
+                    value: _videoController!.value.position.inMilliseconds
+                        .toDouble()
+                        .clamp(
+                          0.0,
+                          _videoController!.value.duration.inMilliseconds
+                              .toDouble(),
+                        ),
+                    min: 0.0,
+                    max: _videoController!.value.duration.inMilliseconds
+                        .toDouble(),
+                    onChanged: (value) {
+                      setState(() {
+                        _videoController!
+                            .seekTo(Duration(milliseconds: value.toInt()));
+                      });
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
       ],
