@@ -92,7 +92,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. ENHANCED FEED SCREEN ====================
+// ==================== 1. FEED SCREEN (FULLSCREEN VIDEO & POSTERS) ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -160,7 +160,8 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
         ],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.redAccent))
           : errorMessage.isNotEmpty
               ? Center(
                   child: Padding(
@@ -192,7 +193,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text(
-                            'ምንም ማስታወቂያ አልተገኘም። የመጀመሪያውን ማስታወቂያ ይፍጠሩ!',
+                            'ምንም ማስታወቂያ አልተገኘም። የመጀመሪያው ማስታወቂያ ይፍጠሩ!',
                             style: TextStyle(color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
@@ -229,8 +230,9 @@ class AdCard extends StatefulWidget {
 class _AdCardState extends State<AdCard> {
   VideoPlayerController? _videoController;
   bool isLiked = false;
-  int likeCount = 12;
+  int likeCount = 24;
   bool isVideoInitialized = false;
+  bool isPlaying = true;
 
   @override
   void initState() {
@@ -246,8 +248,6 @@ class _AdCardState extends State<AdCard> {
             _videoController!.setLooping(true);
             _videoController!.play();
           }
-        }).catchError((err) {
-          // Video Load Error handling
         });
     }
   }
@@ -286,39 +286,64 @@ class _AdCardState extends State<AdCard> {
       }
     }
 
-    final int startColorVal = templateData?['colorStart'] ?? Colors.indigo.value;
-    final int endColorVal = templateData?['colorEnd'] ?? Colors.blueAccent.value;
+    final int startColorVal =
+        templateData?['colorStart'] ?? Colors.indigo.value;
+    final int endColorVal =
+        templateData?['colorEnd'] ?? Colors.blueAccent.value;
     final String phone = templateData?['phone'] ?? '';
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
 
     return Stack(
       children: [
-        // 1. Fullscreen Media
+        // 1. Fullscreen Video / Poster Background
         Positioned.fill(
           child: videoUrl.isNotEmpty
               ? (isVideoInitialized && _videoController != null
                   ? GestureDetector(
                       onTap: () {
                         setState(() {
-                          _videoController!.value.isPlaying
-                              ? _videoController!.pause()
-                              : _videoController!.play();
+                          if (_videoController!.value.isPlaying) {
+                            _videoController!.pause();
+                            isPlaying = false;
+                          } else {
+                            _videoController!.play();
+                            isPlaying = true;
+                          }
                         });
                       },
-                      child: SizedBox.expand(
-                        child: FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            width: _videoController!.value.size.width,
-                            height: _videoController!.value.size.height,
-                            child: VideoPlayer(_videoController!),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox.expand(
+                            child: FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width: _videoController!.value.size.width,
+                                height: _videoController!.value.size.height,
+                                child: VideoPlayer(_videoController!),
+                              ),
+                            ),
                           ),
-                        ),
+                          if (!isPlaying)
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: const BoxDecoration(
+                                color: Colors.black45,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.play_arrow,
+                                size: 50,
+                                color: Colors.white,
+                              ),
+                            ),
+                        ],
                       ),
                     )
                   : const Center(
-                      child: CircularProgressIndicator(color: Colors.redAccent)))
+                      child: CircularProgressIndicator(
+                          color: Colors.redAccent)))
               : Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -379,14 +404,15 @@ class _AdCardState extends State<AdCard> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green.shade600,
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 22, vertical: 12),
+                                    horizontal: 24, vertical: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(30),
                                 ),
                                 elevation: 8,
                               ),
                               onPressed: () => _makePhoneCall(phone),
-                              icon: const Icon(Icons.phone, color: Colors.white),
+                              icon:
+                                  const Icon(Icons.phone, color: Colors.white),
                               label: Text(
                                 phone,
                                 style: const TextStyle(
@@ -403,25 +429,27 @@ class _AdCardState extends State<AdCard> {
                 ),
         ),
 
-        // Dark Overlay when video plays
+        // Gradient Overlay on Video
         if (videoUrl.isNotEmpty)
           Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.black26,
-                    Colors.transparent,
-                    Colors.black87,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+            child: IgnorePointer(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black26,
+                      Colors.transparent,
+                      Colors.black87,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
                 ),
               ),
             ),
           ),
 
-        // Bottom Left Info Overlay
+        // Bottom Left Info Area
         Positioned(
           bottom: 30,
           left: 16,
@@ -432,10 +460,14 @@ class _AdCardState extends State<AdCard> {
             children: [
               if (sticker.isNotEmpty && videoUrl.isNotEmpty) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.amber,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 4)
+                    ],
                   ),
                   child: Text(
                     sticker,
@@ -469,11 +501,34 @@ class _AdCardState extends State<AdCard> {
                     shadows: [Shadow(color: Colors.black, blurRadius: 6)],
                   ),
                 ),
-              const SizedBox(height: 4),
-              const Text(
-                'በ KuanYngne የተዘጋጀ ማስታወቂያ',
-                style: TextStyle(color: Colors.white60, fontSize: 11),
-              ),
+              const SizedBox(height: 6),
+              if (phone.isNotEmpty && videoUrl.isNotEmpty)
+                InkWell(
+                  onTap: () => _makePhoneCall(phone),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade600,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.phone, size: 14, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Call Now: $phone',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -503,14 +558,6 @@ class _AdCardState extends State<AdCard> {
                     color: Colors.white, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 18),
-              if (phone.isNotEmpty) ...[
-                IconButton(
-                  iconSize: 32,
-                  icon: const Icon(Icons.phone, color: Colors.greenAccent),
-                  onPressed: () => _makePhoneCall(phone),
-                ),
-                const SizedBox(height: 18),
-              ],
               IconButton(
                 iconSize: 30,
                 icon: const Icon(Icons.share_rounded, color: Colors.white),
@@ -539,7 +586,7 @@ class _AdCardState extends State<AdCard> {
   }
 }
 
-// ==================== 2. CREATOR / EDITOR SCREEN ====================
+// ==================== 2. AD & POSTER CREATOR SCREEN ====================
 class AdEditorScreen extends StatefulWidget {
   final Map<String, dynamic>? initialTemplate;
   const AdEditorScreen({super.key, this.initialTemplate});
@@ -726,13 +773,19 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: _isPublishing
-                ? const Center(
-                    child: SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.greenAccent),
-                    ),
+                ? const Row(
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.greenAccent),
+                      ),
+                      SizedBox(width: 8),
+                      Text('Uploading...',
+                          style: TextStyle(
+                              color: Colors.greenAccent, fontSize: 13)),
+                    ],
                   )
                 : TextButton.icon(
                     onPressed: _publishAd,
