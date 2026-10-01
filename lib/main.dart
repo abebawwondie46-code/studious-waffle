@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -92,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. FEED SCREEN (FULLSCREEN VIDEO & POSTERS) ====================
+// ==================== 1. FEED SCREEN WITH VIDEO TIMELINE & AUTO-HIDE CONTROLS ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -160,8 +161,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
         ],
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.redAccent))
+          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
           : errorMessage.isNotEmpty
               ? Center(
                   child: Padding(
@@ -232,7 +232,9 @@ class _AdCardState extends State<AdCard> {
   bool isLiked = false;
   int likeCount = 24;
   bool isVideoInitialized = false;
-  bool isPlaying = true;
+
+  bool showControls = false;
+  Timer? _hideControlsTimer;
 
   @override
   void initState() {
@@ -254,8 +256,36 @@ class _AdCardState extends State<AdCard> {
 
   @override
   void dispose() {
+    _hideControlsTimer?.cancel();
     _videoController?.dispose();
     super.dispose();
+  }
+
+  void _togglePlayPause() {
+    if (_videoController == null || !_videoController!.value.isInitialized) return;
+
+    setState(() {
+      if (_videoController!.value.isPlaying) {
+        _videoController!.pause();
+        showControls = true;
+        _hideControlsTimer?.cancel();
+      } else {
+        _videoController!.play();
+        showControls = true;
+        _startHideControlsTimer();
+      }
+    });
+  }
+
+  void _startHideControlsTimer() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted && _videoController != null && _videoController!.value.isPlaying) {
+        setState(() {
+          showControls = false;
+        });
+      }
+    });
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
@@ -301,17 +331,7 @@ class _AdCardState extends State<AdCard> {
           child: videoUrl.isNotEmpty
               ? (isVideoInitialized && _videoController != null
                   ? GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (_videoController!.value.isPlaying) {
-                            _videoController!.pause();
-                            isPlaying = false;
-                          } else {
-                            _videoController!.play();
-                            isPlaying = true;
-                          }
-                        });
-                      },
+                      onTap: _togglePlayPause,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -325,17 +345,24 @@ class _AdCardState extends State<AdCard> {
                               ),
                             ),
                           ),
-                          if (!isPlaying)
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: const BoxDecoration(
-                                color: Colors.black45,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.play_arrow,
-                                size: 50,
-                                color: Colors.white,
+                          // Auto-hiding Play/Pause Icon Overlay
+                          if (showControls)
+                            AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: showControls ? 1.0 : 0.0,
+                              child: Container(
+                                padding: const EdgeInsets.all(18),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _videoController!.value.isPlaying
+                                      ? Icons.pause
+                                      : Icons.play_arrow,
+                                  size: 55,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                         ],
@@ -581,6 +608,23 @@ class _AdCardState extends State<AdCard> {
             ],
           ),
         ),
+
+        // 2. Bottom Video Timeline Progress Bar
+        if (videoUrl.isNotEmpty && isVideoInitialized && _videoController != null)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: VideoProgressIndicator(
+              _videoController!,
+              allowScrubbing: true,
+              colors: const VideoProgressColors(
+                playedColor: Colors.redAccent,
+                bufferedColor: Colors.white24,
+                backgroundColor: Colors.white10,
+              ),
+            ),
+          ),
       ],
     );
   }
