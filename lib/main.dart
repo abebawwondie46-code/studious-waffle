@@ -351,14 +351,15 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
             });
             _videoController!.setLooping(true);
             _videoController!.play();
-
-            _videoController!.addListener(() {
-              if (mounted) {
-                setState(() {});
-              }
-            });
           }
         });
+
+      // ቪዲዮው በሚጫወትበት ጊዜ በየሰከንዱ ስክሪኑ ተነቃቅቶ ቁጥሩን እንዲቀይረው
+      _videoController!.addListener(() {
+        if (mounted) {
+          setState(() {});
+        }
+      });
     }
   }
 
@@ -902,7 +903,8 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                 behavior: HitTestBehavior.opaque,
                 onTap: _toggleLike,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 4.0, horizontal: 8.0),
                   child: Column(
                     children: [
                       Icon(
@@ -1004,72 +1006,88 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. የተስተካከለው የጊዜ መስመር (SLIDER & DURATION 0:08 / 0:20)
+        // 2. የተስተካከለው የጊዜ መስመር (VALUE LISTENABLE BUILDER FOR REAL-TIME PROGRESS)
         if (videoUrl.isNotEmpty &&
             isVideoInitialized &&
             _videoController != null)
           Positioned(
-            bottom: 2,
+            bottom: 0,
             left: 0,
             right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _formatDuration(_videoController!.value.position),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(color: Colors.black, blurRadius: 4)],
-                        ),
+            child: ValueListenableBuilder(
+              valueListenable: _videoController!,
+              builder: (context, VideoPlayerValue value, child) {
+                final position = value.position;
+                final duration = value.duration;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // የሰከንድ ቁጥሮቹ ከጫፍ እስከ ጫፍ እኩል እንዲቀመጡ (00:00 / 00:20)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _formatDuration(position),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(color: Colors.black, blurRadius: 4)
+                              ],
+                            ),
+                          ),
+                          Text(
+                            _formatDuration(duration),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(color: Colors.black, blurRadius: 4)
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        _formatDuration(_videoController!.value.duration),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(color: Colors.black, blurRadius: 4)],
-                        ),
+                    ),
+
+                    // ከጫፍ እስከ ጫፍ የተስተካከለ ባለ ድቡልቡል መጎተቻ Slider
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3.0,
+                        thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6.0),
+                        overlayShape: const RoundSliderOverlayShape(
+                            overlayRadius: 12.0),
+                        activeTrackColor: Colors.redAccent,
+                        inactiveTrackColor: Colors.white38,
+                        thumbColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
                       ),
-                    ],
-                  ),
-                ),
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 2.5,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
-                    activeTrackColor: Colors.white,
-                    inactiveTrackColor: Colors.white30,
-                    thumbColor: Colors.white,
-                  ),
-                  child: Slider(
-                    value: _videoController!.value.position.inMilliseconds
-                        .toDouble()
-                        .clamp(
-                          0.0,
-                          _videoController!.value.duration.inMilliseconds
-                              .toDouble(),
-                        ),
-                    min: 0.0,
-                    max: _videoController!.value.duration.inMilliseconds
-                        .toDouble(),
-                    onChanged: (value) {
-                      setState(() {
-                        _videoController!
-                            .seekTo(Duration(milliseconds: value.toInt()));
-                      });
-                    },
-                  ),
-                ),
-              ],
+                      child: Slider(
+                        value: duration.inMilliseconds > 0
+                            ? position.inMilliseconds
+                                .toDouble()
+                                .clamp(0.0, duration.inMilliseconds.toDouble())
+                            : 0.0,
+                        min: 0.0,
+                        max: duration.inMilliseconds > 0
+                            ? duration.inMilliseconds.toDouble()
+                            : 1.0,
+                        onChanged: (newRating) {
+                          _videoController!.seekTo(
+                            Duration(milliseconds: newRating.toInt()),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
       ],
