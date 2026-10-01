@@ -393,9 +393,9 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     setState(() {
       isLiked = !isLiked;
       if (isLiked) {
-        likeCount++;
+        likeCount += 1;
       } else {
-        likeCount--;
+        likeCount -= 1;
       }
     });
   }
@@ -404,7 +404,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     setState(() {
       if (!isLiked) {
         isLiked = true;
-        likeCount++;
+        likeCount += 1;
       }
       showHeartAnim = true;
     });
@@ -564,7 +564,9 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
   }
 
   String _formatCount(int count) {
-    if (count >= 1000) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    } else if (count >= 1000) {
       return '${(count / 1000).toStringAsFixed(1)}K';
     }
     return '$count';
@@ -595,11 +597,12 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
 
-    double progressValue = 0.0;
+    // Precise timeline ratio
+    double progressRatio = 0.0;
     if (_videoController != null &&
         _videoController!.value.isInitialized &&
         _videoController!.value.duration.inMilliseconds > 0) {
-      progressValue = _videoController!.value.position.inMilliseconds /
+      progressRatio = _videoController!.value.position.inMilliseconds /
           _videoController!.value.duration.inMilliseconds;
     }
 
@@ -895,7 +898,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 18),
 
-              // Like Button & Counter
+              // Dynamic Red Like Button & Instant Increment/Decrement
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -994,7 +997,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Real-time Video Progress Line (Accurate Timeline)
+        // 2. Real-time Synced Interactive Video Progress Timeline
         if (videoUrl.isNotEmpty &&
             isVideoInitialized &&
             _videoController != null)
@@ -1002,12 +1005,17 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
             bottom: 0,
             left: 0,
             right: 0,
-            child: SizedBox(
-              height: 3,
-              child: LinearProgressIndicator(
-                value: progressValue.clamp(0.0, 1.0),
-                backgroundColor: Colors.white24,
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.redAccent),
+            child: Container(
+              height: 3.5,
+              color: Colors.white24,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 100),
+                  width: MediaQuery.of(context).size.width *
+                      progressRatio.clamp(0.0, 1.0),
+                  color: Colors.redAccent,
+                ),
               ),
             ),
           ),
