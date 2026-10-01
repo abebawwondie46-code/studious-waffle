@@ -599,9 +599,10 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
 
     return Stack(
       children: [
-        // 1. Fullscreen Video / Poster Background with Single Tap Pause/Play
+        // 1. Fullscreen Video Background with Single Tap Pause/Play
         Positioned.fill(
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: _togglePlayPause,
             onDoubleTap: _onDoubleTap,
             onLongPress: _showDeleteDialog,
@@ -758,7 +759,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
 
         // Bottom Left Info Area
         Positioned(
-          bottom: 25,
+          bottom: 28,
           left: 16,
           right: 90,
           child: Column(
@@ -850,7 +851,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
 
         // Right Action Bar
         Positioned(
-          bottom: 25,
+          bottom: 28,
           right: 12,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -889,16 +890,16 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 18),
 
-              // Responsive Interactive Heart Icon & Dynamic Counter
+              // Interactive Heart Button & Counter
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: _toggleLike,
                 child: Padding(
-                  padding: const EdgeInsets.all(6.0),
+                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
                   child: Column(
                     children: [
                       Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        Icons.favorite,
                         color: isLiked ? Colors.redAccent : Colors.white,
                         size: 38,
                       ),
@@ -996,16 +997,16 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Visible & Synced Video Progress Bar (መሬት ላይ የወረደና በግልጽ የሚታይ)
+        // 2. Clear & Fully Visible Timeline Indicator
         if (videoUrl.isNotEmpty &&
             isVideoInitialized &&
             _videoController != null)
           Positioned(
-            bottom: 2,
+            bottom: 0,
             left: 0,
             right: 0,
             child: SizedBox(
-              height: 4,
+              height: 5,
               child: VideoProgressIndicator(
                 _videoController!,
                 allowScrubbing: true,
