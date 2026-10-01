@@ -93,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. FEED SCREEN (TIKTOK STYLE WITH TIMELINE & BUSINESS TOOLS) ====================
+// ==================== 1. FEED SCREEN WITH SEARCH & REAL-TIME PROGRESS ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -103,9 +103,12 @@ class VideoFeedScreen extends StatefulWidget {
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> {
   final supabase = Supabase.instance.client;
-  List<dynamic> videos = [];
+  List<dynamic> allVideos = [];
+  List<dynamic> filteredVideos = [];
   bool isLoading = true;
+  bool isSearching = false;
   String errorMessage = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -124,7 +127,8 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
           .select()
           .order('id', ascending: false);
       setState(() {
-        videos = response;
+        allVideos = response;
+        filteredVideos = response;
         isLoading = false;
       });
     } catch (e) {
@@ -135,33 +139,78 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
     }
   }
 
+  void _filterAds(String query) {
+    if (query.trim().isEmpty) {
+      setState(() {
+        filteredVideos = allVideos;
+      });
+      return;
+    }
+    setState(() {
+      filteredVideos = allVideos.where((item) {
+        final title = (item['title'] ?? '').toString().toLowerCase();
+        final template = item['template_json']?.toString().toLowerCase() ?? '';
+        return title.contains(query.toLowerCase()) ||
+            template.contains(query.toLowerCase());
+      }).toList();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bolt, color: Colors.amber, size: 24),
-            SizedBox(width: 6),
-            Text(
-              'KuanYngne Ads',
-              style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1),
-            ),
-          ],
-        ),
+        title: isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'ማስታወቂያዎችን ይፈልጉ...',
+                  hintStyle: TextStyle(color: Colors.white54),
+                  border: InputBorder.none,
+                ),
+                onChanged: _filterAds,
+              )
+            : const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bolt, color: Colors.amber, size: 24),
+                  SizedBox(width: 6),
+                  Text(
+                    'KuanYngne Ads',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                  ),
+                ],
+              ),
         centerTitle: true,
         backgroundColor: Colors.black,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _fetchVideos,
-          )
+            icon: Icon(isSearching ? Icons.close : Icons.search,
+                color: Colors.white),
+            onPressed: () {
+              setState(() {
+                isSearching = !isSearching;
+                if (!isSearching) {
+                  _searchController.clear();
+                  filteredVideos = allVideos;
+                }
+              });
+            },
+          ),
+          if (!isSearching)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _fetchVideos,
+            )
         ],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.redAccent))
           : errorMessage.isNotEmpty
               ? Center(
                   child: Padding(
@@ -187,13 +236,13 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                     ),
                   ),
                 )
-              : videos.isEmpty
+              : filteredVideos.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text(
-                            'ምንም ማስታወቂያ አልተገኘም። የመጀመሪያው ማስታወቂያ ይፍጠሩ!',
+                            'ምንም ማስታወቂያ አልተገኘም።',
                             style: TextStyle(color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
@@ -209,9 +258,9 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                       onRefresh: _fetchVideos,
                       child: PageView.builder(
                         scrollDirection: Axis.vertical,
-                        itemCount: videos.length,
+                        itemCount: filteredVideos.length,
                         itemBuilder: (context, index) {
-                          return AdCard(adData: videos[index]);
+                          return AdCard(adData: filteredVideos[index]);
                         },
                       ),
                     ),
@@ -259,8 +308,12 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
             });
             _videoController!.setLooping(true);
             _videoController!.play();
+
+            // Real-time timeline synchronization listener
             _videoController!.addListener(() {
-              if (mounted) setState(() {});
+              if (mounted) {
+                setState(() {});
+              }
             });
           }
         });
@@ -296,7 +349,9 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
   void _startHideControlsTimer() {
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted && _videoController != null && _videoController!.value.isPlaying) {
+      if (mounted &&
+          _videoController != null &&
+          _videoController!.value.isPlaying) {
         setState(() {
           showControls = false;
         });
@@ -361,7 +416,6 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                               ),
                             ),
                           ),
-                          // Auto-hiding Play/Pause Icon Overlay
                           if (showControls)
                             AnimatedOpacity(
                               duration: const Duration(milliseconds: 200),
@@ -472,7 +526,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                 ),
         ),
 
-        // Gradient Overlay on Video
+        // Gradient Overlay
         if (videoUrl.isNotEmpty)
           Positioned.fill(
             child: IgnorePointer(
@@ -492,7 +546,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
             ),
           ),
 
-        // Bottom Left Info Area
+        // Bottom Left Info Area with Verified Business Badge
         Positioned(
           bottom: 25,
           left: 16,
@@ -523,14 +577,20 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                 ),
                 const SizedBox(height: 8),
               ],
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [Shadow(color: Colors.black, blurRadius: 8)],
-                ),
+              Row(
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.verified, color: Colors.blueAccent, size: 18),
+                ],
               ),
               const SizedBox(height: 6),
               if (text.isNotEmpty && videoUrl.isNotEmpty)
@@ -717,7 +777,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Rotating Business Audio Disc Overlay
+              // Rotating Business Disc Overlay
               RotationTransition(
                 turns: _discAnimController,
                 child: Container(
@@ -738,14 +798,14 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Video Progress Timeline Bar (Bottom)
+        // 2. Real-time Synced Video Progress Timeline Bar (Bottom)
         if (videoUrl.isNotEmpty && isVideoInitialized && _videoController != null)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: SizedBox(
-              height: 4,
+              height: 5,
               child: VideoProgressIndicator(
                 _videoController!,
                 allowScrubbing: true,
