@@ -93,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. FEED SCREEN WITH ADVANCED CONTROLS ====================
+// ==================== 1. FEED SCREEN ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -315,13 +315,12 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
   VideoPlayerController? _videoController;
   bool isLiked = false;
   int likeCount = 44000;
-  int commentCount = 744;
+  int commentCount = 745;
   int shareCount = 1809;
   bool isVideoInitialized = false;
 
   bool showControls = false;
   bool showHeartAnim = false;
-  bool isHolding = false;
   Timer? _hideControlsTimer;
   late AnimationController _discAnimController;
 
@@ -388,27 +387,6 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
         _startHideControlsTimer();
       }
     });
-  }
-
-  void _onLongPressStart() {
-    setState(() {
-      isHolding = true;
-    });
-    if (_videoController != null && _videoController!.value.isPlaying) {
-      _videoController!.pause();
-      _discAnimController.stop();
-    }
-  }
-
-  void _onLongPressEnd() {
-    setState(() {
-      isHolding = false;
-    });
-    if (_videoController != null && !_videoController!.value.isPlaying) {
-      _videoController!.play();
-      _discAnimController.repeat();
-    }
-    _showDeleteDialog();
   }
 
   void _onDoubleTap() {
@@ -598,8 +576,6 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     final String phone = templateData?['phone'] ?? '';
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
-    final bool showLocation = templateData?['showLocation'] ?? false;
-    final String locationText = templateData?['locationText'] ?? 'አዲስ አበባ፣ ኢትዮጵያ';
 
     double progressRatio = 0.0;
     if (_videoController != null &&
@@ -609,58 +585,55 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           _videoController!.value.duration.inMilliseconds;
     }
 
-    return GestureDetector(
-      onLongPressStart: (_) => _onLongPressStart(),
-      onLongPressEnd: (_) => _onLongPressEnd(),
-      child: Stack(
-        children: [
-          // 1. Fullscreen Video / Poster Background
-          Positioned.fill(
+    return Stack(
+      children: [
+        // 1. Fullscreen Video / Poster Background with Gesture Support
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: _togglePlayPause,
+            onDoubleTap: _onDoubleTap,
+            onLongPress: _showDeleteDialog,
             child: videoUrl.isNotEmpty
                 ? (isVideoInitialized && _videoController != null
-                    ? GestureDetector(
-                        onTap: _togglePlayPause,
-                        onDoubleTap: _onDoubleTap,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            SizedBox.expand(
-                              child: FittedBox(
-                                fit: BoxFit.cover,
-                                child: SizedBox(
-                                  width: _videoController!.value.size.width,
-                                  height: _videoController!.value.size.height,
-                                  child: VideoPlayer(_videoController!),
+                    ? Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox.expand(
+                            child: FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width: _videoController!.value.size.width,
+                                height: _videoController!.value.size.height,
+                                child: VideoPlayer(_videoController!),
+                              ),
+                            ),
+                          ),
+                          if (showHeartAnim)
+                            const Icon(
+                              Icons.favorite,
+                              color: Colors.redAccent,
+                              size: 110,
+                            ),
+                          if (showControls)
+                            AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: showControls ? 1.0 : 0.0,
+                              child: Container(
+                                padding: const EdgeInsets.all(18),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _videoController!.value.isPlaying
+                                      ? Icons.pause
+                                      : Icons.play_arrow,
+                                  size: 55,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),
-                            if (showHeartAnim)
-                              const Icon(
-                                Icons.favorite,
-                                color: Colors.redAccent,
-                                size: 110,
-                              ),
-                            if (showControls)
-                              AnimatedOpacity(
-                                duration: const Duration(milliseconds: 200),
-                                opacity: showControls ? 1.0 : 0.0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(18),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black54,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    _videoController!.value.isPlaying
-                                        ? Icons.pause
-                                        : Icons.play_arrow,
-                                    size: 55,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                        ],
                       )
                     : const Center(
                         child: CircularProgressIndicator(
@@ -749,308 +722,287 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                     ),
                   ),
           ),
+        ),
 
-          // Gradient Overlay
-          if (videoUrl.isNotEmpty)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.black26,
-                        Colors.transparent,
-                        Colors.black87,
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
+        // Gradient Overlay
+        if (videoUrl.isNotEmpty)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black26,
+                      Colors.transparent,
+                      Colors.black87,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
                 ),
               ),
             ),
-
-          // Bottom Left Info Area
-          Positioned(
-            bottom: 25,
-            left: 16,
-            right: 90,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (sticker.isNotEmpty && videoUrl.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black26, blurRadius: 4)
-                      ],
-                    ),
-                    child: Text(
-                      sticker,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Row(
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [Shadow(color: Colors.black, blurRadius: 8)],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.verified,
-                        color: Colors.blueAccent, size: 18),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                if (text.isNotEmpty && videoUrl.isNotEmpty)
-                  Text(
-                    text,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 6)],
-                    ),
-                  ),
-                const SizedBox(height: 6),
-                if (phone.isNotEmpty && videoUrl.isNotEmpty)
-                  InkWell(
-                    onTap: () => _makePhoneCall(phone),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade600,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.phone,
-                              size: 14, color: Colors.white),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Call Now: $phone',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
           ),
 
-          // Right TikTok-Style Action Side-Bar
-          Positioned(
-            bottom: 25,
-            right: 12,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Profile Avatar
-                Stack(
-                  alignment: Alignment.bottomCenter,
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        image: const DecorationImage(
-                          image: NetworkImage(
-                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -8,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                        child:
-                            const Icon(Icons.add, size: 14, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-
-                // Like Button
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  iconSize: 34,
-                  icon: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite,
-                    color: isLiked ? Colors.redAccent : Colors.white,
+        // Bottom Left Info Area
+        Positioned(
+          bottom: 25,
+          left: 16,
+          right: 90,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (sticker.isNotEmpty && videoUrl.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 4)
+                    ],
                   ),
-                  onPressed: () {
-                    setState(() {
-                      isLiked = !isLiked;
-                      isLiked ? likeCount++ : likeCount--;
-                    });
-                  },
-                ),
-                Text(
-                  '${(likeCount / 1000).toStringAsFixed(1)}K',
-                  style: const TextStyle(
-                      color: Colors.white,
+                  child: Text(
+                    sticker,
+                    style: const TextStyle(
+                      color: Colors.black,
                       fontWeight: FontWeight.bold,
-                      fontSize: 12),
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-
-                // Comment Button
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  iconSize: 32,
-                  icon: const Icon(Icons.comment_rounded, color: Colors.white),
-                  onPressed: _openCommentsBottomSheet,
-                ),
-                Text(
-                  '$commentCount',
-                  style: const TextStyle(
-                      color: Colors.white,
+                const SizedBox(height: 8),
+              ],
+              Row(
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-
-                // Conditional Location Pin Button
-                if (showLocation) ...[
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    iconSize: 32,
-                    icon: const Icon(Icons.location_on_rounded,
-                        color: Colors.redAccent),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('📍 አድራሻ፡ $locationText'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
+                      color: Colors.white,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+                    ),
                   ),
-                  const Text(
-                    'Location',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.verified,
+                      color: Colors.blueAccent, size: 18),
                 ],
-
-                // Bold TikTok-Style Arrow Share Button
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  iconSize: 34,
-                  icon: const Icon(Icons.shortcut_rounded, color: Colors.white),
-                  onPressed: () => _shareAd(title, text),
-                ),
+              ),
+              const SizedBox(height: 6),
+              if (text.isNotEmpty && videoUrl.isNotEmpty)
                 Text(
-                  '$shareCount',
+                  text,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12),
+                    color: Colors.white,
+                    fontSize: 14,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+                  ),
                 ),
-                const SizedBox(height: 16),
-
-                // Remix Template Button
-                FloatingActionButton.small(
-                  heroTag: null,
-                  backgroundColor: Colors.redAccent,
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            AdEditorScreen(initialTemplate: templateData),
-                      ),
-                    );
-                  },
-                  child: const Icon(Icons.auto_awesome, color: Colors.white),
-                ),
-                const SizedBox(height: 16),
-
-                // Rotating Business Disc
-                RotationTransition(
-                  turns: _discAnimController,
+              const SizedBox(height: 6),
+              if (phone.isNotEmpty && videoUrl.isNotEmpty)
+                InkWell(
+                  onTap: () => _makePhoneCall(phone),
                   child: Container(
-                    width: 38,
-                    height: 38,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade600,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.phone,
+                            size: 14, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Call Now: $phone',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // Right TikTok-Style Action Side-Bar
+        Positioned(
+          bottom: 25,
+          right: 12,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Profile Avatar
+              Stack(
+                alignment: Alignment.bottomCenter,
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade800, width: 6),
+                      border: Border.all(color: Colors.white, width: 2),
                       image: const DecorationImage(
                         image: NetworkImage(
-                            'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'),
+                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
                         fit: BoxFit.cover,
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // 2. Smooth Synced Timeline Progress Line (Bottom)
-          if (videoUrl.isNotEmpty &&
-              isVideoInitialized &&
-              _videoController != null)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 3.5,
-                color: Colors.white12,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: progressRatio.clamp(0.0, 1.0),
+                  Positioned(
+                    bottom: -8,
                     child: Container(
-                      color: Colors.redAccent,
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          const Icon(Icons.add, size: 14, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Like Button
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 34,
+                icon: Icon(
+                  isLiked ? Icons.favorite : Icons.favorite,
+                  color: isLiked ? Colors.redAccent : Colors.white,
+                ),
+                onPressed: () {
+                  setState(() {
+                    isLiked = !isLiked;
+                    isLiked ? likeCount++ : likeCount--;
+                  });
+                },
+              ),
+              Text(
+                '${(likeCount / 1000).toStringAsFixed(1)}K',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              // Comment Button
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 32,
+                icon: const Icon(Icons.comment_rounded, color: Colors.white),
+                onPressed: _openCommentsBottomSheet,
+              ),
+              Text(
+                '$commentCount',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              // Bold TikTok-Style Curved Arrow Share Button
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                iconSize: 38,
+                icon: Transform.rotate(
+                  angle: -0.2,
+                  child: const Icon(
+                    Icons.reply_all_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+                onPressed: () => _shareAd(title, text),
+              ),
+              Text(
+                '$shareCount',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              // Remix Template Button
+              FloatingActionButton.small(
+                heroTag: null,
+                backgroundColor: Colors.redAccent,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AdEditorScreen(initialTemplate: templateData),
+                    ),
+                  );
+                },
+                child: const Icon(Icons.auto_awesome, color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+
+              // Rotating Business Disc
+              RotationTransition(
+                turns: _discAnimController,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey.shade800, width: 6),
+                    image: const DecorationImage(
+                      image: NetworkImage(
+                          'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100'),
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+
+        // 2. Precise Video Timeline Bar (Bottom Position Bar)
+        if (videoUrl.isNotEmpty &&
+            isVideoInitialized &&
+            _videoController != null)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 3.5,
+              color: Colors.white24,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: progressRatio.clamp(0.0, 1.0),
+                  child: Container(
+                    color: Colors.redAccent,
+                  ),
+                ),
+              ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -1069,7 +1021,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
 
   File? _selectedVideoFile;
   VideoPlayerController? _previewVideoController;
@@ -1077,7 +1028,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   int _selectedPresetIndex = 0;
   String _selectedSticker = 'Telebirr Accepted';
   bool _isPublishing = false;
-  bool _showLocationSwitch = true;
 
   final List<Map<String, dynamic>> _colorPresets = [
     {
@@ -1124,14 +1074,10 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   @override
   void initState() {
     super.initState();
-    _locationController.text = 'አዲስ አበባ፣ ኢትዮጵያ';
     if (widget.initialTemplate != null) {
       _textController.text = widget.initialTemplate!['text'] ?? '';
       _phoneController.text = widget.initialTemplate!['phone'] ?? '';
       _selectedSticker = widget.initialTemplate!['sticker'] ?? _stickers.first;
-      _showLocationSwitch = widget.initialTemplate!['showLocation'] ?? true;
-      _locationController.text =
-          widget.initialTemplate!['locationText'] ?? 'አዲስ አበባ፣ ኢትዮጵያ';
     } else {
       _textController.text = 'የማስታወቂያ መልዕክትዎን እዚህ ይፃፉ...';
     }
@@ -1140,7 +1086,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   @override
   void dispose() {
     _previewVideoController?.dispose();
-    _locationController.dispose();
     super.dispose();
   }
 
@@ -1198,8 +1143,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
         'sticker': _selectedSticker,
         'colorStart': selectedPreset['start'],
         'colorEnd': selectedPreset['end'],
-        'showLocation': _showLocationSwitch,
-        'locationText': _locationController.text.trim(),
       };
 
       await supabase.from('videos').insert({
@@ -1457,60 +1400,6 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Location Switch (On / Off) Toggle
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E28),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.location_on,
-                              color: Colors.redAccent),
-                          const SizedBox(width: 10),
-                          const Expanded(
-                            child: Text(
-                              'የንግድ አድራሻ/ሎኬሽን ይታይ?',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          Switch(
-                            value: _showLocationSwitch,
-                            activeColor: Colors.redAccent,
-                            onChanged: (val) {
-                              setState(() {
-                                _showLocationSwitch = val;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_showLocationSwitch) ...[
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _locationController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'የቦታ/አድራሻ ስም',
-                          prefixIcon: const Icon(Icons.map,
-                              color: Colors.amber),
-                          filled: true,
-                          fillColor: const Color(0xFF1E1E28),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ],
-
                     const SizedBox(height: 22),
                     if (_selectedVideoFile == null) ...[
                       const Text(
