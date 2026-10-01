@@ -93,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. FEED SCREEN WITH DELETE & LOCATION ====================
+// ==================== 1. FEED SCREEN WITH ADVANCED CONTROLS ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -195,7 +195,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                 autofocus: true,
                 style: const TextStyle(color: Colors.white, fontSize: 16),
                 decoration: const InputDecoration(
-                  hintText: 'ማንኛውንም ነገር ይፈልጉ (ርዕስ፣ ስልክ፣ ፅሁፍ...)...',
+                  hintText: 'ማንኛውንም ነገር ይፈልጉ...',
                   hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
                   border: InputBorder.none,
                 ),
@@ -271,7 +271,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text(
-                            'ምንም ተዛማጅ መረጃ አልተገኘም።',
+                            'ምንም ማስታወቂያ አልተገኘም።',
                             style: TextStyle(color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
@@ -321,6 +321,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
 
   bool showControls = false;
   bool showHeartAnim = false;
+  bool isHolding = false;
   Timer? _hideControlsTimer;
   late AnimationController _discAnimController;
 
@@ -387,6 +388,27 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
         _startHideControlsTimer();
       }
     });
+  }
+
+  void _onLongPressStart() {
+    setState(() {
+      isHolding = true;
+    });
+    if (_videoController != null && _videoController!.value.isPlaying) {
+      _videoController!.pause();
+      _discAnimController.stop();
+    }
+  }
+
+  void _onLongPressEnd() {
+    setState(() {
+      isHolding = false;
+    });
+    if (_videoController != null && !_videoController!.value.isPlaying) {
+      _videoController!.play();
+      _discAnimController.repeat();
+    }
+    _showDeleteDialog();
   }
 
   void _onDoubleTap() {
@@ -576,8 +598,9 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     final String phone = templateData?['phone'] ?? '';
     final String text = templateData?['text'] ?? '';
     final String sticker = templateData?['sticker'] ?? '';
+    final bool showLocation = templateData?['showLocation'] ?? false;
+    final String locationText = templateData?['locationText'] ?? 'አዲስ አበባ፣ ኢትዮጵያ';
 
-    // Precise Duration Progress Ratio
     double progressRatio = 0.0;
     if (_videoController != null &&
         _videoController!.value.isInitialized &&
@@ -587,7 +610,8 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     }
 
     return GestureDetector(
-      onLongPress: _showDeleteDialog,
+      onLongPressStart: (_) => _onLongPressStart(),
+      onLongPressEnd: (_) => _onLongPressEnd(),
       child: Stack(
         children: [
           // 1. Fullscreen Video / Poster Background
@@ -746,7 +770,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
             ),
 
-          // Bottom Left Info Area with Verified Business Badge
+          // Bottom Left Info Area
           Positioned(
             bottom: 25,
             left: 16,
@@ -921,37 +945,39 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                 ),
                 const SizedBox(height: 16),
 
-                // Location Pin Button (Replaced Bookmark Icon)
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  iconSize: 32,
-                  icon: const Icon(Icons.location_on_rounded,
-                      color: Colors.redAccent),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('📍 አድራሻ፡ አዲስ አበባ፣ ኢትዮጵያ'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-                const Text(
-                  'Location',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11),
-                ),
-                const SizedBox(height: 16),
+                // Conditional Location Pin Button
+                if (showLocation) ...[
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    iconSize: 32,
+                    icon: const Icon(Icons.location_on_rounded,
+                        color: Colors.redAccent),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('📍 አድራሻ፡ $locationText'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                  const Text(
+                    'Location',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
-                // Share Button
+                // Bold TikTok-Style Arrow Share Button
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  iconSize: 32,
-                  icon: const Icon(Icons.share_rounded, color: Colors.white),
+                  iconSize: 34,
+                  icon: const Icon(Icons.shortcut_rounded, color: Colors.white),
                   onPressed: () => _shareAd(title, text),
                 ),
                 Text(
@@ -1001,7 +1027,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
             ),
           ),
 
-          // 2. Real-Time Dynamic Timeline Progress Line (Bottom)
+          // 2. Smooth Synced Timeline Progress Line (Bottom)
           if (videoUrl.isNotEmpty &&
               isVideoInitialized &&
               _videoController != null)
@@ -1043,6 +1069,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
 
   File? _selectedVideoFile;
   VideoPlayerController? _previewVideoController;
@@ -1050,6 +1077,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   int _selectedPresetIndex = 0;
   String _selectedSticker = 'Telebirr Accepted';
   bool _isPublishing = false;
+  bool _showLocationSwitch = true;
 
   final List<Map<String, dynamic>> _colorPresets = [
     {
@@ -1096,10 +1124,14 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   @override
   void initState() {
     super.initState();
+    _locationController.text = 'አዲስ አበባ፣ ኢትዮጵያ';
     if (widget.initialTemplate != null) {
       _textController.text = widget.initialTemplate!['text'] ?? '';
       _phoneController.text = widget.initialTemplate!['phone'] ?? '';
       _selectedSticker = widget.initialTemplate!['sticker'] ?? _stickers.first;
+      _showLocationSwitch = widget.initialTemplate!['showLocation'] ?? true;
+      _locationController.text =
+          widget.initialTemplate!['locationText'] ?? 'አዲስ አበባ፣ ኢትዮጵያ';
     } else {
       _textController.text = 'የማስታወቂያ መልዕክትዎን እዚህ ይፃፉ...';
     }
@@ -1108,6 +1140,7 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
   @override
   void dispose() {
     _previewVideoController?.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -1165,6 +1198,8 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
         'sticker': _selectedSticker,
         'colorStart': selectedPreset['start'],
         'colorEnd': selectedPreset['end'],
+        'showLocation': _showLocationSwitch,
+        'locationText': _locationController.text.trim(),
       };
 
       await supabase.from('videos').insert({
@@ -1422,6 +1457,60 @@ class _AdEditorScreenState extends State<AdEditorScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // Location Switch (On / Off) Toggle
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E28),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on,
+                              color: Colors.redAccent),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'የንግድ አድራሻ/ሎኬሽን ይታይ?',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          Switch(
+                            value: _showLocationSwitch,
+                            activeColor: Colors.redAccent,
+                            onChanged: (val) {
+                              setState(() {
+                                _showLocationSwitch = val;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_showLocationSwitch) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _locationController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'የቦታ/አድራሻ ስም',
+                          prefixIcon: const Icon(Icons.map,
+                              color: Colors.amber),
+                          filled: true,
+                          fillColor: const Color(0xFF1E1E28),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: 22),
                     if (_selectedVideoFile == null) ...[
                       const Text(
