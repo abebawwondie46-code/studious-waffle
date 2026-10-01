@@ -389,6 +389,17 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     });
   }
 
+  void _toggleLike() {
+    setState(() {
+      isLiked = !isLiked;
+      if (isLiked) {
+        likeCount++;
+      } else {
+        likeCount--;
+      }
+    });
+  }
+
   void _onDoubleTap() {
     setState(() {
       if (!isLiked) {
@@ -877,21 +888,16 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 18),
 
-              // Like Button
+              // Dynamic Red Like Button
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                iconSize: 34,
+                iconSize: 36,
                 icon: Icon(
-                  isLiked ? Icons.favorite : Icons.favorite,
+                  Icons.favorite,
                   color: isLiked ? Colors.redAccent : Colors.white,
                 ),
-                onPressed: () {
-                  setState(() {
-                    isLiked = !isLiked;
-                    isLiked ? likeCount++ : likeCount--;
-                  });
-                },
+                onPressed: _toggleLike,
               ),
               Text(
                 '${(likeCount / 1000).toStringAsFixed(1)}K',
@@ -919,13 +925,14 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Bold TikTok-Style Curved Arrow Share Button
+              // Flipped Bold TikTok-Style Right-Pointing Arrow Share Button
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 iconSize: 38,
-                icon: Transform.rotate(
-                  angle: -0.2,
+                icon: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.rotationY(3.14159), // Flip horizontal
                   child: const Icon(
                     Icons.reply_all_rounded,
                     color: Colors.white,
@@ -980,7 +987,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Precise Video Timeline Bar (Bottom Position Bar)
+        // 2. Precise Video Timeline Bar
         if (videoUrl.isNotEmpty &&
             isVideoInitialized &&
             _videoController != null)
