@@ -93,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== 1. FEED SCREEN WITH SEARCH & REAL-TIME PROGRESS ====================
+// ==================== 1. FEED SCREEN WITH UNIVERSAL SEARCH ====================
 class VideoFeedScreen extends StatefulWidget {
   const VideoFeedScreen({super.key});
 
@@ -139,8 +139,10 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
     }
   }
 
-  void _filterAds(String query) {
-    if (query.trim().isEmpty) {
+  // Universal Deep Search Method
+  void _universalSearch(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+    if (cleanQuery.isEmpty) {
       setState(() {
         filteredVideos = allVideos;
       });
@@ -149,9 +151,13 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
     setState(() {
       filteredVideos = allVideos.where((item) {
         final title = (item['title'] ?? '').toString().toLowerCase();
-        final template = item['template_json']?.toString().toLowerCase() ?? '';
-        return title.contains(query.toLowerCase()) ||
-            template.contains(query.toLowerCase());
+        final rawTemplate = item['template_json'];
+        String templateStr = '';
+        if (rawTemplate != null) {
+          templateStr = rawTemplate.toString().toLowerCase();
+        }
+
+        return title.contains(cleanQuery) || templateStr.contains(cleanQuery);
       }).toList();
     });
   }
@@ -164,13 +170,13 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
                 decoration: const InputDecoration(
-                  hintText: 'ማስታወቂያዎችን ይፈልጉ...',
-                  hintStyle: TextStyle(color: Colors.white54),
+                  hintText: 'ማንኛውንም ነገር ይፈልጉ (ርዕስ፣ ስልክ፣ ፅሁፍ...)...',
+                  hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
                   border: InputBorder.none,
                 ),
-                onChanged: _filterAds,
+                onChanged: _universalSearch,
               )
             : const Row(
                 mainAxisSize: MainAxisSize.min,
@@ -242,7 +248,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text(
-                            'ምንም ማስታወቂያ አልተገኘም።',
+                            'ምንም ተዛማጅ መረጃ አልተገኘም።',
                             style: TextStyle(color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
@@ -260,7 +266,9 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> {
                         scrollDirection: Axis.vertical,
                         itemCount: filteredVideos.length,
                         itemBuilder: (context, index) {
-                          return AdCard(adData: filteredVideos[index]);
+                          return AdCard(
+                              key: ValueKey(filteredVideos[index]['id']),
+                              adData: filteredVideos[index]);
                         },
                       ),
                     ),
@@ -287,8 +295,17 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
   bool isVideoInitialized = false;
 
   bool showControls = false;
+  bool showHeartAnim = false;
   Timer? _hideControlsTimer;
   late AnimationController _discAnimController;
+
+  final List<String> commentsList = [
+    'በጣም አሪፍ ማስታወቂያ ነው!',
+    'ዋጋው ስንት ነው?',
+    'አድራሻችሁ የት ነው?',
+    'አሪፍ አገልግሎት ነው በርቱ!'
+  ];
+  final TextEditingController _commentInputController = TextEditingController();
 
   @override
   void initState() {
@@ -309,7 +326,6 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
             _videoController!.setLooping(true);
             _videoController!.play();
 
-            // Real-time timeline synchronization listener
             _videoController!.addListener(() {
               if (mounted) {
                 setState(() {});
@@ -325,6 +341,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     _discAnimController.dispose();
     _hideControlsTimer?.cancel();
     _videoController?.dispose();
+    _commentInputController.dispose();
     super.dispose();
   }
 
@@ -346,6 +363,23 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
     });
   }
 
+  void _onDoubleTap() {
+    setState(() {
+      if (!isLiked) {
+        isLiked = true;
+        likeCount++;
+      }
+      showHeartAnim = true;
+    });
+    Timer(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          showHeartAnim = false;
+        });
+      }
+    });
+  }
+
   void _startHideControlsTimer() {
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(const Duration(seconds: 2), () {
@@ -357,6 +391,103 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
         });
       }
     });
+  }
+
+  void _openCommentsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF181820),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 16,
+                right: 16,
+                top: 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'አስተያየቶች ($commentCount)',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 250,
+                    child: ListView.builder(
+                      itemCount: commentsList.length,
+                      itemBuilder: (context, idx) {
+                        return ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Colors.redAccent,
+                            child: Icon(Icons.person, color: Colors.white),
+                          ),
+                          title: Text(
+                            commentsList[idx],
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _commentInputController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'አስተያየት ይፃፉ...',
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            filled: true,
+                            fillColor: const Color(0xFF252532),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Colors.redAccent),
+                        onPressed: () {
+                          if (_commentInputController.text.trim().isNotEmpty) {
+                            setModalState(() {
+                              commentsList.add(_commentInputController.text);
+                              commentCount++;
+                            });
+                            setState(() {});
+                            _commentInputController.clear();
+                          }
+                        },
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
@@ -403,6 +534,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ? (isVideoInitialized && _videoController != null
                   ? GestureDetector(
                       onTap: _togglePlayPause,
+                      onDoubleTap: _onDoubleTap,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -416,6 +548,13 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
                               ),
                             ),
                           ),
+                          // Heart Popup Animation on Double Tap
+                          if (showHeartAnim)
+                            const Icon(
+                              Icons.favorite,
+                              color: Colors.redAccent,
+                              size: 110,
+                            ),
                           if (showControls)
                             AnimatedOpacity(
                               duration: const Duration(milliseconds: 200),
@@ -643,7 +782,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Profile Avatar with + Follow Button
+              // Profile Avatar
               Stack(
                 alignment: Alignment.bottomCenter,
                 clipBehavior: Clip.none,
@@ -701,13 +840,13 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Comment Button
+              // Comment Interactive Button
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 iconSize: 32,
                 icon: const Icon(Icons.comment_rounded, color: Colors.white),
-                onPressed: () {},
+                onPressed: _openCommentsBottomSheet,
               ),
               Text(
                 '$commentCount',
@@ -777,7 +916,7 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Rotating Business Disc Overlay
+              // Rotating Business Disc
               RotationTransition(
                 turns: _discAnimController,
                 child: Container(
@@ -798,23 +937,35 @@ class _AdCardState extends State<AdCard> with SingleTickerProviderStateMixin {
           ),
         ),
 
-        // 2. Real-time Synced Video Progress Timeline Bar (Bottom)
+        // 2. Dynamic Smooth Interactive Video Timeline (Bottom Slider)
         if (videoUrl.isNotEmpty && isVideoInitialized && _videoController != null)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: SizedBox(
-              height: 5,
-              child: VideoProgressIndicator(
-                _videoController!,
-                allowScrubbing: true,
-                padding: EdgeInsets.zero,
-                colors: const VideoProgressColors(
-                  playedColor: Colors.redAccent,
-                  bufferedColor: Colors.white30,
-                  backgroundColor: Colors.white12,
-                ),
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                activeTrackColor: Colors.redAccent,
+                inactiveTrackColor: Colors.white24,
+                thumbColor: Colors.redAccent,
+              ),
+              child: Slider(
+                value: _videoController!.value.position.inMilliseconds.toDouble().clamp(
+                      0.0,
+                      _videoController!.value.duration.inMilliseconds.toDouble(),
+                    ),
+                min: 0.0,
+                max: _videoController!.value.duration.inMilliseconds.toDouble() > 0
+                    ? _videoController!.value.duration.inMilliseconds.toDouble()
+                    : 1.0,
+                onChanged: (double value) {
+                  setState(() {
+                    _videoController!.seekTo(Duration(milliseconds: value.toInt()));
+                  });
+                },
               ),
             ),
           ),
