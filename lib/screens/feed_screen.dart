@@ -127,20 +127,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             _videoController?.setLooping(true);
           }
         });
-
-      _videoController?.addListener(_videoListener);
-    }
-  }
-
-  void _videoListener() {
-    if (mounted && _videoController != null) {
-      setState(() {});
     }
   }
 
   @override
   void dispose() {
-    _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
     _discAnimController.dispose();
     super.dispose();
@@ -151,13 +142,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       return '${(count / 1000).toStringAsFixed(1)}K';
     }
     return count.toString();
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
   }
 
   void _toggleLike() {
@@ -194,13 +178,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     final phone = widget.templateJson['phone'] ?? '';
     final sticker = widget.templateJson['sticker'] ?? '';
 
-    // ቪዲዮው እየተጫወተ መሆኑን እና አለመሆኑን በትክክል የሚያረጋግጥ ተለዋዋጭ
-    final bool isPlaying = _videoController != null && isVideoInitialized && _videoController!.value.isPlaying;
-
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. የቪዲዮ ማጫወቻው እና የንክኪ (GestureDetector) ማስተካከያ
+        // 1. የቪዲዮ ማጫወቻው እና ስክሪኑን ሲነኩት Play/Pause የሚያደርግበት ሲስተም
         if (_videoController != null && isVideoInitialized)
           Positioned.fill(
             child: GestureDetector(
@@ -247,33 +228,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-        // 2. ቪዲዮው ሲቆም ብቻ (Pause ሲሆን) የሚታየው እና ሲነኩት ቪዲዮውን የሚያስጀምረው የ Play አዝራር
-        if (_videoController != null && isVideoInitialized && !isPlaying)
-          Center(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _videoController!.play();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow,
-                  size: 50,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-
-        // 3. የጽሁፍ እና የስልክ መረጃ ቦታ
+        // 2. የጽሁፍ እና የስልክ መረጃ ቦታ
         Positioned(
-          bottom: 110,
+          bottom: 70,
           left: 16,
           right: 90,
           child: Column(
@@ -315,10 +272,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           ),
         ),
 
-        // 4. የቀኝဘက် አዝራሮች (ላይክ፣ ኮሜንት፣ ሼር)
+        // 3. የቀኝဘက် አዝራሮች (ላይክ፣ ኮሜንት፣ ሼር)
         Positioned(
           right: 12,
-          bottom: 115,
+          bottom: 80,
           child: Column(
             children: [
               const CircleAvatar(
@@ -373,61 +330,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ],
           ),
         ),
-
-        // 5. የቪዲዮ የጊዜ መስመር (Slider) እና ሰዓት ቆጣሪ
-        if (_videoController != null && isVideoInitialized)
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _formatDuration(_videoController!.value.position),
-                        style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        _formatDuration(_videoController!.value.duration),
-                        style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 2),
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 3.0,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14.0),
-                    activeTrackColor: Colors.redAccent,
-                    inactiveTrackColor: Colors.white24,
-                    thumbColor: Colors.white,
-                  ),
-                  child: Slider(
-                    value: _videoController!.value.position.inMilliseconds.toDouble().clamp(
-                          0.0,
-                          _videoController!.value.duration.inMilliseconds.toDouble() > 0
-                              ? _videoController!.value.duration.inMilliseconds.toDouble()
-                              : 1.0,
-                        ),
-                    min: 0.0,
-                    max: _videoController!.value.duration.inMilliseconds.toDouble() > 0
-                        ? _videoController!.value.duration.inMilliseconds.toDouble()
-                        : 1.0,
-                    onChanged: (value) {
-                      _videoController!.seekTo(Duration(milliseconds: value.toInt()));
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
