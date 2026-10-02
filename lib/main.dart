@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/feed_screen.dart';
-import 'screens/ad_editor_screen.dart';
+import 'screens/create_screen.dart'; // አዲሱ የቪዲዮ መፍጠሪያ ፋይል
+import 'screens/profile_screen.dart'; // አዲሱ የፕሮፋይል ፋይል
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,15 +45,11 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
+  // ሦስቱን ዋና ዋና ስክሪኖች እዚህ በንጹህ መልኩ አካተናል
   final List<Widget> _screens = [
     const FeedScreen(),
-    const AdEditorScreen(),
-    const Center(
-      child: Text(
-        'መገለጫ (Profile)',
-        style: TextStyle(color: Colors.white, fontSize: 18),
-      ),
-    ),
+    const CreateScreen(),
+    const ProfileScreen(),
   ];
 
   @override
