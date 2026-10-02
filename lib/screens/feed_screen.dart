@@ -1,10 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:video_player/video_player.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
-import '../widgets/comments_bottom_sheet.dart';
+import '../widgets/ad_video_item.dart'; // የቪዲዮ ማጫወቻውን እና የቁጥጥር ክፍሉን የያዘው ፋይል
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -26,7 +22,8 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Future<void> _fetchAds() async {
     try {
-      final response = await supabase.from('videos').select(); // የጠረጴዛህን (Table) ስም እንደአስፈላጊነቱ አስተካክለው
+      // ከ Supabase የቪዲዮ መረጃዎችን መቀበል
+      final response = await supabase.from('videos').select();
       setState(() {
         _ads = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
@@ -43,7 +40,9 @@ class _FeedScreenState extends State<FeedScreen> {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.redAccent)),
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.redAccent),
+        ),
       );
     }
 
@@ -56,11 +55,15 @@ class _FeedScreenState extends State<FeedScreen> {
           centerTitle: true,
         ),
         body: const Center(
-          child: Text('ምንም ማስታወቂያዎች ወይም ቪዲዮዎች የሉም።', style: TextStyle(color: Colors.white70)),
+          child: Text(
+            'ምንም ቪዲዮዎች አልተገኙም::',
+            style: TextStyle(color: Colors.white70),
+          ),
         ),
       );
     }
 
+    // ቪዲዮዎችን በአቀባዊ (Vertical) በቅደም ተከተል ማሳየት
     return Scaffold(
       backgroundColor: Colors.black,
       body: PageView.builder(
@@ -79,4 +82,3 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 }
-                              
