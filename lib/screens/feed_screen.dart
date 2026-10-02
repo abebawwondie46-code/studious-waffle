@@ -194,12 +194,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     final phone = widget.templateJson['phone'] ?? '';
     final sticker = widget.templateJson['sticker'] ?? '';
 
+    // ቪዲዮው እየተጫወተ መሆኑን እና አለመሆኑን በትክክል የሚያረጋግጥ ተለዋዋጭ
     final bool isPlaying = _videoController != null && isVideoInitialized && _videoController!.value.isPlaying;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. ቪዲዮው ወይም የጀርባው ቀለም
+        // 1. የቪዲዮ ማጫወቻው እና የንክኪ (GestureDetector) ማስተካከያ
         if (_videoController != null && isVideoInitialized)
           Positioned.fill(
             child: GestureDetector(
@@ -246,7 +247,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-        // 2. ቪዲዮው ቆሞ ሲገኝ ብቻ የሚታየው እና ስንነካው ቪዲዮውን የሚያስጀምረው የ Play አዝራር
+        // 2. ቪዲዮው ሲቆም ብቻ (Pause ሲሆን) የሚታየው እና ሲነኩት ቪዲዮውን የሚያስጀምረው የ Play አዝራር
         if (_videoController != null && isVideoInitialized && !isPlaying)
           Center(
             child: GestureDetector(
