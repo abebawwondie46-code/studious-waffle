@@ -85,21 +85,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 30),
             // ስታቲስቲክስ (Videos, Likes, etc.)
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
+              children: [
                 _ProfileStatItem(title: 'ቪዲዮዎች', count: '0'),
                 _ProfileStatItem(title: 'ላይክ', count: '0'),
                 _ProfileStatItem(title: 'ተከታዮች', count: '0'),
               ],
             ),
             const Spacer(),
-            // ከመተግበሪያው የመውጫ ቁልፍ (Sign Out)
+            // ከመተግበሪያው የመውጫ ቁልፍ (Sign Out) - child: ተጨምሯል
             ElevatedButton(
               onPressed: () async {
                 await supabase.auth.signOut();
                 if (mounted) {
-                  Navigator.of(context).pushReplacementNamed('/login'); // እንደ አቀማመጥዎ ማስተካከል ይቻላል
+                  Navigator.of(context).pushReplacementNamed('/login');
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -109,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              const Text(
+              child: const Text(
                 'ውጣ (Log Out)',
                 style: TextStyle(color: Colors.redAccent, fontSize: 16),
               ),
