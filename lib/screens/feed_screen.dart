@@ -256,8 +256,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
+        // የጽሁፍ እና የስልክ መረጃ ቦታ (ከታች ከፍ እንዲል ተደርጓል)
         Positioned(
-          bottom: 65,
+          bottom: 110,
           left: 16,
           right: 90,
           child: Column(
@@ -299,9 +300,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           ),
         ),
 
+        // የቀኝဘက် አዝራሮች (ላይክ፣ ኮሜንት፣ ሼር)
         Positioned(
           right: 12,
-          bottom: 75,
+          bottom: 115,
           child: Column(
             children: [
               const CircleAvatar(
@@ -357,9 +359,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           ),
         ),
 
+        // የቪዲዮ የጊዜ መስመር (Progress Bar) - ከዳሰሳ አሞሌው በላይ ከፍ እንዲል ተደረገ
         if (_videoController != null && isVideoInitialized)
           Positioned(
-            bottom: 55,
+            bottom: 60,
             left: 0,
             right: 0,
             child: Column(
