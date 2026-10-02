@@ -133,7 +133,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 
   void _videoListener() {
-    if (mounted && _videoController != null) {
+    if (mounted && _videoController != null && _videoController!.value.isPlaying) {
       setState(() {});
     }
   }
@@ -197,7 +197,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     return Stack(
       fit: StackFit.expand,
       children: [
-        // የቪዲዮ ማጫወቻው እና የንክኪ (GestureDetector) ማስተካከያ
+        // ቪዲዮውን ስንነካው Play/Pause እንዲያደርግ የሚያስችል ዋናው GestureDetector
         if (_videoController != null && isVideoInitialized)
           GestureDetector(
             onTap: () {
@@ -244,7 +244,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-        // ቪዲዮው ሲቆም (Pause ሲሆን) በመሃል ላይ የሚታየው የመጫወቻ (Play) ምልክት
+        // ቪዲዮው ሲቆም በመሃል ላይ የሚታየው የ Play (ሶስት ማዕዘን) ምልክት
         if (_videoController != null && isVideoInitialized && !_videoController!.value.isPlaying)
           Center(
             child: GestureDetector(
@@ -254,9 +254,16 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 });
               },
               child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
-                child: const Icon(Icons.play_arrow, size: 50, color: Colors.white),
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow,
+                  size: 50,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -364,7 +371,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           ),
         ),
 
-        // የቪዲዮ የጊዜ መስመር (Progress Bar) እና ሰዓት ቆጣሪ
+        // የቪዲዮ የጊዜ መስመር (Progress Bar) እና ትክክለኛ የሰዓት ቆጣሪ
         if (_videoController != null && isVideoInitialized)
           Positioned(
             bottom: 60,
@@ -390,13 +397,29 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ),
                 ),
                 const SizedBox(height: 2),
-                VideoProgressIndicator(
-                  _videoController!,
-                  allowScrubbing: true,
-                  colors: const VideoProgressColors(
-                    playedColor: Colors.redAccent,
-                    bufferedColor: Colors.white30,
-                    backgroundColor: Colors.white10,
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 3.0,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14.0),
+                    activeTrackColor: Colors.redAccent,
+                    inactiveTrackColor: Colors.white24,
+                    thumbColor: Colors.white,
+                  ),
+                  child: Slider(
+                    value: _videoController!.value.position.inMilliseconds.toDouble().clamp(
+                          0.0,
+                          _videoController!.value.duration.inMilliseconds.toDouble() > 0
+                              ? _videoController!.value.duration.inMilliseconds.toDouble()
+                              : 1.0,
+                        ),
+                    min: 0.0,
+                    max: _videoController!.value.duration.inMilliseconds.toDouble() > 0
+                        ? _videoController!.value.duration.inMilliseconds.toDouble()
+                        : 1.0,
+                    onChanged: (value) {
+                      _videoController!.seekTo(Duration(milliseconds: value.toInt()));
+                    },
                   ),
                 ),
               ],
