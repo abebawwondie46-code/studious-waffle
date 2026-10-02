@@ -100,8 +100,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   late AnimationController _discAnimController;
 
   bool _isLiked = false;
-  // ቁጥሩን በIntegerValue (እውነተኛ ቁጥር) አስጀምረነዋል (44000 = 44.0K)
-  int _likeCount = 44000;
+  // የመጀመሪያው የላይክ ቁጥር 54 እንዲሆን ተደርጓል
+  int _likeCount = 54;
   final int commentCount = 745;
   final int shareCount = 1809;
 
@@ -138,7 +138,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     super.dispose();
   }
 
-  // ቁጥሩን ልክ እንደ ቲክቶክ ወደ 'K' ቅርጸት ይቀይረዋል (ለምሳሌ: 44100 -> 44.1K)
+  // ቁጥሩ ከ 1000 በታች ሲሆን በቀጥታ ቁጥሩን ራሱ (ለምሳሌ 54 ወይም 55) ያሳያል
   String _formatCount(int count) {
     if (count >= 1000) {
       return '${(count / 1000).toStringAsFixed(1)}K';
@@ -146,7 +146,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     return count.toString();
   }
 
-  // የላይክ አዝራሩ ሲጫን ቁጥሩ እንዲጨምር/እንዲቀንስ እና ቀለሙ እንዲቀየር የሚያደርግ ፋንክሽን
+  // የላይክ አዝራሩ ሲጫን ከ 54 ወደ 55 ከፍ እንዲል የሚያደርግ ፋንክሽን
   void _toggleLike() {
     setState(() {
       _isLiked = !_isLiked;
@@ -287,7 +287,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 child: CircleAvatar(radius: 20, backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white)),
               ),
               const SizedBox(height: 16),
-              // የላይክ አዝራር እና ቁጥር መጨመሪያ ሎጂክ
+              // የላይክ አዝራር እና ቁጥር 54 -> 55 ማስተካከያ
               GestureDetector(
                 onTap: _toggleLike,
                 child: Column(
