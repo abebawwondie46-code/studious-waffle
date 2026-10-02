@@ -100,6 +100,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   late AnimationController _discAnimController;
 
   bool _isLiked = false;
+  // ቁጥሩን በIntegerValue (እውነተኛ ቁጥር) አስጀምረነዋል (44000 = 44.0K)
   int _likeCount = 44000;
   final int commentCount = 745;
   final int shareCount = 1809;
@@ -137,6 +138,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     super.dispose();
   }
 
+  // ቁጥሩን ልክ እንደ ቲክቶክ ወደ 'K' ቅርጸት ይቀይረዋል (ለምሳሌ: 44100 -> 44.1K)
   String _formatCount(int count) {
     if (count >= 1000) {
       return '${(count / 1000).toStringAsFixed(1)}K';
@@ -144,6 +146,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     return count.toString();
   }
 
+  // የላይክ አዝራሩ ሲጫን ቁጥሩ እንዲጨምር/እንዲቀንስ እና ቀለሙ እንዲቀየር የሚያደርግ ፋንክሽን
   void _toggleLike() {
     setState(() {
       _isLiked = !_isLiked;
@@ -181,7 +184,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. የቪዲዮ ማጫወቻው እና ስክሪኑን ሲነኩት Play/Pause የሚያደርግበት ሲስተም
+        // 1. ቪዲዮ ማጫወቻ እና ስክሪኑን ሲነኩት Play/Pause የሚያደርግበት ሲስተም
         if (_videoController != null && isVideoInitialized)
           Positioned.fill(
             child: GestureDetector(
@@ -284,13 +287,21 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 child: CircleAvatar(radius: 20, backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white)),
               ),
               const SizedBox(height: 16),
+              // የላይክ አዝራር እና ቁጥር መጨመሪያ ሎጂክ
               GestureDetector(
                 onTap: _toggleLike,
                 child: Column(
                   children: [
-                    Icon(_isLiked ? Icons.favorite : Icons.favorite_border, color: _isLiked ? Colors.redAccent : Colors.white, size: 36),
+                    Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? Colors.redAccent : Colors.white,
+                      size: 36,
+                    ),
                     const SizedBox(height: 4),
-                    Text(_formatCount(_likeCount), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text(
+                      _formatCount(_likeCount),
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
               ),
