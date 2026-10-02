@@ -6,7 +6,7 @@ import 'screens/ad_editor_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ትክክለኛውን የሱፓቤስ መረጃዎትን በመጠቀም ማገናኘት
+  // የሱፓቤስ ማገናኛ ቁልፎችዎ በትክክል ተካትተዋል
   await Supabase.initialize(
     url: 'https://yszkonhhprwtavxywchz.supabase.co',
     anonKey:
