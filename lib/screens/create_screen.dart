@@ -121,7 +121,7 @@ class _CreateScreenState extends State<CreateScreen> {
                 },
               ),
               const SizedBox(height: 30),
-              // የመጫኛ አዝራር (Upload Button)
+              // የመጫኛ አዝራር (Upload Button) - child እና የ Ternary operator ተስተካክለዋል
               ElevatedButton(
                 onPressed: _isUploading ? null : _uploadVideo,
                 style: ElevatedButton.styleFrom(
@@ -132,7 +132,7 @@ class _CreateScreenState extends State<CreateScreen> {
                   ),
                 ),
                 child: _isUploading
-                    const SizedBox(
+                    ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
