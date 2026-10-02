@@ -197,19 +197,19 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ቪዲዮውን ስንነካው Play/Pause እንዲያደርግ የሚያስችል ዋናው GestureDetector
+        // 1. የቪዲዮ ማጫወቻው እና የንክኪ (GestureDetector) ማስተካከያ
         if (_videoController != null && isVideoInitialized)
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                if (_videoController!.value.isPlaying) {
-                  _videoController!.pause();
-                } else {
-                  _videoController!.play();
-                }
-              });
-            },
-            child: SizedBox.expand(
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (_videoController!.value.isPlaying) {
+                    _videoController!.pause();
+                  } else {
+                    _videoController!.play();
+                  }
+                });
+              },
               child: FittedBox(
                 fit: BoxFit.cover,
                 child: SizedBox(
@@ -244,31 +244,35 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-        // ቪዲዮው ሲቆም በመሃል ላይ የሚታየው የ Play (ሶስት ማዕዘን) ምልክት
+        // 2. ቪዲዮው ሲቆም በመሃል ላይ የሚታየው እና በቀላሉ ሊነካ የሚችለው የ Play አዝራር
         if (_videoController != null && isVideoInitialized && !_videoController!.value.isPlaying)
           Center(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _videoController!.play();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow,
-                  size: 50,
-                  color: Colors.white,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _videoController!.play();
+                  });
+                },
+                borderRadius: BorderRadius.circular(40),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    size: 50,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
           ),
 
-        // የጽሁፍ እና የስልክ መረጃ ቦታ
+        // 3. የጽሁፍ እና የስልክ መረጃ ቦታ
         Positioned(
           bottom: 110,
           left: 16,
@@ -312,7 +316,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           ),
         ),
 
-        // የቀኝဘက် አዝራሮች (ላይክ፣ ኮሜንት፣ ሼር)
+        // 4. የቀኝဘက် አዝራሮች (ላይክ፣ ኮሜንት፣ ሼር)
         Positioned(
           right: 12,
           bottom: 115,
@@ -371,7 +375,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           ),
         ),
 
-        // የቪዲዮ የጊዜ መስመር (Progress Bar) እና ትክክለኛ የሰዓት ቆጣሪ
+        // 5. የቪዲዮ የጊዜ መስመር (Slider) እና ሰዓት ቆጣሪ
         if (_videoController != null && isVideoInitialized)
           Positioned(
             bottom: 60,
