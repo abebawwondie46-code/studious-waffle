@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
-import '../widgets/comments_bottom_sheet.dart'; // አዲሱን የኮሜንት ፋይል ማስገቢያ (Import)
+import '../widgets/comments_bottom_sheet.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -123,6 +123,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           }
         });
 
+      // ቪዲዮው ሲጫወት በየሰኮንዱ የጊዜ ሰሌዳውን እንዲያዘምን አድስ (Refresh) ያደርጋል
       _videoController?.addListener(() {
         if (mounted) {
           setState(() {});
@@ -163,7 +164,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     });
   }
 
-  // ኮሜንቶቹን ከያዘው የተለየ ፋይል ላይ የሚጠራበት ውቅር
   void _openCommentsBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -348,7 +348,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           ),
         ),
 
-        // የቪዲዮ የጊዜ መስመር (Progress Bar)
+        // የቪዲዮ የጊዜ መስመር (Progress Bar) እና ሰዓት ቆጣሪ
         if (_videoController != null && isVideoInitialized)
           Positioned(
             bottom: 60,
@@ -362,8 +362,14 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(_formatDuration(_videoController!.value.position), style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                      Text(_formatDuration(_videoController!.value.duration), style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(
+                        _formatDuration(_videoController!.value.position),
+                        style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        _formatDuration(_videoController!.value.duration),
+                        style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ),
