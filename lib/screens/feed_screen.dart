@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import '../widgets/comments_bottom_sheet.dart'; // አዲሱን የኮሜንት ፋይል ማስገቢያ (Import)
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -162,6 +163,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     });
   }
 
+  // ኮሜንቶቹን ከያዘው የተለየ ፋይል ላይ የሚጠራበት ውቅር
   void _openCommentsBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -170,28 +172,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          height: 300,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('አስተያየቶች (Comments)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const Divider(color: Colors.white24),
-              Expanded(
-                child: ListView(
-                  children: const [
-                    ListTile(
-                      leading: CircleAvatar(backgroundColor: Colors.redAccent, child: Text('አ')),
-                      title: Text('በቀለ'),
-                      subtitle: Text('በጣም አሪፍ ማስታወቂያ ነው! ቀጥበት።'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
+        return const CommentsBottomSheet();
       },
     );
   }
