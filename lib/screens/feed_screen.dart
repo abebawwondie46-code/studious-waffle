@@ -67,6 +67,7 @@ class _FeedScreenState extends State<FeedScreen> {
         itemBuilder: (context, index) {
           final ad = _ads[index];
           return AdVideoItem(
+            key: ValueKey(ad['id'] ?? index),
             title: ad['title'] ?? '',
             videoUrl: ad['video_url'] ?? '',
             templateJson: ad['template_json'] ?? {},
@@ -111,6 +112,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       duration: const Duration(seconds: 4),
     )..repeat();
 
+    _initializeVideo();
+  }
+
+  void _initializeVideo() {
     if (widget.videoUrl.isNotEmpty) {
       _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
         ..initialize().then((_) {
@@ -123,17 +128,19 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           }
         });
 
-      // ቪዲዮው ሲጫወት በየሰኮንዱ የጊዜ ሰሌዳውን እንዲያዘምን አድስ (Refresh) ያደርጋል
-      _videoController?.addListener(() {
-        if (mounted) {
-          setState(() {});
-        }
-      });
+      _videoController?.addListener(_videoListener);
+    }
+  }
+
+  void _videoListener() {
+    if (mounted && _videoController != null) {
+      setState(() {});
     }
   }
 
   @override
   void dispose() {
+    _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
     _discAnimController.dispose();
     super.dispose();
@@ -190,6 +197,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     return Stack(
       fit: StackFit.expand,
       children: [
+        // የቪዲዮ ማጫወቻው እና የንክኪ (GestureDetector) ማስተካከያ
         if (_videoController != null && isVideoInitialized)
           GestureDetector(
             onTap: () {
@@ -236,12 +244,20 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
+        // ቪዲዮው ሲቆም (Pause ሲሆን) በመሃል ላይ የሚታየው የመጫወቻ (Play) ምልክት
         if (_videoController != null && isVideoInitialized && !_videoController!.value.isPlaying)
           Center(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
-              child: const Icon(Icons.play_arrow, size: 50, color: Colors.white),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _videoController!.play();
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                child: const Icon(Icons.play_arrow, size: 50, color: Colors.white),
+              ),
             ),
           ),
 
