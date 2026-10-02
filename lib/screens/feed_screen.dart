@@ -133,7 +133,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 
   void _videoListener() {
-    if (mounted && _videoController != null && _videoController!.value.isPlaying) {
+    if (mounted && _videoController != null) {
       setState(() {});
     }
   }
@@ -194,10 +194,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     final phone = widget.templateJson['phone'] ?? '';
     final sticker = widget.templateJson['sticker'] ?? '';
 
+    final bool isPlaying = _videoController != null && isVideoInitialized && _videoController!.value.isPlaying;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. የቪዲዮ ማጫወቻው እና የንክኪ (GestureDetector) ማስተካከያ
+        // 1. ቪዲዮው ወይም የጀርባው ቀለም
         if (_videoController != null && isVideoInitialized)
           Positioned.fill(
             child: GestureDetector(
@@ -244,29 +246,25 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-        // 2. ቪዲዮው ሲቆም በመሃል ላይ የሚታየው እና በቀላሉ ሊነካ የሚችለው የ Play አዝራር
-        if (_videoController != null && isVideoInitialized && !_videoController!.value.isPlaying)
+        // 2. ቪዲዮው ቆሞ ሲገኝ ብቻ የሚታየው እና ስንነካው ቪዲዮውን የሚያስጀምረው የ Play አዝራር
+        if (_videoController != null && isVideoInitialized && !isPlaying)
           Center(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _videoController!.play();
-                  });
-                },
-                borderRadius: BorderRadius.circular(40),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    size: 50,
-                    color: Colors.white,
-                  ),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _videoController!.play();
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow,
+                  size: 50,
+                  color: Colors.white,
                 ),
               ),
             ),
