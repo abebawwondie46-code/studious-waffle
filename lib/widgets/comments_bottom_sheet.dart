@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
-  final String videoId; // ለእያንዳንዱ ቪዲዮ የተለየ መለያ
+  final String videoId;
   final Function(int)? onCommentCountUpdated;
 
   const CommentsBottomSheet({
@@ -27,10 +27,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     _loadSavedComments();
   }
 
-  // 1. የዚህን ቪዲዮ ኮሜንቶች ብቻ ከ SharedPreferences መጫን
   Future<void> _loadSavedComments() async {
     final prefs = await SharedPreferences.getInstance();
-    // ለእያንዳንዱ ቪዲዮ የተለየ ኪ (Key) እንጠቀማለን (ለምሳሌ፦ comments_video_1)
     final String? savedData = prefs.getString('comments_${widget.videoId}');
 
     if (savedData != null) {
@@ -41,14 +39,12 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       });
     } else {
       setState(() {
-        // ለአዲስ ቪዲዮ ባዶ ሊስት ወይም ነባሪ ኮሜንት ማድረግ ይቻላል
         _comments = [];
         _isLoading = false;
       });
     }
   }
 
-  // 2. የዚህን ቪዲዮ ኮሜንቶች ብቻ ማስቀመጥ
   Future<void> _saveCommentsToPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final String encodedData = jsonEncode(_comments);
@@ -62,7 +58,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       _comments.insert(0, {
         'name': 'እርስዎ',
         'comment': _commentController.text.trim(),
-        'time': 'አሁን', // "አሁን" የሚለው ቃል ከፊት እንዲሆን ተደርጓል
+        'time': 'አሁን',
       });
       _commentController.clear();
     });
@@ -167,7 +163,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           itemBuilder: (context, index) {
                             final item = _comments[index];
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding: const EdgeInsets.symmetric(vertical: 10.0),
                               child: GestureDetector(
                                 onLongPress: () => _deleteComment(index),
                                 child: Container(
@@ -175,44 +171,70 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      // የፕሮፋይል ቼክል ፎቶ/አክታር
                                       CircleAvatar(
                                         radius: 18,
-                                        backgroundColor: Colors.redAccent,
+                                        backgroundColor: Colors.green[800],
                                         child: Text(
                                           item['name']![0],
                                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
+                                      // የኮሜንቱ ዝርዝር አቀማመጥ (እንደ ቲክቶክ)
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
+                                            // 1. የተጠቃሚው ስም
+                                            Text(
+                                              item['name']!,
+                                              style: const TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            // 2. የኮሜንቱ ጽሁፍ
+                                            Text(
+                                              item['comment']!,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            // 3. ሰዓት እና ሪፕላይ (Reply) በግራ በኩል
                                             Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
                                                 Text(
-                                                  item['name']!,
-                                                  style: const TextStyle(
-                                                    color: Colors.white70,
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                // "አሁን" የሚለው ቃል ከሰዓቱ በፊት እንዲሆን ተደርጓል
-                                                Text(
                                                   item['time']!,
-                                                  style: const TextStyle(color: Colors.grey, fontSize: 10),
+                                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                                ),
+                                                const SizedBox(width: 16),
+                                                const Text(
+                                                  'Reply',
+                                                  style: TextStyle(
+                                                    color: Colors.grey,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              item['comment']!,
-                                              style: const TextStyle(color: Colors.white, fontSize: 14),
-                                            ),
                                           ],
                                         ),
+                                      ),
+                                      // 4. በስተቀኝ በኩል የሚቀመጡ የላይክ እና የዲስላይክ አዶዎች (እንደ ቲክቶክ)
+                                      Column(
+                                        children: [
+                                          const Icon(Icons.favorite_border, color: Colors.grey, size: 20),
+                                          const SizedBox(height: 2),
+                                          const Text('0', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                                          const SizedBox(height: 10),
+                                          const Icon(Icons.thumb_down_off_alt, color: Colors.grey, size: 18),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -222,6 +244,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           },
                         ),
                 ),
+                // የታችኛው የ ግብዓት (Input) ሣጥን
                 Container(
                   padding: EdgeInsets.only(
                     left: 16,
@@ -232,12 +255,18 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   color: Colors.black54,
                   child: Row(
                     children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Colors.green[800],
+                        child: const Text('አ', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
                           controller: _commentController,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
-                            hintText: 'አስተያየት ይስጡ...',
+                            hintText: 'Add comment...',
                             hintStyle: const TextStyle(color: Colors.grey),
                             filled: true,
                             fillColor: Colors.grey[850],
@@ -251,10 +280,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.send, color: Colors.redAccent),
-                        onPressed: _addComment,
-                      ),
+                      const Icon(Icons.image_outlined, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.sentiment_satisfied_outlined, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.alternate_email, color: Colors.grey),
                     ],
                   ),
                 ),
