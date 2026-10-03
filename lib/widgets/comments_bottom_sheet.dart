@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
-  const CommentsBottomSheet({super.key});
+  final Function(int) onCommentChanged; // የኮሜንት ብዛት መቀየሪያ callback
+
+  const CommentsBottomSheet({
+    super.key,
+    required this.onCommentChanged,
+  });
 
   @override
   State<CommentsBottomSheet> createState() => _CommentsBottomSheetState();
@@ -10,7 +15,6 @@ class CommentsBottomSheet extends StatefulWidget {
 class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _commentController = TextEditingController();
   
-  // የናሙና ኮሜንቶች ዝርዝር
   final List<Map<String, String>> _comments = [
     {
       'name': 'በቀለ',
@@ -34,7 +38,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     },
   ];
 
-  // አዲስ ኮሜንት የመጨመር ተግባር
   void _addComment() {
     if (_commentController.text.trim().isEmpty) return;
     setState(() {
@@ -45,10 +48,12 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       });
       _commentController.clear();
     });
+    // ውጭ ላለው ገጽ አዲሱን አጠቃላይ ብዛት ማሳወቅ
+    final int total = 745 + _comments.length;
+    widget.onCommentChanged(total);
     FocusScope.of(context).unfocus();
   }
 
-  // ኮሜንትን የመሰረዝ ተግባር
   void _deleteComment(int index) {
     showDialog(
       context: context,
@@ -60,9 +65,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           actions: [
             TextButton(
               child: const Text('አይ', style: TextStyle(color: Colors.grey)),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
               child: const Text('አዎ፣ ሰርዝ', style: TextStyle(color: Colors.redAccent)),
@@ -70,6 +73,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 setState(() {
                   _comments.removeAt(index);
                 });
+                final int total = 745 + _comments.length;
+                widget.onCommentChanged(total);
                 Navigator.of(context).pop();
               },
             ),
@@ -87,9 +92,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final int baseCount = 745; 
-    final int newComments = _comments.length;
-    final int totalCommentCount = baseCount + newComments;
+    final int totalCommentCount = 745 + _comments.length;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.65,
@@ -99,7 +102,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       ),
       child: Column(
         children: [
-          // 1. የከፍታ መያዣ እና ርዕስ
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Container(
@@ -120,8 +122,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
             ),
           ),
           const Divider(color: Colors.white24),
-
-          // 2. የኮሜንቶች ዝርዝር
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -131,9 +131,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: GestureDetector(
-                    onLongPress: () {
-                      _deleteComment(index);
-                    },
+                    onLongPress: () => _deleteComment(index),
                     child: Container(
                       color: Colors.transparent,
                       child: Row(
@@ -185,8 +183,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               },
             ),
           ),
-
-          // 3. ከታች አዲስ ኮሜንት መጻፊያ ሳጥን
           Container(
             padding: EdgeInsets.only(
               left: 16,
