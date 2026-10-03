@@ -34,7 +34,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
 
   int _likeCount = 440;
   bool _isLiked = false;
-  int _commentCount = 741;
+  int _commentCount = 745;
   int _shareCount = 112;
   bool _isFollowing = false; // የፕሮፋይል ፕላስ ቁልፍ ሁኔታ
 
@@ -156,16 +156,15 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (context) => CommentsBottomSheet(
-      commentsList: _globalComments, // የኮሜንቶቹን ዝርዝር እናልፋለን
-      onCommentsUpdated: (updatedList) {
+      onCommentChanged: (newCount) {
         setState(() {
-          _globalComments = updatedList; // አዲሱን ዝርዝር እንይዛለን
-          _commentCount = 741 + _globalComments.length; // ቁጥሩን እናዘምነዋለን
+          _commentCount = newCount; // ከታች አዲስ ኮሜንት ሲጨመር የውጪው ቁጥር እንዲቀየር ያደርጋል
         });
       },
     ),
   );
 }
+
   void _openSearchDialog() {
     showDialog(
       context: context,
