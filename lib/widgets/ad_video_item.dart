@@ -48,7 +48,6 @@ class _AdVideoItemState extends State<AdVideoItem> {
   }
 
   void _videoListener() {
-    // ቪዲዮው በሚጫወትበት ጊዜ የሰዓት መስመሩ ከቪዲዮው ጋር አብሮ እንዲዘምን ራሱን እንዲያድስ እናደርጋለን
     if (mounted && _videoController != null && _videoController!.value.isInitialized) {
       setState(() {});
     }
@@ -101,7 +100,6 @@ class _AdVideoItemState extends State<AdVideoItem> {
 
   @override
   Widget build(BuildContext context) {
-    // ቪዲዮው ሙሉ በሙሉ እስኪጫን (initialize እስኪሆን) ድረስ የ 0 ሰዓት እንሰጣለን፣ ከተጫነ በኋላ ግን ትክክለኛውን ርዝመት እንወስዳለን
     final Duration duration = (_isInitialized && _videoController != null)
         ? _videoController!.value.duration
         : Duration.zero;
@@ -116,20 +114,26 @@ class _AdVideoItemState extends State<AdVideoItem> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          // 1. ቪዲዮ ማጫወቻ እና ንክኪ (Tap to Play/Pause)
-          Center(
-            child: _isInitialized && _videoController != null
-                ? GestureDetector(
-                    onTap: _togglePlayPause,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        AspectRatio(
-                          aspectRatio: _videoController!.value.aspectRatio,
+          // 1. ቪዲዮው ሙሉ ስክሪኑን እንዲሸፍን (Full Screen Cover)
+          _isInitialized && _videoController != null
+              ? GestureDetector(
+                  onTap: _togglePlayPause,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _videoController!.value.size.width,
+                          height: _videoController!.value.size.height,
                           child: VideoPlayer(_videoController!),
                         ),
-                        AnimatedOpacity(
+                      ),
+                      // ጫን/አቁም (Play/Pause) ምልክት በመሃል ላይ ሲነካ ይታያል
+                      Center(
+                        child: AnimatedOpacity(
                           opacity: _showPlayIcon ? 1.0 : 0.0,
                           duration: const Duration(milliseconds: 200),
                           child: Container(
@@ -147,18 +151,117 @@ class _AdVideoItemState extends State<AdVideoItem> {
                             ),
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                )
+              : const Center(
+                  child: CircularProgressIndicator(color: Colors.redAccent),
+                ),
+
+          // 2. ከስክሪኑ በታች ከጨለማ ዳራ (Gradient) ጋር የሚታዩ ጽሁፎች፣ የልዩ ቅንንት ምልክት እና የጊዜ መስመር (Slider)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.8),
+                    Colors.black.withOpacity(0.4),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // የልዩ ቅንንት ባጅ (Badge) - ልክ በሁለተኛው ምስል ላይ እንዳለው
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[700],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('🔥 🔥', style: TextStyle(fontSize: 12)),
+                        SizedBox(width: 4),
+                        Text(
+                          'ልዩ ቅናሽ!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
-                  )
-                : const CircularProgressIndicator(color: Colors.redAccent),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // የቪዲዮ ባለቤቱ ስም ወይም ርዕስ
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // የጊዜ መስመር (Slider) እና ሰዓቶች
+                  if (_isInitialized && _videoController != null) ...[
+                    Row(
+                      children: [
+                        Text(
+                          _formatDuration(position),
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                        ),
+                        Expanded(
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 3.0,
+                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14.0),
+                            ),
+                            child: Slider(
+                              value: currentPositionMs,
+                              min: 0.0,
+                              max: maxDurationMs,
+                              activeColor: Colors.redAccent,
+                              inactiveColor: Colors.white38,
+                              onChanged: (value) {
+                                _videoController!.seekTo(Duration(milliseconds: value.toInt()));
+                              },
+                            ),
+                          ),
+                        ),
+                        Text(
+                          _formatDuration(duration),
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
 
-          // 2. የጎን አዝራሮች (Like, Share, Comment)
+          // 3. የጎን አዝራሮች (Like, Comment, Share, Profile) - ከቀኝ በኩል ከታች ከፍ ብሎ
           Positioned(
-            right: 16,
-            bottom: 100,
+            right: 12,
+            bottom: 90,
             child: VideoActionsWidget(
-              initialLikeCount: 54,
+              initialLikeCount: 44000, // 44.0K እንዲመስል
               shareCount: 1809,
               onCommentPressed: _openComments,
               onSharePressed: () {
@@ -166,63 +269,6 @@ class _AdVideoItemState extends State<AdVideoItem> {
                   const SnackBar(content: Text('ሊንኩ ተገልብጧል!')),
                 );
               },
-            ),
-          ),
-
-          // 3. የሰዓት መቆጣጠሪያ (Slider) እና የቪዲዮ ርዕስ
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 75,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // ቪዲዮው እስኪጫን ድረስ የሰዓት መስመሩን አንደብቀውም፣ ይልቅስ _isInitialized ሲሆን ልክ ከቪዲዮው መጫወት ጋር አብሮ ይታያል
-                if (_isInitialized && _videoController != null) ...[
-                  Row(
-                    children: [
-                      Text(
-                        _formatDuration(position),
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                      Expanded(
-                        child: Slider(
-                          value: currentPositionMs,
-                          min: 0.0,
-                          max: maxDurationMs,
-                          activeColor: Colors.redAccent,
-                          inactiveColor: Colors.grey.withOpacity(0.5),
-                          onChanged: (value) {
-                            _videoController!.seekTo(Duration(milliseconds: value.toInt()));
-                          },
-                        ),
-                      ),
-                      Text(
-                        _formatDuration(duration),
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ] else ...[
-                  // ቪዲዮው እየተጫነ (Loading) ባለበት ሰዓት ዱሬሽኑ 00:00 ሆኖ እንዳይዘገይ የጫን መጫወቻ (Placeholder) ማሳየት ይቻላል
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("00:00", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text("00:00", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                    ],
-                  ),
-                ],
-              ],
             ),
           ),
         ],
