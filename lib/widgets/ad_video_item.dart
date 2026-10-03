@@ -174,6 +174,7 @@ class _AdVideoItemState extends State<AdVideoItem> {
                 ),
                 const SizedBox(height: 10),
                 if (_isInitialized && _videoController != null) ...[
+                if (_isInitialized && _videoController != null) ...[
                   Row(
                     children: [
                       Text(
@@ -182,15 +183,15 @@ class _AdVideoItemState extends State<AdVideoItem> {
                       ),
                       Expanded(
                         child: Slider(
-                          value: _videoController!.value.position.inMilliseconds.toDouble(),
+                          value: _videoController!.value.position.inSeconds.toDouble(),
                           min: 0.0,
-                          max: _videoController!.value.duration.inMilliseconds > 0
-                              ? _videoController!.value.duration.inMilliseconds.toDouble()
+                          max: _videoController!.value.duration.inSeconds > 0
+                              ? _videoController!.value.duration.inSeconds.toDouble()
                               : 1.0,
                           activeColor: Colors.redAccent,
                           inactiveColor: Colors.grey.withOpacity(0.5),
                           onChanged: (value) {
-                            _videoController!.seekTo(Duration(milliseconds: value.toInt()));
+                            _videoController!.seekTo(Duration(seconds: value.toInt()));
                           },
                         ),
                       ),
