@@ -22,9 +22,19 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       'comment': 'ይህን ምርት እንዴት ማግኘት እንችላለን?',
       'time': '10 ደቂቃ በፊት',
     },
+    {
+      'name': 'ሳሙኤል',
+      'comment': 'ሰላም፣ ይህ ሊንክ ይሰራል?',
+      'time': '15 ደቂቃ በፊት',
+    },
+    {
+      'name': 'ገነት',
+      'comment': 'በጣም አሪፍ ነው!',
+      'time': '1 ሰዓት በፊት',
+    },
   ];
 
-  // 1. አዲስ ኮሜንት የመጨመር ተግባር (ለቁጥር ቆጠራ የተስተካከለ)
+  // አዲስ ኮሜንት የመጨመር ተግባር (ለቁጥር ቆጠራ የተስተካከለ)
   void _addComment() {
     if (_commentController.text.trim().isEmpty) return;
     setState(() {
@@ -39,7 +49,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).unfocus();
   }
 
-  // 2. ኮሜንትን የመሰረዝ ተግባር
+  // ኮሜንትን የመሰረዝ ተግባር
   void _deleteComment(int index) {
     showDialog(
       context: context,
@@ -78,8 +88,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // አጠቃላይ የኮሜንቶች ብዛት
-    final int commentCount = _comments.length;
+    // አጠቃላይ የኮሜንቶች ብዛት (ከምሳሌው ጋር እንዲመሳሰል 4 ተጀመረ)
+    // ወደፊት ከዳታቤዝ እውነተኛውን ቁጥር ለማግኘት እዚህ ላይ መቀየር ይቻላል።
+    final int baseCount = 745; 
+    final int newComments = _comments.length;
+    final int totalCommentCount = baseCount + newComments;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.65,
@@ -103,7 +116,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           ),
           Text(
             // የኮሜንቶች ብዛት በራስ-ሰር ይዘምናል
-            'አስተያየቶች ($commentCount)', 
+            'አስተያየቶች ($totalCommentCount)', 
             style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
@@ -124,8 +137,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   // ረጅም ጊዜ ሲጫን (Long Press) የሚሰራ ተግባር
                   child: GestureDetector(
                     onLongPress: () {
-                      // 'እርስዎ' የጻፉትን ኮሜንት ብቻ ለመሰረዝ ወይም ሁሉንም ለመሰረዝ ሊመርጡ ይችላሉ።
-                      // እዚህ ላይ ማንኛውንም ኮሜንት መረርጥ ያስችላል።
                       _deleteComment(index);
                     },
                     child: Container(
@@ -163,16 +174,15 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  item['comment']!,
-                                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                                ),
-                              ],
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                item['comment']!,
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 );
