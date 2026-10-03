@@ -109,6 +109,28 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
+  // የሌሎቹ አዶዎች መጫኛ ፋንክሽኖች
+  void _onImagePickPressed() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ፎቶ መምረጫ ተከፍቷል')),
+    );
+  }
+
+  void _onEmojiPressed() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ኢሞጂ ማስተካከያ ተከፍቷል')),
+    );
+  }
+
+  void _onMentionPressed() {
+    setState(() {
+      _commentController.text += '@';
+      _commentController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _commentController.text.length),
+      );
+    });
+  }
+
   @override
   void dispose() {
     _commentController.dispose();
@@ -171,7 +193,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      // የፕሮፋይል ቼክል ፎቶ/አክታር
                                       CircleAvatar(
                                         radius: 18,
                                         backgroundColor: Colors.green[800],
@@ -181,12 +202,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      // የኮሜንቱ ዝርዝር አቀማመጥ (እንደ ቲክቶክ)
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            // 1. የተጠቃሚው ስም
                                             Text(
                                               item['name']!,
                                               style: const TextStyle(
@@ -196,7 +215,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                               ),
                                             ),
                                             const SizedBox(height: 4),
-                                            // 2. የኮሜንቱ ጽሁፍ
                                             Text(
                                               item['comment']!,
                                               style: const TextStyle(
@@ -205,7 +223,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                               ),
                                             ),
                                             const SizedBox(height: 6),
-                                            // 3. ሰዓት እና ሪፕላይ (Reply) በግራ በኩል
                                             Row(
                                               children: [
                                                 Text(
@@ -226,14 +243,13 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                           ],
                                         ),
                                       ),
-                                      // 4. በስተቀኝ በኩል የሚቀመጡ የላይክ እና የዲስላይክ አዶዎች (እንደ ቲክቶክ)
                                       Column(
-                                        children: [
-                                          const Icon(Icons.favorite_border, color: Colors.grey, size: 20),
-                                          const SizedBox(height: 2),
-                                          const Text('0', style: TextStyle(color: Colors.grey, fontSize: 10)),
-                                          const SizedBox(height: 10),
-                                          const Icon(Icons.thumb_down_off_alt, color: Colors.grey, size: 18),
+                                        children: const [
+                                          Icon(Icons.favorite_border, color: Colors.grey, size: 20),
+                                          SizedBox(height: 2),
+                                          Text('0', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                                          SizedBox(height: 10),
+                                          Icon(Icons.thumb_down_off_alt, color: Colors.grey, size: 18),
                                         ],
                                       ),
                                     ],
@@ -244,7 +260,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           },
                         ),
                 ),
-                // የታችኛው የ ግብዓት (Input) ሣጥን
+                // የታችኛው የግብዓት ሣጥን (ከመላኪያ ቁልፍ እና ከሌሎች አዶዎች ጋር)
                 Container(
                   padding: EdgeInsets.only(
                     left: 16,
@@ -279,12 +295,27 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           onSubmitted: (_) => _addComment(),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.image_outlined, color: Colors.grey),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.sentiment_satisfied_outlined, color: Colors.grey),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.alternate_email, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      // ፎቶ መምረጫ አዶ (ሲጫን ይከፍታል)
+                      IconButton(
+                        icon: const Icon(Icons.image_outlined, color: Colors.grey),
+                        onPressed: _onImagePickPressed,
+                      ),
+                      // ኢሞጂ አዶ (ሲጫን ይከፍታል)
+                      IconButton(
+                        icon: const Icon(Icons.sentiment_satisfied_outlined, color: Colors.grey),
+                        onPressed: _onEmojiPressed,
+                      ),
+                      // ሜንሽን አዶ (ሲጫን "@" ጨምሮ ይከፍታል)
+                      IconButton(
+                        icon: const Icon(Icons.alternate_email, color: Colors.grey),
+                        onPressed: _onMentionPressed,
+                      ),
+                      // መላኪያ (Send) ቁልፍ
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Colors.greenAccent),
+                        onPressed: _addComment,
+                      ),
                     ],
                   ),
                 ),
