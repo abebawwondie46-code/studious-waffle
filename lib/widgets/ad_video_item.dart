@@ -24,7 +24,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
   bool _showPlayIcon = false;
   late AnimationController _discController;
   
-  // የሰርች (Search) መቆጣጠሪያዎች
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
@@ -90,7 +89,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
     );
   }
 
-  // የሰርች ማዘዣ ሳጥን (Search Dialog) ማሳያ
   void _openSearchDialog() {
     showDialog(
       context: context,
@@ -192,7 +190,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. ቪዲዮው ሙሉ ስክሪኑን እንዲሸፍን (Full Screen Cover)
+          // 1. ቪዲዮው ሙሉ ስክሪኑን እንዲሸፍን
           _isInitialized && _videoController != null
               ? GestureDetector(
                   onTap: _togglePlayPause,
@@ -207,7 +205,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                           child: VideoPlayer(_videoController!),
                         ),
                       ),
-                      // ጫን/አቁም (Play/Pause) ምልክት በመሃል ላይ
                       Center(
                         child: AnimatedOpacity(
                           opacity: _showPlayIcon ? 1.0 : 0.0,
@@ -235,7 +232,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
 
-          // 2. ከላይ በስተቀኝ በኩል የሰርች (Search) ቁልፍ - የተካተተበት ቦታ
+          // 2. ከላይ በስተቀኝ በኩል የሰርች (Search) ቁልፍ
           Positioned(
             top: 45,
             right: 16,
@@ -245,7 +242,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
           ),
 
-          // 3. ከስክሪኑ በታች ከጨለማ ዳራ ጋር የሚታዩ ጽሁፎች፣ የልዩ ቅንንት ምልክት እና የጊዜ መስመር (Slider)
+          // 3. ከስክሪኑ በታች የርዕስ እና የጊዜ መስመር (Slider) መቆጣጠሪያ
           Positioned(
             left: 0,
             right: 0,
@@ -267,7 +264,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // የልዩ ቅናሽ ባጅ (Badge)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -291,8 +287,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                     ),
                   ),
                   const SizedBox(height: 8),
-
-                  // የቪዲዮ ባለቤቱ ስም ወይም ርዕስ (እንዲሁም ሰርች የተደረገ ቃል ካለ ማሳየት ይቻላል)
                   Text(
                     _isSearching ? '${widget.title} (ፍለጋ: $_searchQuery)' : widget.title,
                     style: const TextStyle(
@@ -302,8 +296,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // የጊዜ መስመር (Slider) እና ሰዓቶች
                   if (_isInitialized && _videoController != null) ...[
                     Row(
                       children: [
@@ -342,7 +334,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
           ),
 
-          // 4. የጎን አዝራሮች (Profile, Like 44.0K, Comment 745, Share 1.8K እና የሚሽከረከር የሙዚቃ ዲስክ)
+          // 4. የጎን አዝራሮች (ትክክለኞቹ የቲክቶክ አዶዎች: Profile, Like, Comment, Share with double arrows, Music Disc)
           Positioned(
             right: 12,
             bottom: 80,
@@ -379,7 +371,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                   ],
                 ),
 
-                // ላይክ (Like - 440)
+                // ላይክ (Like)
                 Column(
                   children: [
                     IconButton(
@@ -394,11 +386,11 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-                // ኮሜንት (Comment - 745)
+                // ኮሜንት (Comment - ልክ እንደ ምስሉ የተስተካከለ የንግግር አዶ)
                 Column(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 30),
+                      icon: const Icon(Icons.chat_bubble, color: Colors.white, size: 28),
                       onPressed: _openComments,
                     ),
                     const Text(
@@ -409,11 +401,11 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-                // ሼር (Share - 112)
+                // ሼር (Share - ልክ እንደ ምስሉ ሁለት የቀስት አቅጣጫዎች ያሉት)
                 Column(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.share, color: Colors.white, size: 30),
+                      icon: const Icon(Icons.reply, color: Colors.white, size: 32),
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('ሊንኩ ተገልብጧል!')),
