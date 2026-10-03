@@ -24,6 +24,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     },
   ];
 
+  // 1. አዲስ ኮሜንት የመጨመር ተግባር (ለቁጥር ቆጠራ የተስተካከለ)
   void _addComment() {
     if (_commentController.text.trim().isEmpty) return;
     setState(() {
@@ -34,6 +35,39 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       });
       _commentController.clear();
     });
+    // ኪቦርዱን መዝጋት
+    FocusScope.of(context).unfocus();
+  }
+
+  // 2. ኮሜንትን የመሰረዝ ተግባር
+  void _deleteComment(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A2A2A),
+          title: const Text('አስተያየትን ሰርዝ', style: TextStyle(color: Colors.white)),
+          content: const Text('እርግጠኛ ነዎት ይህን አስተያየት መሰረዝ ይፈልጋሉ?', style: TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              child: const Text('አይ', style: TextStyle(color: Colors.grey)),
+              onPressed: () {
+                Navigator.of(context).pop(); // የመሰረዝ መስኮቱን መዝጋት
+              },
+            ),
+            TextButton(
+              child: const Text('አዎ፣ ሰርዝ', style: TextStyle(color: Colors.redAccent)),
+              onPressed: () {
+                setState(() {
+                  _comments.removeAt(index); // ኮሜንቱን ከዝርዝሩ ማስወገድ
+                });
+                Navigator.of(context).pop(); // የመሰረዝ መስኮቱን መዝጋት
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -44,15 +78,18 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // አጠቃላይ የኮሜንቶች ብዛት
+    final int commentCount = _comments.length;
+
     return Container(
-      height: MediaQuery.of(context).size.height * 0.65, // የስክሪኑን 65% እንዲሸፍን
+      height: MediaQuery.of(context).size.height * 0.65,
       decoration: const BoxDecoration(
         color: Color(0xFF1E1E1E),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
-          // 1. የከፍታ መያዣ (Drag Handle) እና  തല ጽሁፍ
+          // 1. የከፍታ መያዣ (Drag Handle) እና ርዕስ (ከብዛት ቆጠራ ጋር)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Container(
@@ -64,9 +101,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               ),
             ),
           ),
-          const Text(
-            'አስተያየቶች (Comments)',
-            style: TextStyle(
+          Text(
+            // የኮሜንቶች ብዛት በራስ-ሰር ይዘምናል
+            'አስተያየቶች ($commentCount)', 
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -74,7 +112,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           ),
           const Divider(color: Colors.white24),
 
-          // 2. የኮሜንቶች ዝርዝር (List of Comments)
+          // 2. የኮሜንቶች ዝርዝር (ረጅም ሲጫኑ ለመሰረዝ የተስተካከለ)
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -83,61 +121,72 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 final item = _comments[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Colors.redAccent,
-                        child: Text(
-                          item['name']![0],
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // ረጅም ጊዜ ሲጫን (Long Press) የሚሰራ ተግባር
+                  child: GestureDetector(
+                    onLongPress: () {
+                      // 'እርስዎ' የጻፉትን ኮሜንት ብቻ ለመሰረዝ ወይም ሁሉንም ለመሰረዝ ሊመርጡ ይችላሉ።
+                      // እዚህ ላይ ማንኛውንም ኮሜንት መረርጥ ያስችላል።
+                      _deleteComment(index);
+                    },
+                    child: Container(
+                      color: Colors.transparent, // ለመንካት ምቹ እንዲሆን
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.redAccent,
+                            child: Text(
+                              item['name']![0],
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  item['name']!,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      item['name']!,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      item['time']!,
+                                      style: const TextStyle(color: Colors.grey, fontSize: 10),
+                                    ),
+                                  ],
                                 ),
+                                const SizedBox(height: 4),
                                 Text(
-                                  item['time']!,
-                                  style: const TextStyle(color: Colors.grey, fontSize: 10),
+                                  item['comment']!,
+                                  style: const TextStyle(color: Colors.white, fontSize: 14),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item['comment']!,
-                              style: const TextStyle(color: Colors.white, fontSize: 14),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 );
               },
             ),
           ),
 
-          // 3. ከታች አዲስ ኮሜንት መጻፊያ ሳጥን (Comment Input Bar)
+          // 3. ከታች አዲስ ኮሜንት መጻፊያ ሳጥን
           Container(
             padding: EdgeInsets.only(
               left: 16,
               right: 16,
               top: 8,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 8, // የኪቦርድ መሸፈኛ እንዳይኖር
+              bottom: MediaQuery.of(context).viewInsets.bottom + 8,
             ),
             color: Colors.black54,
             child: Row(
@@ -157,6 +206,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         borderSide: BorderSide.none,
                       ),
                     ),
+                    // ኢንተር ሲጫን ኮሜንቱን ለመጨመር
+                    onSubmitted: (_) => _addComment(),
                   ),
                 ),
                 const SizedBox(width: 8),
