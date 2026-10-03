@@ -48,7 +48,8 @@ class _AdVideoItemState extends State<AdVideoItem> {
   }
 
   void _videoListener() {
-    if (mounted) {
+    // ቪዲዮው በሚጫወትበት ጊዜ የሰዓት መስመሩ ከቪዲዮው ጋር አብሮ እንዲዘምን ራሱን እንዲያድስ እናደርጋለን
+    if (mounted && _videoController != null && _videoController!.value.isInitialized) {
       setState(() {});
     }
   }
@@ -100,13 +101,17 @@ class _AdVideoItemState extends State<AdVideoItem> {
 
   @override
   Widget build(BuildContext context) {
-    // የቪዲዮውን ዱሬሽን እና ፖዚሽን ለማስላት (ደህንነቱ የተጠበቀ እሴት)
-    final duration = _videoController?.value.duration ?? Duration.zero;
-    final position = _videoController?.value.position ?? Duration.zero;
-    
-    // ዱሬሽኑ ዜሮ እንዳይሆን ማድረግ (ለ Slider max እሴት)
-    final maxDurationMs = duration.inMilliseconds > 0 ? duration.inMilliseconds.toDouble() : 1.0;
-    final currentPositionMs = position.inMilliseconds.toDouble().clamp(0.0, maxDurationMs);
+    // ቪዲዮው ሙሉ በሙሉ እስኪጫን (initialize እስኪሆን) ድረስ የ 0 ሰዓት እንሰጣለን፣ ከተጫነ በኋላ ግን ትክክለኛውን ርዝመት እንወስዳለን
+    final Duration duration = (_isInitialized && _videoController != null)
+        ? _videoController!.value.duration
+        : Duration.zero;
+        
+    final Duration position = (_isInitialized && _videoController != null)
+        ? _videoController!.value.position
+        : Duration.zero;
+
+    final double maxDurationMs = duration.inMilliseconds > 0 ? duration.inMilliseconds.toDouble() : 1.0;
+    final double currentPositionMs = position.inMilliseconds.toDouble().clamp(0.0, maxDurationMs);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -164,7 +169,7 @@ class _AdVideoItemState extends State<AdVideoItem> {
             ),
           ),
 
-          // 3. የሰዓት መቆጣጠሪያ (Slider) እና የቪዲዮ ርዕስ ከታችኛው ማሰሻ በላይ
+          // 3. የሰዓት መቆጣጠሪያ (Slider) እና የቪዲዮ ርዕስ
           Positioned(
             left: 16,
             right: 16,
@@ -181,6 +186,7 @@ class _AdVideoItemState extends State<AdVideoItem> {
                   ),
                 ),
                 const SizedBox(height: 10),
+                // ቪዲዮው እስኪጫን ድረስ የሰዓት መስመሩን አንደብቀውም፣ ይልቅስ _isInitialized ሲሆን ልክ ከቪዲዮው መጫወት ጋር አብሮ ይታያል
                 if (_isInitialized && _videoController != null) ...[
                   Row(
                     children: [
@@ -204,6 +210,15 @@ class _AdVideoItemState extends State<AdVideoItem> {
                         _formatDuration(duration),
                         style: const TextStyle(color: Colors.white70, fontSize: 12),
                       ),
+                    ],
+                  ),
+                ] else ...[
+                  // ቪዲዮው እየተጫነ (Loading) ባለበት ሰዓት ዱሬሽኑ 00:00 ሆኖ እንዳይዘገይ የጫን መጫወቻ (Placeholder) ማሳየት ይቻላል
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("00:00", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text("00:00", style: TextStyle(color: Colors.white70, fontSize: 12)),
                     ],
                   ),
                 ],
