@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'video_actions_widget.dart';
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -19,14 +18,19 @@ class AdVideoItem extends StatefulWidget {
   State<AdVideoItem> createState() => _AdVideoItemState();
 }
 
-class _AdVideoItemState extends State<AdVideoItem> {
+class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStateMixin {
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   bool _showPlayIcon = false;
+  late AnimationController _discController;
 
   @override
   void initState() {
     super.initState();
+    _discController = AnimationController(
+      duration: const Duration(seconds: 4),
+      vsync: this,
+    )..repeat();
     _initializeVideo();
   }
 
@@ -55,6 +59,7 @@ class _AdVideoItemState extends State<AdVideoItem> {
 
   @override
   void dispose() {
+    _discController.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
     super.dispose();
@@ -83,8 +88,10 @@ class _AdVideoItemState extends State<AdVideoItem> {
     setState(() {
       if (_videoController!.value.isPlaying) {
         _videoController!.pause();
+        _discController.stop();
       } else {
         _videoController!.play();
+        _discController.repeat();
       }
       _showPlayIcon = true;
     });
@@ -131,7 +138,7 @@ class _AdVideoItemState extends State<AdVideoItem> {
                           child: VideoPlayer(_videoController!),
                         ),
                       ),
-                      // ጫን/አቁም (Play/Pause) ምልክት በመሃል ላይ ሲነካ ይታያል
+                      // ጫን/አቁም (Play/Pause) ምልክት በመሃል ላይ
                       Center(
                         child: AnimatedOpacity(
                           opacity: _showPlayIcon ? 1.0 : 0.0,
@@ -159,13 +166,25 @@ class _AdVideoItemState extends State<AdVideoItem> {
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
 
-          // 2. ከስክሪኑ በታች ከጨለማ ዳራ (Gradient) ጋር የሚታዩ ጽሁፎች፣ የልዩ ቅንንት ምልክት እና የጊዜ መስመር (Slider)
+          // 2. ከላይ በስተቀኝ በኩል የሰርች (Search) ቁልፍ
+          Positioned(
+            top: 45,
+            right: 16,
+            child: IconButton(
+              icon: const Icon(Icons.search, color: Colors.white, size: 28),
+              onPressed: () {
+                // የሰርች ማዘዣ እዚህ ይጻፍ
+              },
+            ),
+          ),
+
+          // 3. ከስክሪኑ በታች ከጨለማ ዳራ ጋር የሚታዩ ጽሁፎች፣ የልዩ ቅንንት ምልክት እና የጊዜ መስመር (Slider)
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
+              padding: const EdgeInsets.fromLTRB(16, 40, 70, 20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
@@ -181,7 +200,7 @@ class _AdVideoItemState extends State<AdVideoItem> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // የልዩ ቅንንት ባጅ (Badge) - ልክ በሁለተኛው ምስል ላይ እንዳለው
+                  // የልዩ ቅናሽ ባጅ (Badge)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -256,19 +275,109 @@ class _AdVideoItemState extends State<AdVideoItem> {
             ),
           ),
 
-          // 3. የጎን አዝራሮች (Like, Comment, Share, Profile) - ከቀኝ በኩል ከታች ከፍ ብሎ
+          // 4. የጎን አዝራሮች (Profile, Like 44.0K, Comment 745, Share 1.8K እና የሚሽከረከር የሙዚቃ ዲስክ) በቀጥታ በዚህ ፋይል ውስጥ ተካተዋል
           Positioned(
             right: 12,
-            bottom: 90,
-            child: VideoActionsWidget(
-              initialLikeCount: 44000, // 44.0K እንዲመስል
-              shareCount: 1809,
-              onCommentPressed: _openComments,
-              onSharePressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('ሊንኩ ተገልብጧል!')),
-                );
-              },
+            bottom: 80,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // የፕሮፋይል አዶ (+ ምልክት ያለው)
+                Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      child: const CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.grey,
+                        child: Icon(Icons.person, color: Colors.white, size: 26),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.add, color: Colors.white, size: 14),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // ላይክ (Like - 44.0K)
+                Column(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.favorite_border, color: Colors.white, size: 32),
+                      onPressed: () {},
+                    ),
+                    const Text(
+                      '44.0K',
+                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // ኮሜንት (Comment - 745)
+                Column(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 30),
+                      onPressed: _openComments,
+                    ),
+                    const Text(
+                      '745',
+                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // ሼር (Share - 1.8K)
+                Column(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.share, color: Colors.white, size: 30),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('ሊንኩ ተገልብጧል!')),
+                        );
+                      },
+                    ),
+                    const Text(
+                      '1.8K',
+                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // የሚሽከረከር የሙዚቃ ዲስክ አዶ (Rotating Audio Disc)
+                RotationTransition(
+                  turns: _discController,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey, width: 6),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.music_note, color: Colors.white, size: 14),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
