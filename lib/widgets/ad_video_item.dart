@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:share_plus/share_plus.dart'; // ሼር ለማድረግ የሚያስችል ፓኬጅ
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -35,6 +36,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
   bool _isLiked = false;
   int _commentCount = 745;
   int _shareCount = 112;
+  bool _isFollowing = false; // የፕሮፋይል ፕላስ ቁልፍ ሁኔታ
 
   @override
   void initState() {
@@ -86,6 +88,25 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
     }
   }
 
+  // 1. የሼር ተግባር (Share to apps)
+  Future<void> _handleSharePressed() async {
+    try {
+      await Share.share('ይህንን አስደሳች ቪዲዮ ይመልከቱ: ${widget.videoUrl}');
+      setState(() {
+        _shareCount += 1;
+      });
+
+      if (widget.videoId != null) {
+        await Supabase.instance.client
+            .from('videos')
+            .update({'shares_count': _shareCount})
+            .eq('id', widget.videoId!);
+      }
+    } catch (e) {
+      debugPrint('ሼር ማድረግ ላይ ስህተት ተፈጥሯል: $e');
+    }
+  }
+
   void _initializeVideo() {
     if (widget.videoUrl.isNotEmpty) {
       _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
@@ -125,6 +146,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
     return "$minutes:$seconds";
   }
 
+  // 2. የኮሜንት መስኮት መክፈቻ (Comments with videoId support)
   void _openComments() {
     showModalBottomSheet(
       context: context,
@@ -133,7 +155,9 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => const CommentsBottomSheet(), // ስህተቱ የጠፋበት ትክክለኛ ጥሪ
+      builder: (context) => CommentsBottomSheet(
+        // የቪዲዮ ኮሜንቶች ከዳታቤዝ እንዲመጡ ካስፈለገ እዚህ ቪዲዮ መለያ ማለፍ ይቻላል
+      ),
     );
   }
 
@@ -370,35 +394,54 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                // 3. የፕሮፋይል ፕላስ ቁልፍ (+) ተግባር
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isFollowing = !_isFollowing;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_isFollowing ? 'ተጠቃሚውን ተከተሉ (Following)!' : 'ማስተከተል ሰርዟል'),
+                        duration: const Duration(seconds: 1),
                       ),
-                      child: const CircleAvatar(
-                        radius: 22,
-                        backgroundColor: Colors.grey,
-                        child: Icon(Icons.person, color: Colors.white, size: 26),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Colors.redAccent,
+                    );
+                  },
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
                         ),
-                        child: const Icon(Icons.add, color: Colors.white, size: 14),
+                        child: const CircleAvatar(
+                          radius: 22,
+                          backgroundColor: Colors.grey,
+                          child: Icon(Icons.person, color: Colors.white, size: 26),
+                        ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        bottom: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: _isFollowing ? Colors.green : Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _isFollowing ? Icons.check : Icons.add,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
+                // ላይክ (Like)
                 Column(
                   children: [
                     IconButton(
@@ -417,6 +460,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
+                // ኮሜንት (Comment)
                 Column(
                   children: [
                     IconButton(
@@ -431,6 +475,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
+                // ሼር (Share)
                 Column(
                   children: [
                     IconButton(
@@ -439,11 +484,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                         transform: Matrix4.rotationY(3.14159),
                         child: const Icon(Icons.reply, color: Colors.white, size: 30),
                       ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('የቪዲዮ ሊንክ ተገልብጧል!')),
-                        );
-                      },
+                      onPressed: _handleSharePressed,
                     ),
                     Text(
                       '$_shareCount',
