@@ -156,6 +156,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (context) => CommentsBottomSheet(
+      videoId: widget.videoUrl,
       onCommentCountUpdated: (newCount) {
         setState(() {
           _commentCount = newCount; // ከታች አዲስ ኮሜንት ሲጨመር የውጪው ቁጥር እንዲቀየር ያደርጋል
