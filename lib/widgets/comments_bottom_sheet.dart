@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
-  final Function(int)? onCommentChanged;
+  final List<Map<String, String>> commentsList;
+  final Function(List<Map<String, String>>) onCommentsUpdated;
 
   const CommentsBottomSheet({
     super.key,
-    this.onCommentChanged,
+    required this.commentsList,
+    required this.onCommentsUpdated,
   });
 
   @override
@@ -14,36 +16,20 @@ class CommentsBottomSheet extends StatefulWidget {
 
 class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _commentController = TextEditingController();
-  
-  // የናሙና ኮሜንቶች ዝርዝር (መነሻ ቁጥር 745 ሲደመር የዝርዝሩ ብዛት)
-  final List<Map<String, String>> _comments = [
-    {
-      'name': 'በቀለ',
-      'comment': 'በጣም አሪፍ ማስታወቂያ ነው! ቀጥበት[cite: 12]።',
-      'time': '2 ደቂቃ በፊት',
-    },
-    {
-      'name': 'ሰላማዊት',
-      'comment': 'ይህን ምርት እንዴት ማግኘት እንችላለን?',
-      'time': '10 ደቂቃ በፊት',
-    },
-    {
-      'name': 'ሳሙኤል',
-      'comment': 'ሰላም፣ ይህ ሊንክ ይሰራል?',
-      'time': '15 ደቂቃ በፊት',
-    },
-    {
-      'name': 'ገነት',
-      'comment': 'በጣም አሪፍ ነው!',
-      'time': '1 ሰዓት በፊት',
-    },
-  ];
+  late List<Map<String, String>> _localComments;
+
+  @override
+  void initState() {
+    super.initState();
+    // ከዋናው ስክሪን የመጣውን ዝርዝር እንቀበላለን
+    _localComments = List.from(widget.commentsList);
+  }
 
   void _addComment() {
     if (_commentController.text.trim().isEmpty) return;
     
     setState(() {
-      _comments.insert(0, {
+      _localComments.insert(0, {
         'name': 'እርስዎ',
         'comment': _commentController.text.trim(),
         'time': 'አሁን',
@@ -51,13 +37,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       _commentController.clear();
     });
 
-    // አጠቃላይ ኮሜንት ብዛት (745 ሲደመር አሁን ያሉት ኮሜንቶች ብዛት)
-    final int totalComments = 745 + _comments.length;
-    
-    // ለዋናው ስክሪን አዲሱን ቁጥር እንልካለን
-    if (widget.onCommentChanged != null) {
-      widget.onCommentChanged!(totalComments);
-    }
+    // የተስተካከለውን ዝርዝር ወደ ዋናው ስክሪን እንልካለን
+    widget.onCommentsUpdated(_localComments);
     
     FocusScope.of(context).unfocus();
   }
@@ -79,13 +60,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               child: const Text('አዎ፣ ሰርዝ', style: TextStyle(color: Colors.redAccent)),
               onPressed: () {
                 setState(() {
-                  _comments.removeAt(index);
+                  _localComments.removeAt(index);
                 });
                 
-                final int totalComments = 745 + _comments.length;
-                if (widget.onCommentChanged != null) {
-                  widget.onCommentChanged!(totalComments);
-                }
+                // ከተሰረዘ በኋላም ዝርዝሩን እናዘምነዋለን
+                widget.onCommentsUpdated(_localComments);
                 
                 Navigator.of(context).pop();
               },
@@ -104,7 +83,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final int totalCommentCount = 745 + _comments.length;
+    final int totalCommentCount = 741 + _localComments.length;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.65,
@@ -137,9 +116,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _comments.length,
+              itemCount: _localComments.length,
               itemBuilder: (context, index) {
-                final item = _comments[index];
+                final item = _localComments[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: GestureDetector(
