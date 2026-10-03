@@ -10,7 +10,7 @@ class CommentsBottomSheet extends StatefulWidget {
 class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _commentController = TextEditingController();
   
-  // የናሙና ኮሜንቶች ዝርዝር (እስከሚገናኝ ድረስ)
+  // የናሙና ኮሜንቶች ዝርዝር
   final List<Map<String, String>> _comments = [
     {
       'name': 'በቀለ',
@@ -34,7 +34,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     },
   ];
 
-  // አዲስ ኮሜንት የመጨመር ተግባር (ለቁጥር ቆጠራ የተስተካከለ)
+  // አዲስ ኮሜንት የመጨመር ተግባር
   void _addComment() {
     if (_commentController.text.trim().isEmpty) return;
     setState(() {
@@ -45,7 +45,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       });
       _commentController.clear();
     });
-    // ኪቦርዱን መዝጋት
     FocusScope.of(context).unfocus();
   }
 
@@ -62,16 +61,16 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
             TextButton(
               child: const Text('አይ', style: TextStyle(color: Colors.grey)),
               onPressed: () {
-                Navigator.of(context).pop(); // የመሰረዝ መስኮቱን መዝጋት
+                Navigator.of(context).pop();
               },
             ),
             TextButton(
               child: const Text('አዎ፣ ሰርዝ', style: TextStyle(color: Colors.redAccent)),
               onPressed: () {
                 setState(() {
-                  _comments.removeAt(index); // ኮሜንቱን ከዝርዝሩ ማስወገድ
+                  _comments.removeAt(index);
                 });
-                Navigator.of(context).pop(); // የመሰረዝ መስኮቱን መዝጋት
+                Navigator.of(context).pop();
               },
             ),
           ],
@@ -88,8 +87,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // አጠቃላይ የኮሜንቶች ብዛት (ከምሳሌው ጋር እንዲመሳሰል 4 ተጀመረ)
-    // ወደፊት ከዳታቤዝ እውነተኛውን ቁጥር ለማግኘት እዚህ ላይ መቀየር ይቻላል።
     final int baseCount = 745; 
     final int newComments = _comments.length;
     final int totalCommentCount = baseCount + newComments;
@@ -102,7 +99,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       ),
       child: Column(
         children: [
-          // 1. የከፍታ መያዣ (Drag Handle) እና ርዕስ (ከብዛት ቆጠራ ጋር)
+          // 1. የከፍታ መያዣ እና ርዕስ
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Container(
@@ -115,7 +112,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
             ),
           ),
           Text(
-            // የኮሜንቶች ብዛት በራስ-ሰር ይዘምናል
             'አስተያየቶች ($totalCommentCount)', 
             style: const TextStyle(
               color: Colors.white,
@@ -125,7 +121,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           ),
           const Divider(color: Colors.white24),
 
-          // 2. የኮሜንቶች ዝርዝር (ረጅም ሲጫኑ ለመሰረዝ የተስተካከለ)
+          // 2. የኮሜንቶች ዝርዝር
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -134,13 +130,12 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 final item = _comments[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  // ረጅም ጊዜ ሲጫን (Long Press) የሚሰራ ተግባር
                   child: GestureDetector(
                     onLongPress: () {
                       _deleteComment(index);
                     },
                     child: Container(
-                      color: Colors.transparent, // ለመንካት ምቹ እንዲሆን
+                      color: Colors.transparent,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -174,15 +169,16 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                     ),
                                   ],
                                 ),
-                              const SizedBox(height: 4),
-                              Text(
-                                item['comment']!,
-                                style: const TextStyle(color: Colors.white, fontSize: 14),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  item['comment']!,
+                                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -216,7 +212,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    // ኢንተር ሲጫን ኮሜንቱን ለመጨመር
                     onSubmitted: (_) => _addComment(),
                   ),
                 ),
