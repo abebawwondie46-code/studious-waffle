@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
-  final Function(int) onCommentChanged; // የኮሜንት ብዛት መቀየሪያ callback
+  final Function(int)? onCommentChanged; // አማራጭ (Optional) እንዲሆን ተደርጓል
 
   const CommentsBottomSheet({
     super.key,
-    required this.onCommentChanged,
+    this.onCommentChanged,
   });
 
   @override
@@ -15,10 +15,11 @@ class CommentsBottomSheet extends StatefulWidget {
 class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _commentController = TextEditingController();
   
+  // የናሙና ኮሜንቶች ዝርዝር
   final List<Map<String, String>> _comments = [
     {
       'name': 'በቀለ',
-      'comment': 'በጣም አሪፍ ማስታወቂያ ነው! ቀጥበት።',
+      'comment': 'በጣም አሪፍ ማስታወቂያ ነው! ቀጥበት[cite: 12]።',
       'time': '2 ደቂቃ በፊት',
     },
     {
@@ -48,9 +49,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       });
       _commentController.clear();
     });
-    // ውጭ ላለው ገጽ አዲሱን አጠቃላይ ብዛት ማሳወቅ
+
     final int total = 745 + _comments.length;
-    widget.onCommentChanged(total);
+    if (widget.onCommentChanged != null) {
+      widget.onCommentChanged!(total);
+    }
     FocusScope.of(context).unfocus();
   }
 
@@ -74,7 +77,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   _comments.removeAt(index);
                 });
                 final int total = 745 + _comments.length;
-                widget.onCommentChanged(total);
+                if (widget.onCommentChanged != null) {
+                  widget.onCommentChanged!(total);
+                }
                 Navigator.of(context).pop();
               },
             ),
