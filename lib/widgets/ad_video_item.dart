@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // የ Supabase ፓኬጅ
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
   final String title;
   final String videoUrl;
   final Map<String, dynamic> templateJson;
+  final String? videoId; // ከዳታቤዝ የሚመጣ ልዩ መለያ (ID)
 
   const AdVideoItem({
     super.key,
     required this.title,
     required this.videoUrl,
     required this.templateJson,
+    this.videoId,
   });
 
   @override
@@ -28,6 +31,12 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
   bool _isSearching = false;
   String _searchQuery = '';
 
+  // ከ Supabase የሚመጡ ተለዋዋጭ መረጃዎች (ላይክ እና ኮሜንት ብዛት)
+  int _likeCount = 440;
+  bool _isLiked = false;
+  int _commentCount = 745;
+  int _shareCount = 112;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +45,48 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
       vsync: this,
     )..repeat();
     _initializeVideo();
+    _fetchEngagementData(); // ከኢንተርኔት መረጃዎችን ማምጣት
+  }
+
+  // 1. የቪዲዮውን ላይክ እና ኮሜንት ብዛት ከ Supabase ሰርቨር ማምጣት
+  Future<void> _fetchEngagementData() async {
+    if (widget.videoId == null) return;
+    try {
+      final response = await Supabase.instance.client
+          .from('videos') // የዳታቤዝ ሠንጠረዥ ስም
+          .select('likes_count, comments_count, shares_count')
+          .eq('id', widget.videoId!)
+          .single();
+
+      if (mounted) {
+        setState(() {
+          _likeCount = response['likes_count'] ?? _likeCount;
+          _commentCount = response['comments_count'] ?? _commentCount;
+          _shareCount = response['shares_count'] ?? _shareCount;
+        });
+      }
+    } catch (e) {
+      debugPrint('ዳታ በማምጣት ላይ ስህተት ተፈጥሯል: $e');
+    }
+  }
+
+  // 2. ላይክ ሲደረግ ወደ Supabase ሰርቨር መላክ (Update)
+  Future<void> _handleLikePressed() async {
+    setState(() {
+      _isLiked = !_isLiked;
+      _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
+    });
+
+    if (widget.videoId != null) {
+      try {
+        await Supabase.instance.client
+            .from('videos')
+            .update({'likes_count': _likeCount})
+            .eq('id', widget.videoId!);
+      } catch (e) {
+        debugPrint('ላይክን ወደ ሰርቨር መላክ አልተቻለም: $e');
+      }
+    }
   }
 
   void _initializeVideo() {
@@ -85,10 +136,11 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => const CommentsBottomSheet(),
+      builder: (context) => CommentsBottomSheet(videoId: widget.videoId),
     );
   }
 
+  // 3. በኢንተርኔት የተደገፈ የቪዲዮ ፍለጋ (Search Functionality with Supabase)
   void _openSearchDialog() {
     showDialog(
       context: context,
@@ -96,12 +148,12 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
         return AlertDialog(
           backgroundColor: Colors.grey[900],
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: const Text('ቪዲዮዎችን ይፈልጉ', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: const Text('ቪዲዮዎችን በኢንተርኔት ይፈልጉ', style: TextStyle(color: Colors.white, fontSize: 18)),
           content: TextField(
             controller: _searchController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'ቁልፍ ቃል ያስገቡ...',
+              hintText: 'ርዕስ ወይም ቁልፍ ቃል ያስገቡ...',
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: Colors.black54,
@@ -111,17 +163,9 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
               ),
               prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
             ),
-            onSubmitted: (value) {
-              setState(() {
-                _searchQuery = value.trim();
-                _isSearching = _searchQuery.isNotEmpty;
-              });
+            onSubmitted: (value) async {
               Navigator.pop(context);
-              if (_isSearching) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('የተፈለገው: "$_searchQuery"')),
-                );
-              }
+              await _performSearch(value.trim());
             },
           ),
           actions: [
@@ -131,17 +175,10 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              onPressed: () {
-                setState(() {
-                  _searchQuery = _searchController.text.trim();
-                  _isSearching = _searchQuery.isNotEmpty;
-                });
+              onPressed: () async {
+                final query = _searchController.text.trim();
                 Navigator.pop(context);
-                if (_isSearching) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('የተፈለገው: "$_searchQuery"')),
-                  );
-                }
+                await _performSearch(query);
               },
               child: const Text('ፈልግ', style: TextStyle(color: Colors.white)),
             ),
@@ -149,6 +186,30 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
         );
       },
     );
+  }
+
+  // ከ Supabase ሰርቨር መረጃዎችን የመፈለግ ተግባር
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) return;
+    try {
+      final results = await Supabase.instance.client
+          .from('videos')
+          .select()
+          .ilike('title', '%$query%'); // በሰርቨር ውስጥ ርዕሱን መፈለግ
+
+      setState(() {
+        _searchQuery = query;
+        _isSearching = true;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${results.length} ቪዲዮዎች ተገኝተዋል!')),
+        );
+      }
+    } catch (e) {
+      debugPrint('የፍለጋ ስህተት: $e');
+    }
   }
 
   void _togglePlayPause() {
@@ -190,7 +251,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. ቪዲዮው ሙሉ ስክሪኑን እንዲሸፍን
+          // 1. ቪዲዮ ማጫወቻ
           _isInitialized && _videoController != null
               ? GestureDetector(
                   onTap: _togglePlayPause,
@@ -232,7 +293,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
 
-          // 2. ከላይ በስተቀኝ በኩል የሰርች (Search) ቁልፍ
+          // 2. ከላይ በስተቀኝ የሰርች ቁልፍ
           Positioned(
             top: 45,
             right: 16,
@@ -242,7 +303,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
           ),
 
-          // 3. ከስክሪኑ በታች የርዕስ እና የጊዜ መስመር (Slider) መቆጣጠሪያ (ልዩ ቅናሽ ባጅ ተወግዷል)
+          // 3. ከታች የርዕስ እና የሰዓት መስመር መቆጣጠሪያ
           Positioned(
             left: 0,
             right: 0,
@@ -311,14 +372,14 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
           ),
 
-          // 4. የጎን አዝራሮች (Profile, Like, Comment ከምስሉ ጋር የተስተካከለ, Share, Music Disc)
+          // 4. የጎን አዝራሮች (ከዳታቤዝ ጋር የተገናኙ ላይክ እና ኮሜንት ቁጥሮች)
           Positioned(
             right: 12,
             bottom: 80,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // የፕሮፋይል አዶ (+ ምልክት ያለው)
+                // የፕሮፋይል አዶ
                 Stack(
                   alignment: Alignment.bottomCenter,
                   children: [
@@ -348,37 +409,41 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                   ],
                 ),
 
-                // ላይክ (Like)
+                // ላይክ (Like button linked to Supabase)
                 Column(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.favorite, color: Colors.redAccent, size: 32),
-                      onPressed: () {},
+                      icon: Icon(
+                        _isLiked ? Icons.favorite : Icons.favorite_border,
+                        color: _isLiked ? Colors.redAccent : Colors.white,
+                        size: 32,
+                      ),
+                      onPressed: _handleLikePressed,
                     ),
-                    const Text(
-                      '440',
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    Text(
+                      '$_likeCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
 
-                // ኮሜንት (Comment - ልክ እንደ ጠየቁት የተስተካከለ የንግግር አዶ)
+                // ኮሜንት (Comment)
                 Column(
                   children: [
                     IconButton(
                       icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 28),
                       onPressed: _openComments,
                     ),
-                    const Text(
-                      '745',
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    Text(
+                      '$_commentCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
 
-                // ሼር (Share - አቅጣጫው የተዞረ)
+                // ሼር (Share)
                 Column(
                   children: [
                     IconButton(
@@ -389,19 +454,19 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                       ),
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('ሊንኩ ተገልብጧል!')),
+                          const SnackBar(content: Text('የቪዲዮ ሊንክ ተገልብጧል!')),
                         );
                       },
                     ),
-                    const Text(
-                      '112',
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    Text(
+                      '$_shareCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
 
-                // የሚሽከረከር የሙዚቃ ዲስክ አዶ (Rotating Audio Disc)
+                // የሚሽከረከር የሙዚቃ ዲስክ
                 RotationTransition(
                   turns: _discController,
                   child: Container(
