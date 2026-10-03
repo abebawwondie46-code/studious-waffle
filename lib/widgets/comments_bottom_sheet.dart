@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final FocusNode _commentFocusNode = FocusNode();
   List<Map<String, dynamic>> _comments = [];
   bool _isLoading = true;
-  String? _replyingToUser; // ሪፕላይ ሲደረግ የተጠቃሚውን ስም ለመያዝ
+  String? _replyingToUser;
 
   @override
   void initState() {
@@ -66,6 +67,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       _comments.insert(0, {
         'name': 'እርስዎ',
         'comment': commentText,
+        'imagePath': null, // ጽሁፍ ብቻ ሲሆን
         'time': '2s ago',
         'likes': 0,
         'isLiked': false,
@@ -159,7 +161,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  // 1. ፎቶ መምረጫ (Image Picker)
+  // ፎቶን ከአሁን በኋላ በቀጥታ በምስል (Image) መልክ እንዲቀመጥ ማድረግ
   Future<void> _onImagePickPressed() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
@@ -167,7 +169,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       setState(() {
         _comments.insert(0, {
           'name': 'እርስዎ',
-          'comment': '[ፎቶ ተልኳል: ${image.name}]',
+          'comment': '',
+          'imagePath': image.path, // የፋይሉን ትክክለኛ ፓዝ (Path) እንይዛለን
           'time': '2s ago',
           'likes': 0,
           'isLiked': false,
@@ -181,7 +184,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
-  // 2. ኢሞጂ መምረጫ (BottomSheet)
   void _onEmojiPressed() {
     showModalBottomSheet(
       context: context,
@@ -220,7 +222,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  // 3. ሜንሽን አዶ
   void _onMentionPressed() {
     setState(() {
       _commentController.text += '@';
@@ -231,7 +232,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
-  // 4. ሪፕላይ ሲደረግ
   void _onReplyPressed(String userName) {
     setState(() {
       _replyingToUser = '@$userName';
@@ -297,6 +297,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final bool isDisliked = item['isDisliked'] ?? false;
                             final int likesCount = item['likes'] ?? 0;
                             final String userName = item['name'];
+                            final String? imagePath = item['imagePath'];
+                            final String commentText = item['comment'] ?? '';
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -329,13 +331,28 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                               ),
                                             ),
                                             const SizedBox(height: 4),
-                                            Text(
-                                              item['comment'],
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 14,
+                                            // ፎቶ ካለ የፎቶውን ፋይል እናሳያለን፣ ካለፈ ጽሁፉን
+                                            if (imagePath != null && imagePath.isNotEmpty)
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  child: Image.file(
+                                                    File(imagePath),
+                                                    width: 150,
+                                                    height: 150,
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              )
+                                            else
+                                              Text(
+                                                commentText,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14,
+                                                ),
                                               ),
-                                            ),
                                             const SizedBox(height: 6),
                                             Row(
                                               children: [
@@ -344,7 +361,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                                   style: const TextStyle(color: Colors.grey, fontSize: 11),
                                                 ),
                                                 const SizedBox(width: 16),
-                                                // ሪፕላይ ሲጫን የሚሰራበት
                                                 GestureDetector(
                                                   onTap: () => _onReplyPressed(userName),
                                                   child: const Text(
@@ -458,7 +474,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.alternate_email, color: Colors.grey),
-                            onPressed: _onMentionPressed,
+                            onPressed: _onMention_Pressed_Safe(),
                           ),
                           IconButton(
                             icon: const Icon(Icons.send, color: Colors.greenAccent),
@@ -472,5 +488,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               ],
             ),
     );
+  }
+
+  // ለሜንሽን አዶ የተስተካከለ ረዳት ፋንክሽን
+  VoidCallback _onMention_Pressed_Safe() {
+    return _onMentionPressed;
   }
 }
