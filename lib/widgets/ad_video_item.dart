@@ -156,7 +156,7 @@ class _AdVideoItemState extends State<AdVideoItem> {
             ),
           ),
 
-          // 3. የሰዓት መቆጣጠሪያ እና ርዕስ ከታችኛው ማሰሻ በላይ
+          // 3. የሰዓት መቆጣጠሪያ (በሰከንዶች የተስተካከለ) እና ርዕስ
           Positioned(
             left: 16,
             right: 16,
@@ -173,7 +173,6 @@ class _AdVideoItemState extends State<AdVideoItem> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                if (_isInitialized && _videoController != null) ...[
                 if (_isInitialized && _videoController != null) ...[
                   Row(
                     children: [
