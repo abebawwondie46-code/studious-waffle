@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
+  final String videoId; // ለእያንዳንዱ ቪዲዮ የተለየ መለያ
   final Function(int)? onCommentCountUpdated;
 
   const CommentsBottomSheet({
     super.key,
+    required this.videoId,
     this.onCommentCountUpdated,
   });
 
@@ -22,13 +24,14 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _loadSavedComments(); // ስልኩ ውስጥ የተቀመጡትን ኮሜንቶች እንጭናለን
+    _loadSavedComments();
   }
 
-  // 1. የተቀመጡ ኮሜንቶችን ከ SharedPreferences ማንበብ
+  // 1. የዚህን ቪዲዮ ኮሜንቶች ብቻ ከ SharedPreferences መጫን
   Future<void> _loadSavedComments() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? savedData = prefs.getString('saved_video_comments');
+    // ለእያንዳንዱ ቪዲዮ የተለየ ኪ (Key) እንጠቀማለን (ለምሳሌ፦ comments_video_1)
+    final String? savedData = prefs.getString('comments_${widget.videoId}');
 
     if (savedData != null) {
       final List decodedList = jsonDecode(savedData);
@@ -37,25 +40,19 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         _isLoading = false;
       });
     } else {
-      // የመጀመሪያ ጊዜ ከሆኑ ነባሪ ናሙናዎችን እንይዛለን
       setState(() {
-        _comments = [
-          {'name': 'በቀለ', 'comment': 'በጣም አሪፍ ማስታወቂያ ነው!', 'time': '2 ደቂቃ በፊት'},
-          {'name': 'ሰላማዊት', 'comment': 'ይህን ምርት እንዴት ማግኘት እንችላለን?', 'time': '10 ደቂቃ በፊት'},
-          {'name': 'ሳሙኤል', 'comment': 'ሰላም፣ ይህ ሊንክ ይሰራል?', 'time': '15 ደቂቃ በፊት'},
-          {'name': 'ገነት', 'comment': 'በጣም አሪፍ ነው!', 'time': '1 ሰዓት በፊት'},
-        ];
+        // ለአዲስ ቪዲዮ ባዶ ሊስት ወይም ነባሪ ኮሜንት ማድረግ ይቻላል
+        _comments = [];
         _isLoading = false;
       });
-      _saveCommentsToPrefs();
     }
   }
 
-  // 2. ኮሜንቶችን SharedPreferences ላይ ማስቀመጥ
+  // 2. የዚህን ቪዲዮ ኮሜንቶች ብቻ ማስቀመጥ
   Future<void> _saveCommentsToPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final String encodedData = jsonEncode(_comments);
-    await prefs.setString('saved_video_comments', encodedData);
+    await prefs.setString('comments_${widget.videoId}', encodedData);
   }
 
   void _addComment() async {
@@ -65,12 +62,12 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       _comments.insert(0, {
         'name': 'እርስዎ',
         'comment': _commentController.text.trim(),
-        'time': 'አሁን',
+        'time': 'አሁን', // "አሁን" የሚለው ቃል ከፊት እንዲሆን ተደርጓል
       });
       _commentController.clear();
     });
 
-    await _saveCommentsToPrefs(); // መረጃውን እናስቀምጣለን
+    await _saveCommentsToPrefs();
 
     final int totalComments = 741 + _comments.length;
     if (widget.onCommentCountUpdated != null) {
@@ -100,7 +97,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   _comments.removeAt(index);
                 });
                 
-                await _saveCommentsToPrefs(); // ከተሰረዘ በኋላ እናዘምነዋለን
+                await _saveCommentsToPrefs();
 
                 final int totalComments = 741 + _comments.length;
                 if (widget.onCommentCountUpdated != null) {
@@ -157,65 +154,73 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 ),
                 const Divider(color: Colors.white24),
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _comments.length,
-                    itemBuilder: (context, index) {
-                      final item = _comments[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: GestureDetector(
-                          onLongPress: () => _deleteComment(index),
-                          child: Container(
-                            color: Colors.transparent,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.redAccent,
-                                  child: Text(
-                                    item['name']![0],
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
+                  child: _comments.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'ገና ምንም አስተያየት የለም',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _comments.length,
+                          itemBuilder: (context, index) {
+                            final item = _comments[index];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: GestureDetector(
+                                onLongPress: () => _deleteComment(index),
+                                child: Container(
+                                  color: Colors.transparent,
+                                  child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            item['name']!,
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          Text(
-                                            item['time']!,
-                                            style: const TextStyle(color: Colors.grey, fontSize: 10),
-                                          ),
-                                        ],
+                                      CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: Colors.redAccent,
+                                        child: Text(
+                                          item['name']![0],
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                        ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        item['comment']!,
-                                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  item['name']!,
+                                                  style: const TextStyle(
+                                                    color: Colors.white70,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                // "አሁን" የሚለው ቃል ከሰዓቱ በፊት እንዲሆን ተደርጓል
+                                                Text(
+                                                  item['time']!,
+                                                  style: const TextStyle(color: Colors.grey, fontSize: 10),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              item['comment']!,
+                                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
                 Container(
                   padding: EdgeInsets.only(
