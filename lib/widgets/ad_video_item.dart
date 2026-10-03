@@ -100,6 +100,14 @@ class _AdVideoItemState extends State<AdVideoItem> {
 
   @override
   Widget build(BuildContext context) {
+    // የቪዲዮውን ዱሬሽን እና ፖዚሽን ለማስላት (ደህንነቱ የተጠበቀ እሴት)
+    final duration = _videoController?.value.duration ?? Duration.zero;
+    final position = _videoController?.value.position ?? Duration.zero;
+    
+    // ዱሬሽኑ ዜሮ እንዳይሆን ማድረግ (ለ Slider max እሴት)
+    final maxDurationMs = duration.inMilliseconds > 0 ? duration.inMilliseconds.toDouble() : 1.0;
+    final currentPositionMs = position.inMilliseconds.toDouble().clamp(0.0, maxDurationMs);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -156,7 +164,7 @@ class _AdVideoItemState extends State<AdVideoItem> {
             ),
           ),
 
-          // 3. የሰዓት መቆጣጠሪያ (በሰከንዶች የተስተካከለ) እና ርዕስ
+          // 3. የሰዓት መቆጣጠሪያ (Slider) እና የቪዲዮ ርዕስ ከታችኛው ማሰሻ በላይ
           Positioned(
             left: 16,
             right: 16,
@@ -177,25 +185,23 @@ class _AdVideoItemState extends State<AdVideoItem> {
                   Row(
                     children: [
                       Text(
-                        _formatDuration(_videoController!.value.position),
+                        _formatDuration(position),
                         style: const TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                       Expanded(
                         child: Slider(
-                          value: _videoController!.value.position.inSeconds.toDouble(),
+                          value: currentPositionMs,
                           min: 0.0,
-                          max: _videoController!.value.duration.inSeconds > 0
-                              ? _videoController!.value.duration.inSeconds.toDouble()
-                              : 1.0,
+                          max: maxDurationMs,
                           activeColor: Colors.redAccent,
                           inactiveColor: Colors.grey.withOpacity(0.5),
                           onChanged: (value) {
-                            _videoController!.seekTo(Duration(seconds: value.toInt()));
+                            _videoController!.seekTo(Duration(milliseconds: value.toInt()));
                           },
                         ),
                       ),
                       Text(
-                        _formatDuration(_videoController!.value.duration),
+                        _formatDuration(duration),
                         style: const TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                     ],
