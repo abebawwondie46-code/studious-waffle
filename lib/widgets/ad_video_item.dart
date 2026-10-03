@@ -23,6 +23,11 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
   bool _isInitialized = false;
   bool _showPlayIcon = false;
   late AnimationController _discController;
+  
+  // የሰርች (Search) መቆጣጠሪያዎች
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -59,6 +64,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
 
   @override
   void dispose() {
+    _searchController.dispose();
     _discController.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
@@ -81,6 +87,69 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => const CommentsBottomSheet(),
+    );
+  }
+
+  // የሰርች ማዘዣ ሳጥን (Search Dialog) ማሳያ
+  void _openSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text('ቪዲዮዎችን ይፈልጉ', style: TextStyle(color: Colors.white, fontSize: 18)),
+          content: TextField(
+            controller: _searchController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'ቁልፍ ቃል ያስገቡ...',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: Colors.black54,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
+            ),
+            onSubmitted: (value) {
+              setState(() {
+                _searchQuery = value.trim();
+                _isSearching = _searchQuery.isNotEmpty;
+              });
+              Navigator.pop(context);
+              if (_isSearching) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('የተፈለገው: "$_searchQuery"')),
+                );
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ሰርዝ', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+              onPressed: () {
+                setState(() {
+                  _searchQuery = _searchController.text.trim();
+                  _isSearching = _searchQuery.isNotEmpty;
+                });
+                Navigator.pop(context);
+                if (_isSearching) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('የተፈለገው: "$_searchQuery"')),
+                  );
+                }
+              },
+              child: const Text('ፈልግ', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -166,15 +235,13 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
 
-          // 2. ከላይ በስተቀኝ በኩል የሰርች (Search) ቁልፍ
+          // 2. ከላይ በስተቀኝ በኩል የሰርች (Search) ቁልፍ - የተካተተበት ቦታ
           Positioned(
             top: 45,
             right: 16,
             child: IconButton(
               icon: const Icon(Icons.search, color: Colors.white, size: 28),
-              onPressed: () {
-                // የሰርች ማዘዣ እዚህ ይጻፍ
-              },
+              onPressed: _openSearchDialog,
             ),
           ),
 
@@ -225,9 +292,9 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                   ),
                   const SizedBox(height: 8),
 
-                  // የቪዲዮ ባለቤቱ ስም ወይም ርዕስ
+                  // የቪዲዮ ባለቤቱ ስም ወይም ርዕስ (እንዲሁም ሰርች የተደረገ ቃል ካለ ማሳየት ይቻላል)
                   Text(
-                    widget.title,
+                    _isSearching ? '${widget.title} (ፍለጋ: $_searchQuery)' : widget.title,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -275,7 +342,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
           ),
 
-          // 4. የጎን አዝራሮች (Profile, Like 44.0K, Comment 745, Share 1.8K እና የሚሽከረከር የሙዚቃ ዲስክ) በቀጥታ በዚህ ፋይል ውስጥ ተካተዋል
+          // 4. የጎን አዝራሮች (Profile, Like 44.0K, Comment 745, Share 1.8K እና የሚሽከረከር የሙዚቃ ዲስክ)
           Positioned(
             right: 12,
             bottom: 80,
@@ -312,7 +379,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                   ],
                 ),
 
-                // ላይክ (Like - 44.0K)
+                // ላይክ (Like - 440)
                 Column(
                   children: [
                     IconButton(
@@ -320,7 +387,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                       onPressed: () {},
                     ),
                     const Text(
-                      '44.0K',
+                      '440',
                       style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -342,7 +409,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-                // ሼር (Share - 1.8K)
+                // ሼር (Share - 112)
                 Column(
                   children: [
                     IconButton(
@@ -354,7 +421,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                       },
                     ),
                     const Text(
-                      '1.8K',
+                      '112',
                       style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
