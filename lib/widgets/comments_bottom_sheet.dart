@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
@@ -18,8 +19,10 @@ class CommentsBottomSheet extends StatefulWidget {
 
 class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _commentController = TextEditingController();
+  final FocusNode _commentFocusNode = FocusNode();
   List<Map<String, dynamic>> _comments = [];
   bool _isLoading = true;
+  String? _replyingToUser; // ሪፕላይ ሲደረግ የተጠቃሚውን ስም ለመያዝ
 
   @override
   void initState() {
@@ -54,16 +57,22 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   void _addComment() async {
     if (_commentController.text.trim().isEmpty) return;
     
+    String commentText = _commentController.text.trim();
+    if (_replyingToUser != null) {
+      commentText = '$_replyingToUser $commentText';
+    }
+
     setState(() {
       _comments.insert(0, {
         'name': 'እርስዎ',
-        'comment': _commentController.text.trim(),
-        'time': '2s ago', // ልክ እንደ ቲክቶክ ቅርጸት
+        'comment': commentText,
+        'time': '2s ago',
         'likes': 0,
         'isLiked': false,
         'isDisliked': false,
       });
       _commentController.clear();
+      _replyingToUser = null;
     });
 
     await _saveCommentsToPrefs();
@@ -89,7 +98,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         comment['isLiked'] = true;
         comment['likes'] = likes + 1;
         if (comment['isDisliked'] == true) {
-          comment['isDisliked'] = false; // ዲስላይክን እናጠፋዋለን
+          comment['isDisliked'] = false;
         }
       }
     });
@@ -150,18 +159,68 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  void _onImagePickPressed() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ፎቶ መምረጫ ተከፍቷል')),
-    );
+  // 1. ፎቶ መምረጫ (Image Picker)
+  Future<void> _onImagePickPressed() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _comments.insert(0, {
+          'name': 'እርስዎ',
+          'comment': '[ፎቶ ተልኳል: ${image.name}]',
+          'time': '2s ago',
+          'likes': 0,
+          'isLiked': false,
+          'isDisliked': false,
+        });
+      });
+      await _saveCommentsToPrefs();
+      if (widget.onCommentCountUpdated != null) {
+        widget.onCommentCountUpdated!(741 + _comments.length);
+      }
+    }
   }
 
+  // 2. ኢሞጂ መምረጫ (BottomSheet)
   void _onEmojiPressed() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ኢሞጂ ማስተካከያ ተከፍቷል')),
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF2A2A2A),
+      builder: (context) {
+        final List<String> emojis = ['😊', '😂', '❤️', '🔥', '👍', '👏', '😍', '🙏', '✨', '😢'];
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: 200,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 5,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+            ),
+            itemCount: emojis.length,
+            itemBuilder: (context, index) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _commentController.text += emojis[index];
+                  });
+                  Navigator.pop(context);
+                },
+                child: Center(
+                  child: Text(
+                    emojis[index],
+                    style: const TextStyle(fontSize: 28),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
+  // 3. ሜንሽን አዶ
   void _onMentionPressed() {
     setState(() {
       _commentController.text += '@';
@@ -169,11 +228,21 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         TextPosition(offset: _commentController.text.length),
       );
     });
+    FocusScope.of(context).requestFocus(_commentFocusNode);
+  }
+
+  // 4. ሪፕላይ ሲደረግ
+  void _onReplyPressed(String userName) {
+    setState(() {
+      _replyingToUser = '@$userName';
+    });
+    FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
   @override
   void dispose() {
     _commentController.dispose();
+    _commentFocusNode.dispose();
     super.dispose();
   }
 
@@ -227,6 +296,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final bool isLiked = item['isLiked'] ?? false;
                             final bool isDisliked = item['isDisliked'] ?? false;
                             final int likesCount = item['likes'] ?? 0;
+                            final String userName = item['name'];
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -241,7 +311,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         radius: 18,
                                         backgroundColor: Colors.green[800],
                                         child: Text(
-                                          item['name'][0],
+                                          userName[0],
                                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       ),
@@ -251,7 +321,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              item['name'],
+                                              userName,
                                               style: const TextStyle(
                                                 color: Colors.grey,
                                                 fontSize: 13,
@@ -274,12 +344,16 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                                   style: const TextStyle(color: Colors.grey, fontSize: 11),
                                                 ),
                                                 const SizedBox(width: 16),
-                                                const Text(
-                                                  'Reply',
-                                                  style: TextStyle(
-                                                    color: Colors.grey,
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w500,
+                                                // ሪፕላይ ሲጫን የሚሰራበት
+                                                GestureDetector(
+                                                  onTap: () => _onReplyPressed(userName),
+                                                  child: const Text(
+                                                    'Reply',
+                                                    style: TextStyle(
+                                                      color: Colors.grey,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -326,48 +400,71 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                     bottom: MediaQuery.of(context).viewInsets.bottom + 8,
                   ),
                   color: Colors.black54,
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Colors.green[800],
-                        child: const Text('አ', style: TextStyle(color: Colors.white, fontSize: 12)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _commentController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'Add comment...',
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            filled: true,
-                            fillColor: Colors.grey[850],
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20),
-                              borderSide: BorderSide.none,
+                      if (_replyingToUser != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Replying to $_replyingToUser',
+                                style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
+                              ),
+                              GestureDetector(
+                                onTap: () => setState(() => _replyingToUser = null),
+                                child: const Icon(Icons.close, color: Colors.grey, size: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: Colors.green[800],
+                            child: const Text('አ', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _commentController,
+                              focusNode: _commentFocusNode,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                hintText: _replyingToUser != null ? 'Add reply...' : 'Add comment...',
+                                hintStyle: const TextStyle(color: Colors.grey),
+                                filled: true,
+                                fillColor: Colors.grey[850],
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              onSubmitted: (_) => _addComment(),
                             ),
                           ),
-                          onSubmitted: (_) => _addComment(),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      IconButton(
-                        icon: const Icon(Icons.image_outlined, color: Colors.grey),
-                        onPressed: _onImagePickPressed,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.sentiment_satisfied_outlined, color: Colors.grey),
-                        onPressed: _onEmojiPressed,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.alternate_email, color: Colors.grey),
-                        onPressed: _onMentionPressed,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.send, color: Colors.greenAccent),
-                        onPressed: _addComment,
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.image_outlined, color: Colors.grey),
+                            onPressed: _onImagePickPressed,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.sentiment_satisfied_outlined, color: Colors.grey),
+                            onPressed: _onEmojiPressed,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.alternate_email, color: Colors.grey),
+                            onPressed: _onMentionPressed,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.send, color: Colors.greenAccent),
+                            onPressed: _addComment,
+                          ),
+                        ],
                       ),
                     ],
                   ),
