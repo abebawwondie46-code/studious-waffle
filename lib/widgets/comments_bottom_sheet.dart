@@ -18,7 +18,7 @@ class CommentsBottomSheet extends StatefulWidget {
 
 class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _commentController = TextEditingController();
-  List<Map<String, String>> _comments = [];
+  List<Map<String, dynamic>> _comments = [];
   bool _isLoading = true;
 
   @override
@@ -34,7 +34,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     if (savedData != null) {
       final List decodedList = jsonDecode(savedData);
       setState(() {
-        _comments = decodedList.map((item) => Map<String, String>.from(item)).toList();
+        _comments = decodedList.map((item) => Map<String, dynamic>.from(item)).toList();
         _isLoading = false;
       });
     } else {
@@ -58,7 +58,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       _comments.insert(0, {
         'name': 'እርስዎ',
         'comment': _commentController.text.trim(),
-        'time': 'አሁን',
+        'time': '2s ago', // ልክ እንደ ቲክቶክ ቅርጸት
+        'likes': 0,
+        'isLiked': false,
+        'isDisliked': false,
       });
       _commentController.clear();
     });
@@ -71,6 +74,44 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
     
     FocusScope.of(context).unfocus();
+  }
+
+  void _toggleLike(int index) {
+    setState(() {
+      final comment = _comments[index];
+      bool isLiked = comment['isLiked'] ?? false;
+      int likes = comment['likes'] ?? 0;
+
+      if (isLiked) {
+        comment['isLiked'] = false;
+        comment['likes'] = likes - 1;
+      } else {
+        comment['isLiked'] = true;
+        comment['likes'] = likes + 1;
+        if (comment['isDisliked'] == true) {
+          comment['isDisliked'] = false; // ዲስላይክን እናጠፋዋለን
+        }
+      }
+    });
+    _saveCommentsToPrefs();
+  }
+
+  void _toggleDislike(int index) {
+    setState(() {
+      final comment = _comments[index];
+      bool isDisliked = comment['isDisliked'] ?? false;
+
+      if (isDisliked) {
+        comment['isDisliked'] = false;
+      } else {
+        comment['isDisliked'] = true;
+        if (comment['isLiked'] == true) {
+          comment['isLiked'] = false;
+          comment['likes'] = (comment['likes'] ?? 1) - 1;
+        }
+      }
+    });
+    _saveCommentsToPrefs();
   }
 
   void _deleteComment(int index) {
@@ -109,7 +150,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  // የሌሎቹ አዶዎች መጫኛ ፋንክሽኖች
   void _onImagePickPressed() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('ፎቶ መምረጫ ተከፍቷል')),
@@ -184,6 +224,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           itemCount: _comments.length,
                           itemBuilder: (context, index) {
                             final item = _comments[index];
+                            final bool isLiked = item['isLiked'] ?? false;
+                            final bool isDisliked = item['isDisliked'] ?? false;
+                            final int likesCount = item['likes'] ?? 0;
+
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10.0),
                               child: GestureDetector(
@@ -197,7 +241,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         radius: 18,
                                         backgroundColor: Colors.green[800],
                                         child: Text(
-                                          item['name']![0],
+                                          item['name'][0],
                                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       ),
@@ -207,7 +251,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              item['name']!,
+                                              item['name'],
                                               style: const TextStyle(
                                                 color: Colors.grey,
                                                 fontSize: 13,
@@ -216,7 +260,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              item['comment']!,
+                                              item['comment'],
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 14,
@@ -226,7 +270,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                             Row(
                                               children: [
                                                 Text(
-                                                  item['time']!,
+                                                  item['time'],
                                                   style: const TextStyle(color: Colors.grey, fontSize: 11),
                                                 ),
                                                 const SizedBox(width: 16),
@@ -244,12 +288,26 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         ),
                                       ),
                                       Column(
-                                        children: const [
-                                          Icon(Icons.favorite_border, color: Colors.grey, size: 20),
-                                          SizedBox(height: 2),
-                                          Text('0', style: TextStyle(color: Colors.grey, fontSize: 10)),
-                                          SizedBox(height: 10),
-                                          Icon(Icons.thumb_down_off_alt, color: Colors.grey, size: 18),
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () => _toggleLike(index),
+                                            child: Icon(
+                                              isLiked ? Icons.favorite : Icons.favorite_border,
+                                              color: isLiked ? Colors.redAccent : Colors.grey,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text('$likesCount', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                                          const SizedBox(height: 10),
+                                          GestureDetector(
+                                            onTap: () => _toggleDislike(index),
+                                            child: Icon(
+                                              isDisliked ? Icons.thumb_down : Icons.thumb_down_off_alt,
+                                              color: isDisliked ? Colors.redAccent : Colors.grey,
+                                              size: 18,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ],
@@ -260,7 +318,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           },
                         ),
                 ),
-                // የታችኛው የግብዓት ሣጥን (ከመላኪያ ቁልፍ እና ከሌሎች አዶዎች ጋር)
                 Container(
                   padding: EdgeInsets.only(
                     left: 16,
@@ -296,22 +353,18 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      // ፎቶ መምረጫ አዶ (ሲጫን ይከፍታል)
                       IconButton(
                         icon: const Icon(Icons.image_outlined, color: Colors.grey),
                         onPressed: _onImagePickPressed,
                       ),
-                      // ኢሞጂ አዶ (ሲጫን ይከፍታል)
                       IconButton(
                         icon: const Icon(Icons.sentiment_satisfied_outlined, color: Colors.grey),
                         onPressed: _onEmojiPressed,
                       ),
-                      // ሜንሽን አዶ (ሲጫን "@" ጨምሮ ይከፍታል)
                       IconButton(
                         icon: const Icon(Icons.alternate_email, color: Colors.grey),
                         onPressed: _onMentionPressed,
                       ),
-                      // መላኪያ (Send) ቁልፍ
                       IconButton(
                         icon: const Icon(Icons.send, color: Colors.greenAccent),
                         onPressed: _addComment,
