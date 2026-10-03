@@ -334,7 +334,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
           ),
 
-          // 4. የጎን አዝራሮች (ትክክለኞቹ የቲክቶክ አዶዎች: Profile, Like, Comment, Share with double arrows, Music Disc)
+          // 4. የጎን አዝራሮች (Profile, Like, Comment, Share (አቅጣጫው የተዞረ), Music Disc)
           Positioned(
             right: 12,
             bottom: 80,
@@ -375,7 +375,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 Column(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.favorite_border, color: Colors.white, size: 32),
+                      icon: const Icon(Icons.favorite, color: Colors.redAccent, size: 32),
                       onPressed: () {},
                     ),
                     const Text(
@@ -386,7 +386,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-                // ኮሜንት (Comment - ልክ እንደ ምስሉ የተስተካከለ የንግግር አዶ)
+                // ኮሜንት (Comment - የተሟላ የንግግር አዶ)
                 Column(
                   children: [
                     IconButton(
@@ -401,11 +401,15 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-                // ሼር (Share - ልክ እንደ ምስሉ ሁለት የቀስት አቅጣጫዎች ያሉት)
+                // ሼር (Share - አቅጣጫው የተዞረ የልብ ምት/ቀስት አዶ)
                 Column(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.reply, color: Colors.white, size: 32),
+                      icon: Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.rotationY(3.14159), // አቅጣጫውን በ አግድም (Horizontally) ማዞር
+                        child: const Icon(Icons.reply, color: Colors.white, size: 30),
+                      ),
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('ሊንኩ ተገልብጧል!')),
