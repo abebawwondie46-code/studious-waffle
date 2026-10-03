@@ -148,18 +148,22 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
 
   // 2. የኮሜንት መስኮት መክፈቻ (Comments with videoId support)
   void _openComments() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.grey[900],
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => CommentsBottomSheet(
-        // የቪዲዮ ኮሜንቶች ከዳታቤዝ እንዲመጡ ካስፈለገ እዚህ ቪዲዮ መለያ ማለፍ ይቻላል
-      ),
-    );
-  }
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.grey[900],
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => CommentsBottomSheet(
+      onCommentChanged: (newCount) {
+        setState(() {
+          _commentCount = newCount; // ከታች አዲስ ኮሜንት ሲጨመር የውጪው ቁጥር እንዲቀየር ያደርጋል
+        });
+      },
+    ),
+  );
+}
 
   void _openSearchDialog() {
     showDialog(
