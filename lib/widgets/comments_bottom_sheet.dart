@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
-  final Function(int)? onCommentChanged; // አማራጭ (Optional) እንዲሆን ተደርጓል
+  final Function(int)? onCommentChanged;
 
   const CommentsBottomSheet({
     super.key,
@@ -15,7 +15,7 @@ class CommentsBottomSheet extends StatefulWidget {
 class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _commentController = TextEditingController();
   
-  // የናሙና ኮሜንቶች ዝርዝር
+  // የናሙና ኮሜንቶች ዝርዝር (መነሻ ቁጥር 745 ሲደመር የዝርዝሩ ብዛት)
   final List<Map<String, String>> _comments = [
     {
       'name': 'በቀለ',
@@ -41,6 +41,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
   void _addComment() {
     if (_commentController.text.trim().isEmpty) return;
+    
     setState(() {
       _comments.insert(0, {
         'name': 'እርስዎ',
@@ -50,10 +51,14 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       _commentController.clear();
     });
 
-    final int total = 745 + _comments.length;
+    // አጠቃላይ ኮሜንት ብዛት (745 ሲደመር አሁን ያሉት ኮሜንቶች ብዛት)
+    final int totalComments = 745 + _comments.length;
+    
+    // ለዋናው ስክሪን አዲሱን ቁጥር እንልካለን
     if (widget.onCommentChanged != null) {
-      widget.onCommentChanged!(total);
+      widget.onCommentChanged!(totalComments);
     }
+    
     FocusScope.of(context).unfocus();
   }
 
@@ -76,10 +81,12 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 setState(() {
                   _comments.removeAt(index);
                 });
-                final int total = 745 + _comments.length;
+                
+                final int totalComments = 745 + _comments.length;
                 if (widget.onCommentChanged != null) {
-                  widget.onCommentChanged!(total);
+                  widget.onCommentChanged!(totalComments);
                 }
+                
                 Navigator.of(context).pop();
               },
             ),
