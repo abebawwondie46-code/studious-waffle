@@ -242,7 +242,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
           ),
 
-          // 3. ከስክሪኑ በታች የርዕስ እና የጊዜ መስመር (Slider) መቆጣጠሪያ
+          // 3. ከስክሪኑ በታች የርዕስ እና የጊዜ መስመር (Slider) መቆጣጠሪያ (ልዩ ቅናሽ ባጅ ተወግዷል)
           Positioned(
             left: 0,
             right: 0,
@@ -264,29 +264,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.amber[700],
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('🔥 🔥', style: TextStyle(fontSize: 12)),
-                        SizedBox(width: 4),
-                        Text(
-                          'ልዩ ቅናሽ!',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Text(
                     _isSearching ? '${widget.title} (ፍለጋ: $_searchQuery)' : widget.title,
                     style: const TextStyle(
@@ -334,7 +311,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             ),
           ),
 
-          // 4. የጎን አዝራሮች (Profile, Like, Comment, Share (አቅጣጫው የተዞረ), Music Disc)
+          // 4. የጎን አዝራሮች (Profile, Like, Comment ከምስሉ ጋር የተስተካከለ, Share, Music Disc)
           Positioned(
             right: 12,
             bottom: 80,
@@ -386,11 +363,11 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-                // ኮሜንት (Comment - የተሟላ የንግግር አዶ)
+                // ኮሜንት (Comment - ልክ እንደ ጠየቁት የተስተካከለ የንግግር አዶ)
                 Column(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.chat_bubble, color: Colors.white, size: 28),
+                      icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 28),
                       onPressed: _openComments,
                     ),
                     const Text(
@@ -401,13 +378,13 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-                // ሼር (Share - አቅጣጫው የተዞረ የልብ ምት/ቀስት አዶ)
+                // ሼር (Share - አቅጣጫው የተዞረ)
                 Column(
                   children: [
                     IconButton(
                       icon: Transform(
                         alignment: Alignment.center,
-                        transform: Matrix4.rotationY(3.14159), // አቅጣጫውን በ አግድም (Horizontally) ማዞር
+                        transform: Matrix4.rotationY(3.14159),
                         child: const Icon(Icons.reply, color: Colors.white, size: 30),
                       ),
                       onPressed: () {
