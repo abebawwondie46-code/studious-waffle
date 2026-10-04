@@ -216,8 +216,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.search, color: Colors.greenAccent),
-                title: const Text('ከኢንተርኔት ፎቶ ፈልግ (Search Web)', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.public, color: Colors.greenAccent),
+                title: const Text('ከኢንተርኔት ፎቶ እና ጂአይኤፍ (GIF/Web) ፈልግ', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
                   _showWebImageSearchDialog();
@@ -238,10 +238,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
+  // ተጠቃሚው የፈለገውን ማንኛውንም ፎቶ ወይም ጂአይኤፍ ከኢንተርኔት ሰርች አድርጎ ያለ ገደብ የሚልክበት የተሻሻለ ንድፍ
   void _showWebImageSearchDialog() {
-    TextEditingController searchController = TextEditingController();
+    TextEditingController searchController = TextEditingController(text: 'funny animation sticker meme');
     List<String> searchResults = [];
-    bool isSearching = false;
+    bool isSearching = true;
 
     showDialog(
       context: context,
@@ -252,13 +253,13 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               if (query.trim().isEmpty) return;
               setDialogState(() => isSearching = true);
               try {
-                final url = Uri.parse('https://unsplash.com/napi/search/photos?query=${Uri.encodeComponent(query)}&per_page=12');
+                final url = Uri.parse('https://unsplash.com/napi/search/photos?query=${Uri.encodeComponent(query)}&per_page=30');
                 final response = await http.get(url);
                 if (response.statusCode == 200) {
                   final data = jsonDecode(response.body);
                   final results = data['results'] as List;
                   setDialogState(() {
-                    searchResults = results.map((e) => e['urls']['small'].toString()).toList();
+                    searchResults = results.map((e) => e['urls']['regular'].toString()).toList();
                     isSearching = false;
                   });
                 } else {
@@ -269,36 +270,52 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               }
             }
 
+            // ሲከፈት በነርቭ በራሱ የተወሰኑ አሪፍ ጂአይኤፎች/ፎቶዎች እንዲያመጣ ማድረግ
+            if (searchResults.isEmpty && isSearching) {
+              searchImages('funny animation sticker meme');
+            }
+
             return AlertDialog(
-              backgroundColor: const Color(0xFF2A2A2A),
-              title: const Text('ከኢንተርኔት ፎቶ ፈልግ', style: TextStyle(color: Colors.white, fontSize: 16)),
+              backgroundColor: const Color(0xFF1E1E1E),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('ከኢንተርኔት ፎቶ/ጂአይኤፍ ፈልግ', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey, size: 18),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
               content: SizedBox(
-                width: double.maxFinite,
-                height: 350,
+                width: MediaQuery.of(context).size.width * 0.9,
+                height: MediaQuery.of(context).size.height * 0.55,
                 child: Column(
                   children: [
                     TextField(
                       controller: searchController,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: 'ምሳሌ፦ heart, nature, tech...',
-                        hintStyle: const TextStyle(color: Colors.grey),
+                        hintText: 'ምሳሌ፦ anime, fire, love, funny...',
+                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                         filled: true,
-                        fillColor: Colors.grey[800],
+                        fillColor: Colors.grey[850],
+                        prefixIcon: const Icon(Icons.search, color: Colors.greenAccent, size: 20),
                         suffixIcon: IconButton(
-                          icon: const Icon(Icons.search, color: Colors.greenAccent),
+                          icon: const Icon(Icons.arrow_forward, color: Colors.greenAccent),
                           onPressed: () => searchImages(searchController.text),
                         ),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
                       onSubmitted: (val) => searchImages(val),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Expanded(
                       child: isSearching
                           ? const Center(child: CircularProgressIndicator(color: Colors.greenAccent))
                           : searchResults.isEmpty
-                              ? const Center(child: Text('ፎቶዎችን ለማግኘት ፈልግ የሚለውን ይጫኑ', style: TextStyle(color: Colors.grey, fontSize: 12)))
+                              ? const Center(child: Text('ምንም አልተገኘም፣ እንደገና ይሞክሩ', style: TextStyle(color: Colors.grey, fontSize: 12)))
                               : GridView.builder(
                                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 3,
@@ -314,8 +331,40 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         await _sendCommentToSupabase(imageUrl: selectedUrl);
                                       },
                                       child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(searchResults[index], fit: BoxFit.cover),
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            Image.network(
+                                              searchResults[index],
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null) return child;
+                                                return Center(
+                                                  child: CircularProgressIndicator(
+                                                    value: loadingProgress.expectedTotalBytes != null
+                                                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                        : null,
+                                                    strokeWidth: 2,
+                                                    color: Colors.greenAccent,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                            Positioned(
+                                              bottom: 4,
+                                              right: 4,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black54,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text('ላክ', style: TextStyle(color: Colors.white, fontSize: 9)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     );
                                   },
@@ -336,13 +385,13 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       context: context,
       backgroundColor: const Color(0xFF2A2A2A),
       builder: (context) {
-        final List<String> emojis = ['😊', '😂', '❤️', '🔥', '👍', '👏', '😍', '🙏', '✨', '😢', '💡', '🚀'];
+        final List<String> emojis = ['😊', '😂', '❤️', '🔥', '👍', '👏', '😍', '🙏', '✨', '😢', '💡', '🚀', '😎', '🥳', '💯'];
         return Container(
           padding: const EdgeInsets.all(16),
           height: 220,
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 6,
+              crossAxisCount: 5,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
             ),
@@ -356,7 +405,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   Navigator.pop(context);
                 },
                 child: Center(
-                  child: Text(emojis[index], style: const TextStyle(fontSize: 26)),
+                  child: Text(emojis[index], style: const TextStyle(fontSize: 28)),
                 ),
               );
             },
@@ -486,8 +535,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                                 child: ClipRRect(
                                                   borderRadius: BorderRadius.circular(8),
                                                   child: imageUrl.startsWith('http')
-                                                      ? Image.network(imageUrl, width: 140, height: 140, fit: BoxFit.cover)
-                                                      : Image.file(File(imageUrl), width: 140, height: 140, fit: BoxFit.cover),
+                                                      ? Image.network(imageUrl, width: 150, height: 150, fit: BoxFit.cover)
+                                                      : Image.file(File(imageUrl), width: 150, height: 150, fit: BoxFit.cover),
                                                 ),
                                               )
                                             else
