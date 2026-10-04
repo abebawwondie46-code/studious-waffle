@@ -238,9 +238,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
-  // ተጠቃሚው የፈለገውን ማንኛውንም ፎቶ ወይም ጂአይኤፍ ከኢንተርኔት ሰርች አድርጎ ያለ ገደብ የሚልክበት የተሻሻለ ንድፍ
+  // ተጠቃሚው ከኢንተርኔት ያለ ገደብ ፎቶዎችን የሚፈልግበት እና የሚያመጣበት የተስተካከለ ተግባር
   void _showWebImageSearchDialog() {
-    TextEditingController searchController = TextEditingController(text: 'funny animation sticker meme');
+    TextEditingController searchController = TextEditingController(text: 'funny animation');
     List<String> searchResults = [];
     bool isSearching = true;
 
@@ -253,8 +253,15 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               if (query.trim().isEmpty) return;
               setDialogState(() => isSearching = true);
               try {
-                final url = Uri.parse('https://unsplash.com/napi/search/photos?query=${Uri.encodeComponent(query)}&per_page=30');
-                final response = await http.get(url);
+                // የ Unsplash API ዩአርኤል (እባክዎ YOUR_UNSLAPSH_ACCESS_KEY የሚለውን በራሱ ትክክለኛ የ Unsplash Access Key ይቀይሩት)
+                final url = Uri.parse('https://api.unsplash.com/search/photos?query=${Uri.encodeComponent(query)}&per_page=30');
+                final response = await http.get(
+                  url,
+                  headers: {
+                    'Authorization': 'Client-ID YOUR_UNSPLASH_ACCESS_KEY',
+                  },
+                );
+
                 if (response.statusCode == 200) {
                   final data = jsonDecode(response.body);
                   final results = data['results'] as List;
@@ -266,13 +273,13 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   setDialogState(() => isSearching = false);
                 }
               } catch (e) {
+                debugPrint('Search error: $e');
                 setDialogState(() => isSearching = false);
               }
             }
 
-            // ሲከፈት በነርቭ በራሱ የተወሰኑ አሪፍ ጂአይኤፎች/ፎቶዎች እንዲያመጣ ማድረግ
             if (searchResults.isEmpty && isSearching) {
-              searchImages('funny animation sticker meme');
+              searchImages('funny animation');
             }
 
             return AlertDialog(
