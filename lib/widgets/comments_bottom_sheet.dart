@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http; // ለኢንተርኔት ፍለጋ (Unsplash API ለመጠቀም)
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CommentsBottomSheet extends StatefulWidget {
   final String videoId;
@@ -26,108 +26,76 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isLoading = true;
   String? _replyingToUser;
 
+  final SupabaseClient supabase = Supabase.instance.client;
+
   @override
   void initState() {
     super.initState();
-    _loadSavedComments();
+    _fetchCommentsFromSupabase();
   }
 
-  Future<void> _loadSavedComments() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? savedData = prefs.getString('comments_${widget.videoId}');
+  // 1. ከ Supabase ኮሜንቶችን ማንበብ
+  Future<void> _fetchCommentsFromSupabase() async {
+    try {
+      final response = await supabase
+          .from('comments')
+          .select()
+          .eq('video_id', widget.videoId)
+          .order('created_at', ascending: false);
 
-    if (savedData != null) {
-      final List decodedList = jsonDecode(savedData);
       setState(() {
-        _comments = decodedList.map((item) => Map<String, dynamic>.from(item)).toList();
+        _comments = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
-    } else {
-      setState(() {
-        _comments = [];
-        _isLoading = false;
-      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint('Error fetching comments: $e');
     }
   }
 
-  Future<void> _saveCommentsToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String encodedData = jsonEncode(_comments);
-    await prefs.setString('comments_${widget.videoId}', encodedData);
-  }
+  // 2. ኮሜንትን (ጽሁፍ ወይም ፎቶ) ወደ Supabase መላክ
+  Future<void> _sendCommentToSupabase({String? text, String? imageUrl}) async {
+    if ((text == null || text.trim().isEmpty) && imageUrl == null) return;
 
-  void _addComment() async {
-    if (_commentController.text.trim().isEmpty) return;
-    
-    String commentText = _commentController.text.trim();
-    if (_replyingToUser != null) {
-      commentText = '$_replyingToUser $commentText';
+    String finalCommentText = text ?? '';
+    if (_replyingToUser != null && text != null) {
+      finalCommentText = '$_replyingToUser $text';
     }
 
-    setState(() {
-      _comments.insert(0, {
-        'name': 'እርስዎ',
-        'comment': commentText,
-        'imagePath': null,
-        'imageUrl': null,
-        'time': '2s ago',
-        'likes': 0,
-        'isLiked': false,
-        'isDisliked': false,
-      });
+    try {
+      final newRow = {
+        'video_id': widget.videoId,
+        'user_name': 'እርስዎ',
+        'comment': finalCommentText,
+        'image_url': imageUrl,
+      };
+
+      await supabase.from('comments').insert(newRow);
+
       _commentController.clear();
-      _replyingToUser = null;
-    });
+      setState(() {
+        _replyingToUser = null;
+      });
 
-    await _saveCommentsToPrefs();
+      // λ ኮሜንቶቹን እንደገና ከሱፓቤስ መጫን
+      await _fetchCommentsFromSupabase();
 
-    final int totalComments = 741 + _comments.length;
-    if (widget.onCommentCountUpdated != null) {
-      widget.onCommentCountUpdated!(totalComments);
+      final int totalComments = 741 + _comments.length;
+      if (widget.onCommentCountUpdated != null) {
+        widget.onCommentCountUpdated!(totalComments);
+      }
+
+      FocusScope.of(context).unfocus();
+    } catch (e) {
+      debugPrint('Error inserting comment: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ማስገባት አልተቻለም: $e'), backgroundColor: Colors.red),
+      );
     }
-    
-    FocusScope.of(context).unfocus();
   }
 
-  void _toggleLike(int index) {
-    setState(() {
-      final comment = _comments[index];
-      bool isLiked = comment['isLiked'] ?? false;
-      int likes = comment['likes'] ?? 0;
-
-      if (isLiked) {
-        comment['isLiked'] = false;
-        comment['likes'] = likes - 1;
-      } else {
-        comment['isLiked'] = true;
-        comment['likes'] = likes + 1;
-        if (comment['isDisliked'] == true) {
-          comment['isDisliked'] = false;
-        }
-      }
-    });
-    _saveCommentsToPrefs();
-  }
-
-  void _toggleDislike(int index) {
-    setState(() {
-      final comment = _comments[index];
-      bool isDisliked = comment['isDisliked'] ?? false;
-
-      if (isDisliked) {
-        comment['isDisliked'] = false;
-      } else {
-        comment['isDisliked'] = true;
-        if (comment['isLiked'] == true) {
-          comment['isLiked'] = false;
-          comment['likes'] = (comment['likes'] ?? 1) - 1;
-        }
-      }
-    });
-    _saveCommentsToPrefs();
-  }
-
-  void _deleteComment(int index) {
+  // 3. አስተያየትን ከ Supabase መሰረዝ
+  Future<void> _deleteComment(String commentId, int index) async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -143,18 +111,18 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
             TextButton(
               child: const Text('አዎ፣ ሰርዝ', style: TextStyle(color: Colors.redAccent)),
               onPressed: () async {
-                setState(() {
-                  _comments.removeAt(index);
-                });
-                
-                await _saveCommentsToPrefs();
-
-                final int totalComments = 741 + _comments.length;
-                if (widget.onCommentCountUpdated != null) {
-                  widget.onCommentCountUpdated!(totalComments);
-                }
-                
                 Navigator.of(context).pop();
+                try {
+                  await supabase.from('comments').delete().eq('id', commentId);
+                  await _fetchCommentsFromSupabase();
+
+                  final int totalComments = 741 + _comments.length;
+                  if (widget.onCommentCountUpdated != null) {
+                    widget.onCommentCountUpdated!(totalComments);
+                  }
+                } catch (e) {
+                  debugPrint('Error deleting comment: $e');
+                }
               },
             ),
           ],
@@ -163,7 +131,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  // የፎቶ አዶ ሲጫን: ከጋለሪ ወይም ከኢንተርኔት የመምረጫ አማራጭ ማሳየት
+  // የፎቶ ምርጫ (ጋለሪ ወይም ኢንተርኔት)
   void _onImagePickPressed() {
     showModalBottomSheet(
       context: context,
@@ -179,7 +147,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 title: const Text('ከስልክ ጋለሪ ፎቶ ምረጥ', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
-                  _pickFromGallery();
+                  _pickAndUploadFromGallery();
                 },
               ),
               ListTile(
@@ -197,31 +165,16 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  // ከጋለሪ የመረጠውን መጫን
-  Future<void> _pickFromGallery() async {
+  Future<void> _pickAndUploadFromGallery() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      setState(() {
-        _comments.insert(0, {
-          'name': 'እርስዎ',
-          'comment': '',
-          'imagePath': image.path,
-          'imageUrl': null,
-          'time': '2s ago',
-          'likes': 0,
-          'isLiked': false,
-          'isDisliked': false,
-        });
-      });
-      await _saveCommentsToPrefs();
-      if (widget.onCommentCountUpdated != null) {
-        widget.onCommentCountUpdated!(741 + _comments.length);
-      }
+      // ፎቶውን ወደ Supabase Storage መጫን ወይም በቀጥታ ፓሱን መውሰድ ይቻላል።
+      // ለቀላልነት የፋይሉን መንገድ ወይም ዩአርኤል እንጠቀማለን (ለስልኩ ሎካል ቴስት image.path)
+      await _sendCommentToSupabase(imageUrl: image.path);
     }
   }
 
-  // ከኢንተርኔት ፎቶ ለመፈለግ የሚረዳ ፕላትፎርም/ዲያሎግ
   void _showWebImageSearchDialog() {
     TextEditingController searchController = TextEditingController();
     List<String> searchResults = [];
@@ -236,7 +189,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               if (query.trim().isEmpty) return;
               setDialogState(() => isSearching = true);
               try {
-                // የልብ፣ የሰው ጭንቅላት ወይም ሌላ ኪይዎርድ በUnsplash API ወይም በነፃ ፑብሊክ አፒአይ መፈለግ
                 final url = Uri.parse('https://unsplash.com/napi/search/photos?query=${Uri.encodeComponent(query)}&per_page=12');
                 final response = await http.get(url);
                 if (response.statusCode == 200) {
@@ -250,12 +202,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   setDialogState(() => isSearching = false);
                 }
               } catch (e) {
-                // በኔትወርክ ችግር ጊዜ የሚታዩ ነባሪ ናሙና ፎቶዎች (Fallback Images)
                 setDialogState(() {
                   searchResults = [
                     'https://images.unsplash.com/photo-1518791841217-8f162f1e1131',
                     'https://images.unsplash.com/photo-1544005313-94ddf0286df2',
-                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d',
                   ];
                   isSearching = false;
                 });
@@ -274,7 +224,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                       controller: searchController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'ምሳሌ፦ heart, head, hand, smile...',
+                        hintText: 'ምሳሌ፦ heart, head, hand...',
                         hintStyle: const TextStyle(color: Colors.grey),
                         filled: true,
                         fillColor: Colors.grey[800],
@@ -303,35 +253,14 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                     return GestureDetector(
                                       onTap: () async {
                                         String selectedUrl = searchResults[index];
-                                        Navigator.pop(context); // የሰርች ሳጥኑን ዝጋ
-                                        
-                                        // የተመረጠውን የኢንተርኔት ፎቶ ወደ ኮሜንት ጨምር
-                                        setState(() {
-                                          _comments.insert(0, {
-                                            'name': 'እርስዎ',
-                                            'comment': '',
-                                            'imagePath': null,
-                                            'imageUrl': selectedUrl,
-                                            'time': '2s ago',
-                                            'likes': 0,
-                                            'isLiked': false,
-                                            'isDisliked': false,
-                                          });
-                                        });
-                                        await _saveCommentsToPrefs();
-                                        if (widget.onCommentCountUpdated != null) {
-                                          widget.onCommentCountUpdated!(741 + _comments.length);
-                                        }
+                                        Navigator.pop(context);
+                                        await _sendCommentToSupabase(imageUrl: selectedUrl);
                                       },
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
                                         child: Image.network(
                                           searchResults[index],
                                           fit: BoxFit.cover,
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent));
-                                          },
                                         ),
                                       ),
                                     );
@@ -373,10 +302,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   Navigator.pop(context);
                 },
                 child: Center(
-                  child: Text(
-                    emojis[index],
-                    style: const TextStyle(fontSize: 28),
-                  ),
+                  child: Text(emojis[index], style: const TextStyle(fontSize: 28)),
                 ),
               );
             },
@@ -457,18 +383,15 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           itemCount: _comments.length,
                           itemBuilder: (context, index) {
                             final item = _comments[index];
-                            final bool isLiked = item['isLiked'] ?? false;
-                            final bool isDisliked = item['isDisliked'] ?? false;
-                            final int likesCount = item['likes'] ?? 0;
-                            final String userName = item['name'];
-                            final String? imagePath = item['imagePath'];
-                            final String? imageUrl = item['imageUrl'];
+                            final String commentId = item['id'].toString();
+                            final String userName = item['user_name'] ?? 'እርስዎ';
                             final String commentText = item['comment'] ?? '';
+                            final String? imageUrl = item['image_url'];
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10.0),
                               child: GestureDetector(
-                                onLongPress: () => _deleteComment(index),
+                                onLongPress: () => _deleteComment(commentId, index),
                                 child: Container(
                                   color: Colors.transparent,
                                   child: Row(
@@ -478,7 +401,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         radius: 18,
                                         backgroundColor: Colors.green[800],
                                         child: Text(
-                                          userName[0],
+                                          userName.isNotEmpty ? userName[0] : 'አ',
                                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       ),
@@ -496,32 +419,14 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                               ),
                                             ),
                                             const SizedBox(height: 4),
-                                            // ከጋለሪ የተመረጠ ፎቶ ከሆነ
-                                            if (imagePath != null && imagePath.isNotEmpty)
+                                            if (imageUrl != null && imageUrl.isNotEmpty)
                                               Padding(
                                                 padding: const EdgeInsets.only(top: 4, bottom: 4),
                                                 child: ClipRRect(
                                                   borderRadius: BorderRadius.circular(8),
-                                                  child: Image.file(
-                                                    File(imagePath),
-                                                    width: 150,
-                                                    height: 150,
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                                ),
-                                              )
-                                            // ከኢንተርኔት የተመረጠ ፎቶ ከሆነ
-                                            else if (imageUrl != null && imageUrl.isNotEmpty)
-                                              Padding(
-                                                padding: const EdgeInsets.only(top: 4, bottom: 4),
-                                                child: ClipRRect(
-                                                  borderRadius: BorderRadius.circular(8),
-                                                  child: Image.network(
-                                                    imageUrl,
-                                                    width: 150,
-                                                    height: 150,
-                                                    fit: BoxFit.cover,
-                                                  ),
+                                                  child: imageUrl.startsWith('http')
+                                                      ? Image.network(imageUrl, width: 150, height: 150, fit: BoxFit.cover)
+                                                      : Image.file(File(imageUrl), width: 150, height: 150, fit: BoxFit.cover),
                                                 ),
                                               )
                                             else
@@ -535,10 +440,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                             const SizedBox(height: 6),
                                             Row(
                                               children: [
-                                                Text(
-                                                  item['time'],
-                                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
-                                                ),
+                                                const Text('አሁን', style: TextStyle(color: Colors.grey, fontSize: 11)),
                                                 const SizedBox(width: 16),
                                                 GestureDetector(
                                                   onTap: () => _onReplyPressed(userName),
@@ -555,29 +457,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      Column(
-                                        children: [
-                                          GestureDetector(
-                                            onTap: () => _toggleLike(index),
-                                            child: Icon(
-                                              isLiked ? Icons.favorite : Icons.favorite_border,
-                                              color: isLiked ? Colors.redAccent : Colors.grey,
-                                              size: 20,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text('$likesCount', style: const TextStyle(color: Colors.grey, fontSize: 10)),
-                                          const SizedBox(height: 10),
-                                          GestureDetector(
-                                            onTap: () => _toggleDislike(index),
-                                            child: Icon(
-                                              isDisliked ? Icons.thumb_down : Icons.thumb_down_off_alt,
-                                              color: isDisliked ? Colors.redAccent : Colors.grey,
-                                              size: 18,
-                                            ),
-                                          ),
-                                        ],
                                       ),
                                     ],
                                   ),
@@ -639,7 +518,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   borderSide: BorderSide.none,
                                 ),
                               ),
-                              onSubmitted: (_) => _addComment(),
+                              onSubmitted: (val) => _sendCommentToSupabase(text: val),
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -657,7 +536,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.send, color: Colors.greenAccent),
-                            onPressed: _addComment,
+                            onPressed: () => _sendCommentToSupabase(text: _commentController.text),
                           ),
                         ],
                       ),
