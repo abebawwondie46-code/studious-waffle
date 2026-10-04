@@ -34,7 +34,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     _fetchCommentsFromSupabase();
   }
 
-  // 1. ከ Supabase ኮሜንቶችን ማንበብ
   Future<void> _fetchCommentsFromSupabase() async {
     try {
       final response = await supabase
@@ -53,7 +52,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
-  // 2. ኮሜንትን (ጽሁፍ ወይም ፎቶ) ወደ Supabase መላክ
   Future<void> _sendCommentToSupabase({String? text, String? imageUrl}) async {
     if ((text == null || text.trim().isEmpty) && imageUrl == null) return;
 
@@ -66,7 +64,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       final newRow = {
         'video_id': widget.videoId,
         'user_name': 'እርስዎ',
-        'comment': finalCommentText,
+        'comment_text': finalCommentText, // እዚህ ጋር ከሱፓቤስ ስም ጋር ተስተካክሏል
         'image_url': imageUrl,
       };
 
@@ -77,7 +75,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         _replyingToUser = null;
       });
 
-      // λ ኮሜንቶቹን እንደገና ከሱፓቤስ መጫን
       await _fetchCommentsFromSupabase();
 
       final int totalComments = 741 + _comments.length;
@@ -94,7 +91,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
-  // 3. አስተያየትን ከ Supabase መሰረዝ
   Future<void> _deleteComment(String commentId, int index) async {
     showDialog(
       context: context,
@@ -131,7 +127,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  // የፎቶ ምርጫ (ጋለሪ ወይም ኢንተርኔት)
   void _onImagePickPressed() {
     showModalBottomSheet(
       context: context,
@@ -169,8 +164,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      // ፎቶውን ወደ Supabase Storage መጫን ወይም በቀጥታ ፓሱን መውሰድ ይቻላል።
-      // ለቀላልነት የፋይሉን መንገድ ወይም ዩአርኤል እንጠቀማለን (ለስልኩ ሎካል ቴስት image.path)
       await _sendCommentToSupabase(imageUrl: image.path);
     }
   }
@@ -385,7 +378,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final item = _comments[index];
                             final String commentId = item['id'].toString();
                             final String userName = item['user_name'] ?? 'እርስዎ';
-                            final String commentText = item['comment'] ?? '';
+                            final String commentText = item['comment_text'] ?? ''; // የተስተካከለ ስም
                             final String? imageUrl = item['image_url'];
 
                             return Padding(
