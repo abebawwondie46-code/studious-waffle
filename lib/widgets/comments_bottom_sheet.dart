@@ -24,7 +24,12 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final FocusNode _commentFocusNode = FocusNode();
   List<Map<String, dynamic>> _comments = [];
   bool _isLoading = true;
+  bool _isSending = false; // ለሚላከው ኮሜንት ሎዲንግ ማሳያ
   String? _replyingToUser;
+
+  // ተጠቃሚው የነካቸውን የላይክ እና ዲስላይክ IDs ለመያዝ (Local State)
+  final Set<String> _likedCommentIds = {};
+  final Set<String> _dislikedCommentIds = {};
 
   final SupabaseClient supabase = Supabase.instance.client;
 
@@ -75,6 +80,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   Future<void> _sendCommentToSupabase({String? text, String? imageUrl}) async {
     if ((text == null || text.trim().isEmpty) && imageUrl == null) return;
 
+    setState(() => _isSending = true); // ሎዲንግ ማሳየት መጀመር
+
     String finalCommentText = text ?? '';
     if (_replyingToUser != null && text != null) {
       finalCommentText = '$_replyingToUser $text';
@@ -110,17 +117,48 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('ማስገባት አልተቻለም: $e'), backgroundColor: Colors.red),
       );
+    } finally {
+      setState(() => _isSending = false); // ሎዲንግ ማጥፋት
     }
   }
 
-  Future<void> _updateLikeDislike(String commentId, int currentLikes, int currentDislikes, bool isLike) async {
-    try {
-      final updatedData = isLike
-          ? {'likes_count': currentLikes + 1}
-          : {'dislikes_count': currentDislikes + 1};
+  // የልብ እና የዲስላይክ ሲጫኑ የሚቀየርበት ዋናሎጂ
+  Future<void> _handleLikeDislike(String commentId, int currentLikes, int currentDislikes, bool isLike) async {
+    setState(() {
+      if (isLike) {
+        if (_likedCommentIds.contains(commentId)) {
+          _likedCommentIds.remove(commentId);
+          currentLikes = currentLikes > 0 ? currentLikes - 1 : 0;
+        } else {
+          _likedCommentIds.add(commentId);
+          currentLikes += 1;
+          // ዲስላይክ ተደርጎ ከሆነ ከዚህ በፊት እናነሳዋለን
+          if (_dislikedCommentIds.contains(commentId)) {
+            _dislikedCommentIds.remove(commentId);
+            currentDislikes = currentDislikes > 0 ? currentDislikes - 1 : 0;
+          }
+        }
+      } else {
+        if (_dislikedCommentIds.contains(commentId)) {
+          _dislikedCommentIds.remove(commentId);
+          currentDislikes = currentDislikes > 0 ? currentDislikes - 1 : 0;
+        } else {
+          _dislikedCommentIds.add(commentId);
+          currentDislikes += 1;
+          // ላይክ ተደርጎ ከሆነ ከዚህ በፊት እናነሳዋለን
+          if (_likedCommentIds.contains(commentId)) {
+            _likedCommentIds.remove(commentId);
+            currentLikes = currentLikes > 0 ? currentLikes - 1 : 0;
+          }
+        }
+      }
+    });
 
-      await supabase.from('comments').update(updatedData).eq('id', commentId);
-      await _fetchCommentsFromSupabase();
+    try {
+      await supabase.from('comments').update({
+        'likes_count': currentLikes,
+        'dislikes_count': currentDislikes,
+      }).eq('id', commentId);
     } catch (e) {
       debugPrint('Error updating like/dislike: $e');
     }
@@ -166,10 +204,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF2A2A2A),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(16),
-          height: 150,
+          height: 160,
           child: Column(
             children: [
               ListTile(
@@ -246,7 +285,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                       controller: searchController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'ምሳሌ፦ heart, head, hand...',
+                        hintText: 'ምሳሌ፦ heart, nature, tech...',
                         hintStyle: const TextStyle(color: Colors.grey),
                         filled: true,
                         fillColor: Colors.grey[800],
@@ -301,13 +340,13 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       context: context,
       backgroundColor: const Color(0xFF2A2A2A),
       builder: (context) {
-        final List<String> emojis = ['😊', '😂', '❤️', '🔥', '👍', '👏', '😍', '🙏', '✨', '😢'];
+        final List<String> emojis = ['😊', '😂', '❤️', '🔥', '👍', '👏', '😍', '🙏', '✨', '😢', '💡', '🚀'];
         return Container(
           padding: const EdgeInsets.all(16),
-          height: 200,
+          height: 220,
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
+              crossAxisCount: 6,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
             ),
@@ -321,7 +360,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   Navigator.pop(context);
                 },
                 child: Center(
-                  child: Text(emojis[index], style: const TextStyle(fontSize: 28)),
+                  child: Text(emojis[index], style: const TextStyle(fontSize: 26)),
                 ),
               );
             },
@@ -360,19 +399,20 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     final int totalCommentCount = 741 + _comments.length;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.70,
+      height: MediaQuery.of(context).size.height * 0.72,
       decoration: const BoxDecoration(
-        color: Color(0xFF161616),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        color: Color(0xFF141414),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
           : Column(
               children: [
+                // የላይኛው መጎተቻ ምልክት (Drag Handle)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Container(
-                    width: 36,
+                    width: 38,
                     height: 4,
                     decoration: BoxDecoration(
                       color: Colors.grey[700],
@@ -409,6 +449,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final int likesCount = item['likes_count'] ?? 0;
                             final int dislikesCount = item['dislikes_count'] ?? 0;
                             final String timeAgo = _formatTimeAgo(item['created_at']);
+
+                            final bool isLiked = _likedCommentIds.contains(commentId);
+                            final bool isDisliked = _dislikedCommentIds.contains(commentId);
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -482,26 +525,35 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
+                                      // የልብ እና ዲስላይክ አዝራሮች ከቁጥር ጋር
                                       Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           InkWell(
-                                            onTap: () => _updateLikeDislike(commentId, likesCount, dislikesCount, true),
-                                            child: const Padding(
-                                              padding: EdgeInsets.all(2.0),
-                                              child: Icon(Icons.favorite_border, color: Colors.grey, size: 18),
+                                            onTap: () => _handleLikeDislike(commentId, likesCount, dislikesCount, true),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(2.0),
+                                              child: Icon(
+                                                isLiked ? Icons.favorite : Icons.favorite_border,
+                                                color: isLiked ? Colors.redAccent : Colors.grey,
+                                                size: 18,
+                                              ),
                                             ),
                                           ),
-                                          Text('$likesCount', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                                          Text('$likesCount', style: TextStyle(color: isLiked ? Colors.redAccent : Colors.grey, fontSize: 10)),
                                           const SizedBox(height: 6),
                                           InkWell(
-                                            onTap: () => _updateLikeDislike(commentId, likesCount, dislikesCount, false),
-                                            child: const Padding(
-                                              padding: EdgeInsets.all(2.0),
-                                              child: Icon(Icons.thumb_down_outlined, color: Colors.grey, size: 18),
+                                            onTap: () => _handleLikeDislike(commentId, likesCount, dislikesCount, false),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(2.0),
+                                              child: Icon(
+                                                isDisliked ? Icons.thumb_down : Icons.thumb_down_outlined,
+                                                color: isDisliked ? Colors.redAccent : Colors.grey,
+                                                size: 18,
+                                              ),
                                             ),
                                           ),
-                                          Text('$dislikesCount', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                                          Text('$dislikesCount', style: TextStyle(color: isDisliked ? Colors.redAccent : Colors.grey, fontSize: 10)),
                                         ],
                                       ),
                                     ],
@@ -512,6 +564,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           },
                         ),
                 ),
+                // የታችኛው የ ግቤት (Input) ቦታ
                 Container(
                   padding: EdgeInsets.only(
                     left: 12,
@@ -519,7 +572,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                     top: 6,
                     bottom: MediaQuery.of(context).viewInsets.bottom + 6,
                   ),
-                  color: const Color(0xFF121212),
+                  color: const Color(0xFF101010),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -587,9 +640,19 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(4),
                           ),
+                          // የመላኪያ ቁልፍ ከ ሎዲንግ (Spinning) ጋር
                           IconButton(
-                            icon: const Icon(Icons.send, color: Colors.greenAccent, size: 20),
-                            onPressed: () => _sendCommentToSupabase(text: _commentController.text),
+                            icon: _isSending
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.greenAccent,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.send, color: Colors.greenAccent, size: 20),
+                            onPressed: _isSending ? null : () => _sendCommentTo_isSending: () => _sendCommentToSupabase(text: _commentController.text),
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(4),
                           ),
