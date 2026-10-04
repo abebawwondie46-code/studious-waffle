@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'dart:json' as convert;
 
 class CommentsBottomSheet extends StatefulWidget {
   final String videoId;
@@ -52,6 +52,26 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
+  String _formatTimeAgo(String? createdAt) {
+    if (createdAt == null) return 'አሁን';
+    try {
+      final dateTime = DateTime.parse(createdAt).toLocal();
+      final difference = DateTime.now().difference(dateTime);
+
+      if (difference.inSeconds < 60) {
+        return '${difference.inSeconds}s ago';
+      } else if (difference.inMinutes < 60) {
+        return '${difference.inMinutes}m ago';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours}h ago';
+      } else {
+        return '${difference.inDays}d ago';
+      }
+    } catch (e) {
+      return 'አሁን';
+    }
+  }
+
   Future<void> _sendCommentToSupabase({String? text, String? imageUrl}) async {
     if ((text == null || text.trim().isEmpty) && imageUrl == null) return;
 
@@ -64,8 +84,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       final newRow = {
         'video_id': widget.videoId,
         'user_name': 'እርስዎ',
-        'comment_text': finalCommentText, // እዚህ ጋር ከሱፓቤስ ስም ጋር ተስተካክሏል
+        'comment_text': finalCommentText,
         'image_url': imageUrl,
+        'likes_count': 0,
+        'dislikes_count': 0,
       };
 
       await supabase.from('comments').insert(newRow);
@@ -88,6 +110,19 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('ማስገባት አልተቻለም: $e'), backgroundColor: Colors.red),
       );
+    }
+  }
+
+  Future<void> _updateLikeDislike(String commentId, int currentLikes, int currentDislikes, bool isLike) async {
+    try {
+      final updatedData = isLike
+          ? {'likes_count': currentLikes + 1}
+          : {'dislikes_count': currentDislikes + 1};
+
+      await supabase.from('comments').update(updatedData).eq('id', commentId);
+      await _fetchCommentsFromSupabase();
+    } catch (e) {
+      debugPrint('Error updating like/dislike: $e');
     }
   }
 
@@ -185,7 +220,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 final url = Uri.parse('https://unsplash.com/napi/search/photos?query=${Uri.encodeComponent(query)}&per_page=12');
                 final response = await http.get(url);
                 if (response.statusCode == 200) {
-                  final data = jsonDecode(response.body);
+                  final data = convert.jsonDecode(response.body);
                   final results = data['results'] as List;
                   setDialogState(() {
                     searchResults = results.map((e) => e['urls']['small'].toString()).toList();
@@ -195,13 +230,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   setDialogState(() => isSearching = false);
                 }
               } catch (e) {
-                setDialogState(() {
-                  searchResults = [
-                    'https://images.unsplash.com/photo-1518791841217-8f162f1e1131',
-                    'https://images.unsplash.com/photo-1544005313-94ddf0286df2',
-                  ];
-                  isSearching = false;
-                });
+                setDialogState(() => isSearching = false);
               }
             }
 
@@ -251,10 +280,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                       },
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(
-                                          searchResults[index],
-                                          fit: BoxFit.cover,
-                                        ),
+                                        child: Image.network(searchResults[index], fit: BoxFit.cover),
                                       ),
                                     );
                                   },
@@ -355,7 +381,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   ),
                 ),
                 Text(
-                  'አስተያየቶች ($totalCommentCount)', 
+                  'አስተያየቶች ($totalCommentCount)',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -378,8 +404,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final item = _comments[index];
                             final String commentId = item['id'].toString();
                             final String userName = item['user_name'] ?? 'እርስዎ';
-                            final String commentText = item['comment_text'] ?? ''; // የተስተካከለ ስም
+                            final String commentText = item['comment_text'] ?? '';
                             final String? imageUrl = item['image_url'];
+                            final int likesCount = item['likes_count'] ?? 0;
+                            final int dislikesCount = item['dislikes_count'] ?? 0;
+                            final String timeAgo = _formatTimeAgo(item['created_at']);
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -433,7 +462,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                             const SizedBox(height: 6),
                                             Row(
                                               children: [
-                                                const Text('አሁን', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                                Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                                                 const SizedBox(width: 16),
                                                 GestureDetector(
                                                   onTap: () => _onReplyPressed(userName),
@@ -450,6 +479,27 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                             ),
                                           ],
                                         ),
+                                      ),
+                                      Column(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.favorite_border, color: Colors.grey, size: 20),
+                                            onPressed: () => _updateLikeDislike(commentId, likesCount, dislikesCount, true),
+                                            constraints: const BoxConstraints(),
+                                            padding: EdgeInsets.zero,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text('$likesCount', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                                          const SizedBox(height: 10),
+                                          IconButton(
+                                            icon: const Icon(Icons.thumb_down_outlined, color: Colors.grey, size: 20),
+                                            onPressed: () => _updateLikeDislike(commentId, likesCount, dislikesCount, false),
+                                            constraints: const BoxConstraints(),
+                                            padding: EdgeInsets.zero,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text('$dislikesCount', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                                        ],
                                       ),
                                     ],
                                   ),
