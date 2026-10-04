@@ -355,40 +355,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                     ),
                   ),
                   const SizedBox(height: 12),
-                  if (_isInitialized && _videoController != null) ...[
-                    Row(
-                      children: [
-                        Text(
-                          _formatDuration(position),
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
-                        ),
-                        Expanded(
-                          child: SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              trackHeight: 3.0,
-                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14.0),
-                            ),
-                            child: Slider(
-                              value: currentPositionMs,
-                              min: 0.0,
-                              max: maxDurationMs,
-                              activeColor: Colors.redAccent,
-                              inactiveColor: Colors.white38,
-                              onChanged: (value) {
-                                _videoController!.seekTo(Duration(milliseconds: value.toInt()));
-                              },
-                            ),
-                          ),
-                        ),
-                        Text(
-                          _formatDuration(duration),
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
+                  
               ),
             ),
           ),
