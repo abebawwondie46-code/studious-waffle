@@ -38,6 +38,16 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     _fetchCommentsFromSupabase();
   }
 
+  void _showToast(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: isError ? Colors.redAccent : Colors.grey[800],
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _fetchCommentsFromSupabase() async {
     try {
       final response = await supabase
@@ -50,6 +60,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         _comments = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
+    } on SocketException {
+      setState(() => _isLoading = false);
+      _showToast('No internet connection!', isError: true);
     } catch (e) {
       setState(() => _isLoading = false);
       debugPrint('Error fetching comments: $e');
@@ -57,7 +70,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   }
 
   String _formatTimeAgo(String? createdAt) {
-    if (createdAt == null) return 'አሁን';
+    if (createdAt == null) return 'just now';
     try {
       final dateTime = DateTime.parse(createdAt).toLocal();
       final difference = DateTime.now().difference(dateTime);
@@ -72,7 +85,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         return '${difference.inDays}d';
       }
     } catch (e) {
-      return 'አሁን';
+      return 'just now';
     }
   }
 
@@ -89,7 +102,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     try {
       final newRow = {
         'video_id': widget.videoId,
-        'user_name': 'እርስዎ',
+        'user_name': 'You',
         'comment_text': finalCommentText,
         'image_url': imageUrl,
         'likes_count': 0,
@@ -105,17 +118,17 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
       await _fetchCommentsFromSupabase();
 
-      final int totalComments = 741 + _comments.length;
+      final int totalComments = 743 + _comments.length;
       if (widget.onCommentCountUpdated != null) {
         widget.onCommentCountUpdated!(totalComments);
       }
 
       FocusScope.of(context).unfocus();
+    } on SocketException {
+      _showToast('No internet connection! Failed to send.', isError: true);
     } catch (e) {
       debugPrint('Error inserting comment: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ማስገባት አልተቻለም: $e'), backgroundColor: Colors.red),
-      );
+      _showToast('Failed to insert comment: $e', isError: true);
     } finally {
       setState(() => _isSending = false);
     }
@@ -155,6 +168,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         'likes_count': currentLikes,
         'dislikes_count': currentDislikes,
       }).eq('id', commentId);
+    } on SocketException {
+      _showToast('No internet connection!', isError: true);
     } catch (e) {
       debugPrint('Error updating like/dislike: $e');
     }
@@ -166,25 +181,27 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF2A2A2A),
-          title: const Text('አስተያየትን ሰርዝ', style: TextStyle(color: Colors.white)),
-          content: const Text('እርግጠኛ ነዎት ይህን አስተያየት መሰረዝ ይፈልጋሉ?', style: TextStyle(color: Colors.white70)),
+          title: const Text('Delete Comment', style: TextStyle(color: Colors.white)),
+          content: const Text('Are you sure you want to delete this comment?', style: TextStyle(color: Colors.white70)),
           actions: [
             TextButton(
-              child: const Text('አይ', style: TextStyle(color: Colors.grey)),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
               onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
-              child: const Text('አዎ፣ ሰርዝ', style: TextStyle(color: Colors.redAccent)),
+              child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
               onPressed: () async {
                 Navigator.of(context).pop();
                 try {
                   await supabase.from('comments').delete().eq('id', commentId);
                   await _fetchCommentsFromSupabase();
 
-                  final int totalComments = 741 + _comments.length;
+                  final int totalComments = 743 + _comments.length;
                   if (widget.onCommentCountUpdated != null) {
                     widget.onCommentCountUpdated!(totalComments);
                   }
+                } on SocketException {
+                  _showToast('No internet connection!', isError: true);
                 } catch (e) {
                   debugPrint('Error deleting comment: $e');
                 }
@@ -209,7 +226,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_library, color: Colors.greenAccent),
-                title: const Text('ከስልክ ጋለሪ ፎቶ ምረጥ', style: TextStyle(color: Colors.white)),
+                title: const Text('Pick photo from gallery', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickAndUploadFromGallery();
@@ -217,7 +234,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               ),
               ListTile(
                 leading: const Icon(Icons.public, color: Colors.greenAccent),
-                title: const Text('ከኢንተርኔት ፎቶ እና ጂአይኤፍ (GIF/Web) ፈልግ', style: TextStyle(color: Colors.white)),
+                title: const Text('Search photo & GIF from web', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
                   _showWebImageSearchDialog();
@@ -238,7 +255,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
-  // ተጠቃሚው ከኢንተርኔት ያለ ገደብ ፎቶዎችን የሚፈልግበት እና የሚያመጣበት የተስተካከለ ተግባር
   void _showWebImageSearchDialog() {
     TextEditingController searchController = TextEditingController(text: 'funny animation');
     List<String> searchResults = [];
@@ -253,7 +269,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               if (query.trim().isEmpty) return;
               setDialogState(() => isSearching = true);
               try {
-                // የ Unsplash API ዩአርኤል (እባክዎ YOUR_UNSLAPSH_ACCESS_KEY የሚለውን በራሱ ትክክለኛ የ Unsplash Access Key ይቀይሩት)
                 final url = Uri.parse('https://api.unsplash.com/search/photos?query=${Uri.encodeComponent(query)}&per_page=30');
                 final response = await http.get(
                   url,
@@ -272,6 +287,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 } else {
                   setDialogState(() => isSearching = false);
                 }
+              } on SocketException {
+                setDialogState(() => isSearching = false);
+                _showToast('No internet connection!', isError: true);
               } catch (e) {
                 debugPrint('Search error: $e');
                 setDialogState(() => isSearching = false);
@@ -288,7 +306,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('ከኢንተርኔት ፎቶ/ጂአይኤፍ ፈልግ', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  const Text('Search Photo/GIF from Web', style: TextStyle(color: Colors.white, fontSize: 14)),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.grey, size: 18),
                     onPressed: () => Navigator.pop(context),
@@ -304,7 +322,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                       controller: searchController,
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: 'ምሳሌ፦ anime, fire, love, funny...',
+                        hintText: 'e.g. anime, fire, love, funny...',
                         hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                         filled: true,
                         fillColor: Colors.grey[850],
@@ -322,7 +340,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                       child: isSearching
                           ? const Center(child: CircularProgressIndicator(color: Colors.greenAccent))
                           : searchResults.isEmpty
-                              ? const Center(child: Text('ምንም አልተገኘም፣ እንደገና ይሞክሩ', style: TextStyle(color: Colors.grey, fontSize: 12)))
+                              ? const Center(child: Text('No results found, try again', style: TextStyle(color: Colors.grey, fontSize: 12)))
                               : GridView.builder(
                                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 3,
@@ -367,7 +385,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                                   color: Colors.black54,
                                                   borderRadius: BorderRadius.circular(4),
                                                 ),
-                                                child: const Text('ላክ', style: TextStyle(color: Colors.white, fontSize: 9)),
+                                                child: const Text('Send', style: TextStyle(color: Colors.white, fontSize: 9)),
                                               ),
                                             ),
                                           ],
@@ -448,7 +466,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final int totalCommentCount = 741 + _comments.length;
+    final int totalCommentCount = 743 + _comments.length;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.72,
@@ -472,7 +490,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   ),
                 ),
                 Text(
-                  'አስተያየቶች ($totalCommentCount)',
+                  'Comments ($totalCommentCount)',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -484,7 +502,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   child: _comments.isEmpty
                       ? const Center(
                           child: Text(
-                            'ገና ምንም አስተያየት የለም',
+                            'No comments yet',
                             style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                         )
@@ -494,7 +512,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           itemBuilder: (context, index) {
                             final item = _comments[index];
                             final String commentId = item['id'].toString();
-                            final String userName = item['user_name'] ?? 'እርስዎ';
+                            final String userName = item['user_name'] ?? 'You';
                             final String commentText = item['comment_text'] ?? '';
                             final String? imageUrl = item['image_url'];
                             final int likesCount = item['likes_count'] ?? 0;
@@ -517,7 +535,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         radius: 16,
                                         backgroundColor: Colors.green[800],
                                         child: Text(
-                                          userName.isNotEmpty ? userName[0] : 'አ',
+                                          userName.isNotEmpty ? userName[0] : 'U',
                                           style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                                         ),
                                       ),
@@ -648,7 +666,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           CircleAvatar(
                             radius: 14,
                             backgroundColor: Colors.green[800],
-                            child: const Text('አ', style: TextStyle(color: Colors.white, fontSize: 10)),
+                            child: const Text('U', style: TextStyle(color: Colors.white, fontSize: 10)),
                           ),
                           const SizedBox(width: 6),
                           Expanded(
