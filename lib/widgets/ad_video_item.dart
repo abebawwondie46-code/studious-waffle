@@ -465,21 +465,30 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-                // ኮሜንት (Comment)
-                Column(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 28),
-                      onPressed: _openComments,
-                    ),
-                    Text(
-                      '$_commentCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
+   // ኮሜንት (Comment)
+   Column(
+    children: [
+     IconButton(
+       icon: Container(
+         padding: const EdgeInsets.all(8),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.chat_bubble,
+          color: Colors.black,
+          size: 20,
+        ),
+      ),
+      onPressed: _openComments,
+    ),
+    Text(
+      '$_commentCount',
+      style: const TextStyle(color: Colors.white),
+    ),
+  ],
+),
                 // ሼር (Share)
                 Column(
                   children: [
