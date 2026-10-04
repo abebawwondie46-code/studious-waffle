@@ -60,6 +60,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         _comments = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
+
+      if (widget.onCommentCountUpdated != null) {
+        widget.onCommentCountUpdated!(_comments.length);
+      }
     } on SocketException {
       setState(() => _isLoading = false);
       _showToast('No internet connection!', isError: true);
@@ -117,12 +121,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       });
 
       await _fetchCommentsFromSupabase();
-
-      final int totalComments = 743 + _comments.length;
-      if (widget.onCommentCountUpdated != null) {
-        widget.onCommentCountUpdated!(totalComments);
-      }
-
       FocusScope.of(context).unfocus();
     } on SocketException {
       _showToast('No internet connection! Failed to send.', isError: true);
@@ -175,7 +173,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
-  Future<void> _deleteComment(String commentId, int index) async {
+  Future<void> _deleteComment(String commentId) async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -195,11 +193,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 try {
                   await supabase.from('comments').delete().eq('id', commentId);
                   await _fetchCommentsFromSupabase();
-
-                  final int totalComments = 743 + _comments.length;
-                  if (widget.onCommentCountUpdated != null) {
-                    widget.onCommentCountUpdated!(totalComments);
-                  }
                 } on SocketException {
                   _showToast('No internet connection!', isError: true);
                 } catch (e) {
@@ -466,8 +459,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final int totalCommentCount = 743 + _comments.length;
-
     return Container(
       height: MediaQuery.of(context).size.height * 0.72,
       decoration: const BoxDecoration(
@@ -490,7 +481,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   ),
                 ),
                 Text(
-                  'Comments ($totalCommentCount)',
+                  'Comments (${_comments.length})',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -525,7 +516,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0),
                               child: GestureDetector(
-                                onLongPress: () => _deleteComment(commentId, index),
+                                onLongPress: () => _deleteComment(commentId),
                                 child: Container(
                                   color: Colors.transparent,
                                   child: Row(
