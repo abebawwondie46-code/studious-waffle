@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http; // ለኢንተርኔት ፍለጋ (Unsplash API ለመጠቀም)
 
 class CommentsBottomSheet extends StatefulWidget {
   final String videoId;
@@ -67,7 +68,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       _comments.insert(0, {
         'name': 'እርስዎ',
         'comment': commentText,
-        'imagePath': null, // ጽሁፍ ብቻ ሲሆን
+        'imagePath': null,
+        'imageUrl': null,
         'time': '2s ago',
         'likes': 0,
         'isLiked': false,
@@ -161,8 +163,42 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  // ፎቶን ከአሁን በኋላ በቀጥታ በምስል (Image) መልክ እንዲቀመጥ ማድረግ
-  Future<void> _onImagePickPressed() async {
+  // የፎቶ አዶ ሲጫን: ከጋለሪ ወይም ከኢንተርኔት የመምረጫ አማራጭ ማሳየት
+  void _onImagePickPressed() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF2A2A2A),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: 150,
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.greenAccent),
+                title: const Text('ከስልክ ጋለሪ ፎቶ ምረጥ', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.search, color: Colors.greenAccent),
+                title: const Text('ከኢንተርኔት ፎቶ ፈልግ (Search Web)', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showWebImageSearchDialog();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ከጋለሪ የመረጠውን መጫን
+  Future<void> _pickFromGallery() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
@@ -170,7 +206,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         _comments.insert(0, {
           'name': 'እርስዎ',
           'comment': '',
-          'imagePath': image.path, // የፋይሉን ትክክለኛ ፓዝ (Path) እንይዛለን
+          'imagePath': image.path,
+          'imageUrl': null,
           'time': '2s ago',
           'likes': 0,
           'isLiked': false,
@@ -182,6 +219,133 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         widget.onCommentCountUpdated!(741 + _comments.length);
       }
     }
+  }
+
+  // ከኢንተርኔት ፎቶ ለመፈለግ የሚረዳ ፕላትፎርም/ዲያሎግ
+  void _showWebImageSearchDialog() {
+    TextEditingController searchController = TextEditingController();
+    List<String> searchResults = [];
+    bool isSearching = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> searchImages(String query) async {
+              if (query.trim().isEmpty) return;
+              setDialogState(() => isSearching = true);
+              try {
+                // የልብ፣ የሰው ጭንቅላት ወይም ሌላ ኪይዎርድ በUnsplash API ወይም በነፃ ፑብሊክ አፒአይ መፈለግ
+                final url = Uri.parse('https://unsplash.com/napi/search/photos?query=${Uri.encodeComponent(query)}&per_page=12');
+                final response = await http.get(url);
+                if (response.statusCode == 200) {
+                  final data = jsonDecode(response.body);
+                  final results = data['results'] as List;
+                  setDialogState(() {
+                    searchResults = results.map((e) => e['urls']['small'].toString()).toList();
+                    isSearching = false;
+                  });
+                } else {
+                  setDialogState(() => isSearching = false);
+                }
+              } catch (e) {
+                // በኔትወርክ ችግር ጊዜ የሚታዩ ነባሪ ናሙና ፎቶዎች (Fallback Images)
+                setDialogState(() {
+                  searchResults = [
+                    'https://images.unsplash.com/photo-1518791841217-8f162f1e1131',
+                    'https://images.unsplash.com/photo-1544005313-94ddf0286df2',
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d',
+                  ];
+                  isSearching = false;
+                });
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF2A2A2A),
+              title: const Text('ከኢንተርኔት ፎቶ ፈልግ', style: TextStyle(color: Colors.white, fontSize: 16)),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 350,
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: searchController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'ምሳሌ፦ heart, head, hand, smile...',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        filled: true,
+                        fillColor: Colors.grey[800],
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.search, color: Colors.greenAccent),
+                          onPressed: () => searchImages(searchController.text),
+                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      ),
+                      onSubmitted: (val) => searchImages(val),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: isSearching
+                          ? const Center(child: CircularProgressIndicator(color: Colors.greenAccent))
+                          : searchResults.isEmpty
+                              ? const Center(child: Text('ፎቶዎችን ለማግኘት ፈልግ የሚለውን ይጫኑ', style: TextStyle(color: Colors.grey, fontSize: 12)))
+                              : GridView.builder(
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 3,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                  ),
+                                  itemCount: searchResults.length,
+                                  itemBuilder: (context, index) {
+                                    return GestureDetector(
+                                      onTap: () async {
+                                        String selectedUrl = searchResults[index];
+                                        Navigator.pop(context); // የሰርች ሳጥኑን ዝጋ
+                                        
+                                        // የተመረጠውን የኢንተርኔት ፎቶ ወደ ኮሜንት ጨምር
+                                        setState(() {
+                                          _comments.insert(0, {
+                                            'name': 'እርስዎ',
+                                            'comment': '',
+                                            'imagePath': null,
+                                            'imageUrl': selectedUrl,
+                                            'time': '2s ago',
+                                            'likes': 0,
+                                            'isLiked': false,
+                                            'isDisliked': false,
+                                          });
+                                        });
+                                        await _saveCommentsToPrefs();
+                                        if (widget.onCommentCountUpdated != null) {
+                                          widget.onCommentCountUpdated!(741 + _comments.length);
+                                        }
+                                      },
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          searchResults[index],
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent));
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _onEmojiPressed() {
@@ -298,6 +462,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final int likesCount = item['likes'] ?? 0;
                             final String userName = item['name'];
                             final String? imagePath = item['imagePath'];
+                            final String? imageUrl = item['imageUrl'];
                             final String commentText = item['comment'] ?? '';
 
                             return Padding(
@@ -331,7 +496,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                               ),
                                             ),
                                             const SizedBox(height: 4),
-                                            // ፎቶ ካለ የፎቶውን ፋይል እናሳያለን፣ ካለፈ ጽሁፉን
+                                            // ከጋለሪ የተመረጠ ፎቶ ከሆነ
                                             if (imagePath != null && imagePath.isNotEmpty)
                                               Padding(
                                                 padding: const EdgeInsets.only(top: 4, bottom: 4),
@@ -339,6 +504,20 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                                   borderRadius: BorderRadius.circular(8),
                                                   child: Image.file(
                                                     File(imagePath),
+                                                    width: 150,
+                                                    height: 150,
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              )
+                                            // ከኢንተርኔት የተመረጠ ፎቶ ከሆነ
+                                            else if (imageUrl != null && imageUrl.isNotEmpty)
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  child: Image.network(
+                                                    imageUrl,
                                                     width: 150,
                                                     height: 150,
                                                     fit: BoxFit.cover,
@@ -474,7 +653,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.alternate_email, color: Colors.grey),
-                            onPressed: _onMention_Pressed_Safe(),
+                            onPressed: _onMentionPressed,
                           ),
                           IconButton(
                             icon: const Icon(Icons.send, color: Colors.greenAccent),
@@ -488,10 +667,5 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               ],
             ),
     );
-  }
-
-  // ለሜንሽን አዶ የተስተካከለ ረዳት ፋንክሽን
-  VoidCallback _onMention_Pressed_Safe() {
-    return _onMentionPressed;
   }
 }
