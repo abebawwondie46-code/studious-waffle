@@ -324,7 +324,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
               onPressed: _openSearchDialog,
             ),
           ),
-
+          // 3. ከስክሪኑ በታች የርዕስ እና የጊዜ መስመር (Slider) መቆጣጠሪያ
           Positioned(
             left: 0,
             right: 0,
