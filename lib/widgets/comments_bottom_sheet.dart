@@ -59,13 +59,13 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       final difference = DateTime.now().difference(dateTime);
 
       if (difference.inSeconds < 60) {
-        return '${difference.inSeconds}s ago';
+        return '${difference.inSeconds}s';
       } else if (difference.inMinutes < 60) {
-        return '${difference.inMinutes}m ago';
+        return '${difference.inMinutes}m';
       } else if (difference.inHours < 24) {
-        return '${difference.inHours}h ago';
+        return '${difference.inHours}h';
       } else {
-        return '${difference.inDays}d ago';
+        return '${difference.inDays}d';
       }
     } catch (e) {
       return 'አሁን';
@@ -360,9 +360,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     final int totalCommentCount = 741 + _comments.length;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.65,
+      height: MediaQuery.of(context).size.height * 0.70,
       decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
+        color: Color(0xFF161616),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: _isLoading
@@ -370,12 +370,12 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Container(
-                    width: 40,
+                    width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey[600],
+                      color: Colors.grey[700],
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -384,21 +384,21 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                   'አስተያየቶች ($totalCommentCount)',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Divider(color: Colors.white24),
+                const Divider(color: Colors.white12, height: 16),
                 Expanded(
                   child: _comments.isEmpty
                       ? const Center(
                           child: Text(
                             'ገና ምንም አስተያየት የለም',
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           itemCount: _comments.length,
                           itemBuilder: (context, index) {
                             final item = _comments[index];
@@ -411,7 +411,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final String timeAgo = _formatTimeAgo(item['created_at']);
 
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10.0),
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
                               child: GestureDetector(
                                 onLongPress: () => _deleteComment(commentId, index),
                                 child: Container(
@@ -420,35 +420,36 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       CircleAvatar(
-                                        radius: 18,
+                                        radius: 16,
                                         backgroundColor: Colors.green[800],
                                         child: Text(
                                           userName.isNotEmpty ? userName[0] : 'አ',
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
+                                      const SizedBox(width: 10),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Text(
                                               userName,
                                               style: const TextStyle(
                                                 color: Colors.grey,
-                                                fontSize: 13,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w500,
                                               ),
                                             ),
-                                            const SizedBox(height: 4),
+                                            const SizedBox(height: 2),
                                             if (imageUrl != null && imageUrl.isNotEmpty)
                                               Padding(
                                                 padding: const EdgeInsets.only(top: 4, bottom: 4),
                                                 child: ClipRRect(
                                                   borderRadius: BorderRadius.circular(8),
                                                   child: imageUrl.startsWith('http')
-                                                      ? Image.network(imageUrl, width: 150, height: 150, fit: BoxFit.cover)
-                                                      : Image.file(File(imageUrl), width: 150, height: 150, fit: BoxFit.cover),
+                                                      ? Image.network(imageUrl, width: 140, height: 140, fit: BoxFit.cover)
+                                                      : Image.file(File(imageUrl), width: 140, height: 140, fit: BoxFit.cover),
                                                 ),
                                               )
                                             else
@@ -456,21 +457,21 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                                 commentText,
                                                 style: const TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 14,
+                                                  fontSize: 13,
                                                 ),
                                               ),
-                                            const SizedBox(height: 6),
+                                            const SizedBox(height: 4),
                                             Row(
                                               children: [
-                                                Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                                                const SizedBox(width: 16),
+                                                Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                                                const SizedBox(width: 12),
                                                 GestureDetector(
                                                   onTap: () => _onReplyPressed(userName),
                                                   child: const Text(
                                                     'Reply',
                                                     style: TextStyle(
                                                       color: Colors.grey,
-                                                      fontSize: 11,
+                                                      fontSize: 10,
                                                       fontWeight: FontWeight.w500,
                                                     ),
                                                   ),
@@ -480,25 +481,27 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                           ],
                                         ),
                                       ),
+                                      const SizedBox(width: 8),
                                       Column(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.favorite_border, color: Colors.grey, size: 20),
-                                            onPressed: () => _updateLikeDislike(commentId, likesCount, dislikesCount, true),
-                                            constraints: const BoxConstraints(),
-                                            padding: EdgeInsets.zero,
+                                          InkWell(
+                                            onTap: () => _updateLikeDislike(commentId, likesCount, dislikesCount, true),
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(2.0),
+                                              child: Icon(Icons.favorite_border, color: Colors.grey, size: 18),
+                                            ),
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text('$likesCount', style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                                          const SizedBox(height: 10),
-                                          IconButton(
-                                            icon: const Icon(Icons.thumb_down_outlined, color: Colors.grey, size: 20),
-                                            onPressed: () => _updateLikeDislike(commentId, likesCount, dislikesCount, false),
-                                            constraints: const BoxConstraints(),
-                                            padding: EdgeInsets.zero,
+                                          Text('$likesCount', style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                                          const SizedBox(height: 6),
+                                          InkWell(
+                                            onTap: () => _updateLikeDislike(commentId, likesCount, dislikesCount, false),
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(2.0),
+                                              child: Icon(Icons.thumb_down_outlined, color: Colors.grey, size: 18),
+                                            ),
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text('$dislikesCount', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                                          Text('$dislikesCount', style: const TextStyle(color: Colors.grey, fontSize: 10)),
                                         ],
                                       ),
                                     ],
@@ -511,28 +514,29 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                 ),
                 Container(
                   padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 8,
-                    bottom: MediaQuery.of(context).viewInsets.bottom + 8,
+                    left: 12,
+                    right: 12,
+                    top: 6,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 6,
                   ),
-                  color: Colors.black54,
+                  color: const Color(0xFF121212),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_replyingToUser != null)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.only(bottom: 4),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 'Replying to $_replyingToUser',
-                                style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
+                                style: const TextStyle(color: Colors.greenAccent, fontSize: 11),
                               ),
                               GestureDetector(
                                 onTap: () => setState(() => _replyingToUser = null),
-                                child: const Icon(Icons.close, color: Colors.grey, size: 16),
+                                child: const Icon(Icons.close, color: Colors.grey, size: 14),
                               ),
                             ],
                           ),
@@ -540,46 +544,54 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                       Row(
                         children: [
                           CircleAvatar(
-                            radius: 16,
+                            radius: 14,
                             backgroundColor: Colors.green[800],
-                            child: const Text('አ', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            child: const Text('አ', style: TextStyle(color: Colors.white, fontSize: 10)),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: TextField(
                               controller: _commentController,
                               focusNode: _commentFocusNode,
-                              style: const TextStyle(color: Colors.white),
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
                               decoration: InputDecoration(
                                 hintText: _replyingToUser != null ? 'Add reply...' : 'Add comment...',
-                                hintStyle: const TextStyle(color: Colors.grey),
+                                hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                                 filled: true,
                                 fillColor: Colors.grey[850],
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(18),
                                   borderSide: BorderSide.none,
                                 ),
                               ),
                               onSubmitted: (val) => _sendCommentToSupabase(text: val),
                             ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 2),
                           IconButton(
-                            icon: const Icon(Icons.image_outlined, color: Colors.grey),
+                            icon: const Icon(Icons.image_outlined, color: Colors.grey, size: 20),
                             onPressed: _onImagePickPressed,
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.sentiment_satisfied_outlined, color: Colors.grey),
+                            icon: const Icon(Icons.sentiment_satisfied_outlined, color: Colors.grey, size: 20),
                             onPressed: _onEmojiPressed,
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.alternate_email, color: Colors.grey),
+                            icon: const Icon(Icons.alternate_email, color: Colors.grey, size: 20),
                             onPressed: _onMentionPressed,
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.send, color: Colors.greenAccent),
+                            icon: const Icon(Icons.send, color: Colors.greenAccent, size: 20),
                             onPressed: () => _sendCommentToSupabase(text: _commentController.text),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
                           ),
                         ],
                       ),
