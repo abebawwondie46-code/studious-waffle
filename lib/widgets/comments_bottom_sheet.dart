@@ -24,10 +24,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final FocusNode _commentFocusNode = FocusNode();
   List<Map<String, dynamic>> _comments = [];
   bool _isLoading = true;
-  bool _isSending = false; // ለሚላከው ኮሜንት ሎዲንግ ማሳያ
+  bool _isSending = false;
   String? _replyingToUser;
 
-  // ተጠቃሚው የነካቸውን የላይክ እና ዲስላይክ IDs ለመያዝ (Local State)
   final Set<String> _likedCommentIds = {};
   final Set<String> _dislikedCommentIds = {};
 
@@ -80,7 +79,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   Future<void> _sendCommentToSupabase({String? text, String? imageUrl}) async {
     if ((text == null || text.trim().isEmpty) && imageUrl == null) return;
 
-    setState(() => _isSending = true); // ሎዲንግ ማሳየት መጀመር
+    setState(() => _isSending = true);
 
     String finalCommentText = text ?? '';
     if (_replyingToUser != null && text != null) {
@@ -118,11 +117,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         SnackBar(content: Text('ማስገባት አልተቻለም: $e'), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() => _isSending = false); // ሎዲንግ ማጥፋት
+      setState(() => _isSending = false);
     }
   }
 
-  // የልብ እና የዲስላይክ ሲጫኑ የሚቀየርበት ዋናሎጂ
   Future<void> _handleLikeDislike(String commentId, int currentLikes, int currentDislikes, bool isLike) async {
     setState(() {
       if (isLike) {
@@ -132,7 +130,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         } else {
           _likedCommentIds.add(commentId);
           currentLikes += 1;
-          // ዲስላይክ ተደርጎ ከሆነ ከዚህ በፊት እናነሳዋለን
           if (_dislikedCommentIds.contains(commentId)) {
             _dislikedCommentIds.remove(commentId);
             currentDislikes = currentDislikes > 0 ? currentDislikes - 1 : 0;
@@ -145,7 +142,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         } else {
           _dislikedCommentIds.add(commentId);
           currentDislikes += 1;
-          // ላይክ ተደርጎ ከሆነ ከዚህ በፊት እናነሳዋለን
           if (_likedCommentIds.contains(commentId)) {
             _likedCommentIds.remove(commentId);
             currentLikes = currentLikes > 0 ? currentLikes - 1 : 0;
@@ -408,7 +404,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
           : Column(
               children: [
-                // የላይኛው መጎተቻ ምልክት (Drag Handle)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Container(
@@ -525,7 +520,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      // የልብ እና ዲስላይክ አዝራሮች ከቁጥር ጋር
                                       Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -564,7 +558,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           },
                         ),
                 ),
-                // የታችኛው የ ግቤት (Input) ቦታ
                 Container(
                   padding: EdgeInsets.only(
                     left: 12,
@@ -640,7 +633,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(4),
                           ),
-                          // የመላኪያ ቁልፍ ከ ሎዲንግ (Spinning) ጋር
                           IconButton(
                             icon: _isSending
                                 ? const SizedBox(
@@ -652,7 +644,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                     ),
                                   )
                                 : const Icon(Icons.send, color: Colors.greenAccent, size: 20),
-                            onPressed: _isSending ? null : () => _sendCommentTo_isSending: () => _sendCommentToSupabase(text: _commentController.text),
+                            onPressed: _isSending ? null : () => _sendCommentToSupabase(text: _commentController.text),
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(4),
                           ),
