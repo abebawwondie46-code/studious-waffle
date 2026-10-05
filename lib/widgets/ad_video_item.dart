@@ -139,32 +139,25 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
     super.dispose();
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "$minutes:$seconds";
-  }
-
   // 2. የኮሜንት መስኮት መክፈቻ (Comments with videoId support)
   void _openComments() {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.grey[900],
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) => CommentsBottomSheet(
-      videoId: widget.videoUrl,
-      onCommentCountUpdated: (newCount) {
-        setState(() {
-          _commentCount = newCount; // ከታች አዲስ ኮሜንት ሲጨመር የውጪው ቁጥር እንዲቀየር ያደርጋል
-        });
-      },
-    ),
-  );
-}
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => CommentsBottomSheet(
+        videoId: widget.videoUrl,
+        onCommentCountUpdated: (newCount) {
+          setState(() {
+            _commentCount = newCount; // ከታች አዲስ ኮሜንት ሲጨመር የውጪው ቁጥር እንዲቀየር ያደርጋል
+          });
+        },
+      ),
+    );
+  }
 
   void _openSearchDialog() {
     showDialog(
@@ -259,17 +252,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final Duration duration = (_isInitialized && _videoController != null)
-        ? _videoController!.value.duration
-        : Duration.zero;
-        
-    final Duration position = (_isInitialized && _videoController != null)
-        ? _videoController!.value.position
-        : Duration.zero;
-
-    final double maxDurationMs = duration.inMilliseconds > 0 ? duration.inMilliseconds.toDouble() : 1.0;
-    final double currentPositionMs = position.inMilliseconds.toDouble().clamp(0.0, maxDurationMs);
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -324,7 +306,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
               onPressed: _openSearchDialog,
             ),
           ),
-          // 3. ከስክሪኑ በታች የርዕስ እና የጊዜ መስመር (Slider) መቆጣጠሪያ
+          // 3. ከስክሪኑ በታች የርዕስ ማሳያ (የጊዜ መስመሩ ተወግዷል)
           Positioned(
             left: 0,
             right: 0,
@@ -354,8 +336,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  
+                ],
               ),
             ),
           ),
@@ -432,30 +413,31 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 10),
 
-   // ኮሜንት (Comment)
-   Column(
-    children: [
-     IconButton(
-       icon: Container(
-         padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.chat_bubble,
-          color: Colors.black,
-          size: 20,
-        ),
-      ),
-      onPressed: _openComments,
-    ),
-    Text(
-      '$_commentCount',
-      style: const TextStyle(color: Colors.white),
-    ),
-  ],
-),
+                // ኮሜንት (Comment)
+                Column(
+                  children: [
+                    IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.chat_bubble,
+                          color: Colors.black,
+                          size: 20,
+                        ),
+                      ),
+                      onPressed: _openComments,
+                    ),
+                    Text(
+                      '$_commentCount',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+                
                 // ሼር (Share)
                 Column(
                   children: [
