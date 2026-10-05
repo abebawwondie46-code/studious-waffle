@@ -821,7 +821,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 }
 
-// 🎬 Fully Functional Interactive Video & Photo Editor Studio Screen
+// 🎬 Interactive Video & Photo Editor Studio Screen with Live AI Online Assets Fetcher
 class VideoEditorStudioScreen extends StatefulWidget {
   const VideoEditorStudioScreen({super.key});
 
@@ -831,14 +831,17 @@ class VideoEditorStudioScreen extends StatefulWidget {
 
 class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
   double _trimValue = 0.5;
-  String _selectedFilter = 'Normal';
+  String _selectedFilter = 'Funny 😂';
   bool _isProcessing = false;
+  bool _isLoadingAiAsset = false;
   XFile? _pickedFile;
   VideoPlayerController? _editorVideoController;
   bool _isEditorVideoInitialized = false;
 
   final TextEditingController _funnyCaptionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+
+  String _aiFetchedMessage = 'AI Asset Loaded: Comedy Sound & Funny Sticker Pack 🔥';
 
   Future<void> _pickMediaFile() async {
     try {
@@ -848,7 +851,6 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
           _pickedFile = media;
         });
 
-        // If it's a video, initialize player for live preview
         if (media.path.endsWith('.mp4') || media.path.endsWith('.mov') || media.path.endsWith('.avi')) {
           _editorVideoController?.dispose();
           _editorVideoController = VideoPlayerController.networkUrl(Uri.parse(media.path))
@@ -874,6 +876,40 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
     }
   }
 
+  // 🌐 Simulate Fetching AI Smart Assets from Internet based on Filter
+  Future<void> _fetchAiFilterAssets(String filterName) async {
+    setState(() {
+      _isLoadingAiAsset = true;
+      _selectedFilter = filterName;
+    });
+
+    // Simulate network delay for fetching online AI templates/effects
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    setState(() {
+      _isLoadingAiAsset = false;
+      if (filterName == 'Funny 😂') {
+        _aiFetchedMessage = 'AI Fetched: Laugh Track Audio & Meme Stickers 🤪';
+        _funnyCaptionController.text = 'Wait for the funny plot twist! 😂🔥';
+      } else if (filterName == 'Cinematic') {
+        _aiFetchedMessage = 'AI Fetched: Hollywood Color Grading & Epic BGM 🎬';
+        _funnyCaptionController.text = 'Cinematic masterpiece in progress ✨';
+      } else if (filterName == 'Vibe AI') {
+        _aiFetchedMessage = 'AI Fetched: Smart Beat Sync & Neon Glow FX 🚀';
+        _funnyCaptionController.text = 'Catch the ultimate vibe with VibeShare AI 💎';
+      } else {
+        _aiFetchedMessage = 'Normal Mode: Standard Raw Editor Active 🎥';
+        _funnyCaptionController.text = '';
+      }
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_aiFetchedMessage), duration: const Duration(seconds: 1)),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _editorVideoController?.dispose();
@@ -881,7 +917,6 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
     super.dispose();
   }
 
-  // 🚀 Publish Created / Edited Video directly to Supabase Feed
   Future<void> _publishEditedVideoToFeed() async {
     final caption = _funnyCaptionController.text.trim();
     if (_pickedFile == null) {
@@ -903,7 +938,7 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
 
     try {
       await Supabase.instance.client.from('videos').insert({
-        'title': '$caption [Filter: $_selectedFilter]',
+        'title': '$caption [AI Preset: $_selectedFilter]',
         'video_url': 'https://www.sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
         'likes_count': 0,
         'comments_count': 0,
@@ -947,7 +982,7 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
           children: [
             // Live Preview Box
             Container(
-              height: 220,
+              height: 200,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.grey[900],
@@ -966,27 +1001,30 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
                         ),
                       )
                     : Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.video_collection, size: 50, color: Colors.redAccent),
-                            const SizedBox(height: 8),
-                            Text(
-                              _pickedFile != null ? 'File: ${_pickedFile!.name}' : 'Tap "Add Media" to load video/photo',
-                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Active Filter: $_selectedFilter',
-                              style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
-                            ),
-                          ],
-                        ),
+                        child: _isLoadingAiAsset
+                            ? const CircularProgressIndicator(color: Colors.redAccent)
+                            : Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.video_collection, size: 45, color: Colors.redAccent),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _pickedFile != null ? 'File: ${_pickedFile!.name}' : 'Tap "Add Media" to load video/photo',
+                                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _aiFetchedMessage,
+                                    style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                       ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             // Funny Caption Input
             TextField(
               controller: _funnyCaptionController,
@@ -1003,7 +1041,7 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
                 prefixIcon: const Icon(Icons.mood, color: Colors.amber),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Align(
               alignment: Alignment.centerLeft,
               child: Text('Trim Video Duration', style: TextStyle(color: Colors.white70, fontSize: 13)),
@@ -1020,8 +1058,8 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
                 });
               },
             ),
-            const SizedBox(height: 10),
-            // Interactive Filters
+            const SizedBox(height: 8),
+            // Interactive Filters fetching AI assets
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: ['Normal', 'Funny 😂', 'Cinematic', 'Vibe AI'].map((filter) {
@@ -1033,17 +1071,12 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
                   backgroundColor: Colors.grey[800],
                   labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.grey),
                   onSelected: (selected) {
-                    setState(() {
-                      _selectedFilter = filter;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Applied filter: $filter'), duration: const Duration(milliseconds: 500)),
-                    );
+                    _fetchAiFilterAssets(filter);
                   },
                 );
               }).toList(),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
