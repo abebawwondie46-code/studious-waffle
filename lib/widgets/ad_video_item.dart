@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -31,6 +33,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isLoadingSearch = false;
 
   int _likeCount = 440;
   bool _isLiked = false;
@@ -52,8 +56,25 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     _fetchEngagementData();
   }
 
+  Future<bool> _checkInternetConnection() async {
+    final connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      Fluttertoast.showToast(
+        msg: "No internet connection!",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _fetchEngagementData() async {
     if (widget.videoId == null) return;
+    if (!await _checkInternetConnection()) return;
+
     try {
       final response = await Supabase.instance.client
           .from('videos')
@@ -69,11 +90,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         });
       }
     } catch (e) {
-      debugPrint('ዳታ በማምጣት ላይ ስህተት ተፈጥሯል: $e');
+      debugPrint('Error fetching engagement data: $e');
     }
   }
 
   Future<void> _handleLikePressed() async {
+    if (!await _checkInternetConnection()) return;
+
     setState(() {
       _isLiked = !_isLiked;
       _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
@@ -86,14 +109,16 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             .update({'likes_count': _likeCount})
             .eq('id', widget.videoId!);
       } catch (e) {
-        debugPrint('ላይክን ወደ ሰርቨር መላክ አልተቻለም: $e');
+        debugPrint('Failed to update like on server: $e');
       }
     }
   }
 
   Future<void> _handleSharePressed() async {
+    if (!await _checkInternetConnection()) return;
+
     try {
-      await Share.share('ይህንን አስደሳች ቪዲዮ ይመልከቱ: ${widget.videoUrl}');
+      await Share.share('Check out this amazing video: ${widget.videoUrl}');
       setState(() {
         _shareCount += 1;
       });
@@ -105,7 +130,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             .eq('id', widget.videoId!);
       }
     } catch (e) {
-      debugPrint('ሼር ማድረግ ላይ ስህተት ተፈጥሯል: $e');
+      debugPrint('Error sharing video: $e');
     }
   }
 
@@ -160,73 +185,138 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  void _openSearchDialog() {
-    showDialog(
+  // Modern Search Screen / Bottom Sheet Modal
+  void _openSearchSheet() {
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.black.withOpacity(0.95),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: const Text('ቪዲዮዎችን በኢንተርኔት ይፈልጉ', style: TextStyle(color: Colors.white, fontSize: 18)),
-          content: TextField(
-            controller: _searchController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'ርዕስ ወይም ቁልፍ ቃል ያስገቡ...',
-              hintStyle: const TextStyle(color: Colors.grey),
-              filled: true,
-              fillColor: Colors.black54,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setStateModal) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.between,
+                    children: [
+                      const Text(
+                        'Search Videos',
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Type title or keywords...',
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.grey[900],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          setStateModal(() {
+                            _searchResults.clear();
+                          });
+                        },
+                      ),
+                    ),
+                    onSubmitted: (value) async {
+                      await _performSearch(value.trim(), setStateModal);
+                    },
+                  ),
+                  const SizedBox(height: 15),
+                  _isLoadingSearch
+                      ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+                      : Expanded(
+                          child: _searchResults.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'No results found. Try searching something else.',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  itemCount: _searchResults.length,
+                                  itemBuilder: (context, index) {
+                                    final video = _searchResults[index];
+                                    return ListTile(
+                                      leading: const Icon(Icons.play_circle_fill, color: Colors.redAccent, size: 40),
+                                      title: Text(
+                                        video['title'] ?? 'Untitled',
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                      subtitle: Text(
+                                        'Likes: ${video['likes_count'] ?? 0}',
+                                        style: const TextStyle(color: Colors.grey),
+                                      ),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        Fluttertoast.showToast(
+                                          msg: "Selected: ${video['title']}",
+                                          toastLength: Toast.LENGTH_SHORT,
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                        ),
+                ],
               ),
-              prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
-            ),
-            onSubmitted: (value) async {
-              Navigator.pop(context);
-              await _performSearch(value.trim());
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ሰርዝ', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              onPressed: () async {
-                final query = _searchController.text.trim();
-                Navigator.pop(context);
-                await _performSearch(query);
-              },
-              child: const Text('ፈልግ', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+            );
+          },
         );
       },
     );
   }
 
-  Future<void> _performSearch(String query) async {
+  Future<void> _performSearch(String query, StateSetter setStateModal) async {
     if (query.isEmpty) return;
+    if (!await _checkInternetConnection()) return;
+
+    setStateModal(() {
+      _isLoadingSearch = true;
+    });
+
     try {
       final results = await Supabase.instance.client
           .from('videos')
           .select()
           .ilike('title', '%$query%');
 
+      setStateModal(() {
+        _searchResults = List<Map<String, dynamic>>.from(results);
+        _isLoadingSearch = false;
+      });
+
       setState(() {
         _searchQuery = query;
         _isSearching = true;
       });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${results.length} ቪዲዮዎች ተገኝተዋል!')),
-        );
-      }
     } catch (e) {
-      debugPrint('የፍለጋ ስህተት: $e');
+      setStateModal(() {
+        _isLoadingSearch = false;
+      });
+      debugPrint('Search error: $e');
+      Fluttertoast.showToast(msg: "Search failed. Please try again.");
     }
   }
 
@@ -306,7 +396,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             right: 16,
             child: IconButton(
               icon: const Icon(Icons.search, color: Colors.white, size: 28),
-              onPressed: _openSearchDialog,
+              onPressed: _openSearchSheet,
             ),
           ),
           
@@ -332,7 +422,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _isSearching ? '${widget.title} (ፍለጋ: $_searchQuery)' : widget.title,
+                    _isSearching ? '${widget.title} (Search: $_searchQuery)' : widget.title,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -355,11 +445,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     setState(() {
                       _isFollowing = !_isFollowing;
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_isFollowing ? 'ተጠቃሚውን ተከተሉ (Following)!' : 'ማስተከተል ሰርዟል'),
-                        duration: const Duration(seconds: 1),
-                      ),
+                    Fluttertoast.showToast(
+                      msg: _isFollowing ? 'Following user!' : 'Unfollowed user',
+                      toastLength: Toast.LENGTH_SHORT,
                     );
                   },
                   child: Stack(
