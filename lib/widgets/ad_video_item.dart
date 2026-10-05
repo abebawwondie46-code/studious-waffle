@@ -57,8 +57,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 
   Future<bool> _checkInternetConnection() async {
-    final connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult.contains(ConnectivityResult.none)) {
+    final List<ConnectivityResult> connectivityResults = await (Connectivity().checkConnectivity());
+    if (connectivityResults.contains(ConnectivityResult.none)) {
       Fluttertoast.showToast(
         msg: "No internet connection!",
         toastLength: Toast.LENGTH_SHORT,
@@ -185,7 +185,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // Modern Search Screen / Bottom Sheet Modal
   void _openSearchSheet() {
     showModalBottomSheet(
       context: context,
@@ -203,7 +202,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               child: Column(
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.between,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         'Search Videos',
