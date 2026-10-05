@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:image_picker/image_picker.dart';
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -30,7 +29,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   late AnimationController _discController;
   
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _publishTitleController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
   List<Map<String, dynamic>> _searchResults = [];
@@ -139,7 +137,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   @override
   void dispose() {
     _searchController.dispose();
-    _publishTitleController.dispose();
     _discController.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
@@ -165,32 +162,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  void _openVideoPhotoEditor() {
-    Navigator.pop(context);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const VideoEditorStudioScreen(),
-      ),
-    );
-  }
-
+  // Text Post Studio ብቻ እንዲከፈት ተደረገ
   void _openTextPostStudio() {
     Navigator.pop(context);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const TextPostStudioScreen(),
-      ),
-    );
-  }
-
-  void _openPosterStickerDesigner() {
-    Navigator.pop(context);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const PosterStickerStudioScreen(),
       ),
     );
   }
@@ -225,27 +203,15 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 ),
                 const Divider(color: Colors.grey, height: 25),
                 const Text(
-                  '🎨 Creator Tools & Publishing Hub:',
+                  '✍️ ማስታወቂያ እና ፅሁፍ ማሻሻያ:',
                   style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: 8),
                 _buildStudioOption(
-                  icon: Icons.movie_edit,
-                  title: 'Video & Photo Editor',
-                  subtitle: 'Combine clips and photos into stunning videos',
-                  onTap: _openVideoPhotoEditor,
-                ),
-                _buildStudioOption(
                   icon: Icons.text_fields,
-                  title: 'Text Ad Post Studio',
-                  subtitle: 'Create gorgeous colored text ads and announcements',
+                  title: 'የማስታወቂያ ፅሁፍ ስቱዲዮ ✍️',
+                  subtitle: 'ማራኪ ቀለማት ያሏቸው የማስታወቂያ ፅሁፎችን ፍጠር',
                   onTap: _openTextPostStudio,
-                ),
-                _buildStudioOption(
-                  icon: Icons.design_services,
-                  title: 'Ad Posters & Stickers',
-                  subtitle: 'Design custom promotional posters and trendy stickers',
-                  onTap: _openPosterStickerDesigner,
                 ),
               ],
             ),
@@ -253,7 +219,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close', style: TextStyle(color: Colors.grey)),
+              child: const Text('ዝጋ', style: TextStyle(color: Colors.grey)),
             ),
           ],
         );
@@ -473,11 +439,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         _isLoadingSearch = false;
       });
       debugPrint('Search error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Search failed. Please check your connection.')),
-        );
-      }
     }
   }
 
@@ -607,12 +568,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     setState(() {
                       _isFollowing = !_isFollowing;
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_isFollowing ? 'Following user!' : 'Unfollowed user'),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
                   },
                   child: Stack(
                     alignment: Alignment.bottomCenter,
@@ -749,322 +704,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 }
 
-// 🎬 ቪዲዮ እና ፎቶ ማቀናበሪያ ስቱዲዮ
-class VideoEditorStudioScreen extends StatefulWidget {
-  const VideoEditorStudioScreen({super.key});
-
-  @override
-  State<VideoEditorStudioScreen> createState() => _VideoEditorStudioScreenState();
-}
-
-class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
-  double _trimValue = 0.5;
-  String _selectedFilter = 'Funny 😂';
-  bool _isProcessing = false;
-  bool _isLoadingAiAsset = false;
-  XFile? _pickedFile;
-  VideoPlayerController? _editorVideoController;
-  bool _isEditorVideoInitialized = false;
-
-  final TextEditingController _funnyCaptionController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
-
-  String _aiFetchedMessage = 'AI Asset Loaded: Comedy Sound & Funny Sticker Pack 🔥';
-
-  Future<void> _pickMediaFile() async {
-    try {
-      final XFile? media = await _picker.pickMedia();
-      if (media != null) {
-        setState(() {
-          _pickedFile = media;
-          _isEditorVideoInitialized = false;
-        });
-
-        _editorVideoController?.dispose();
-        _editorVideoController = VideoPlayerController.networkUrl(Uri.parse(media.path))
-          ..initialize().then((_) {
-            if (mounted) {
-              setState(() {
-                _isEditorVideoInitialized = true;
-              });
-              _editorVideoController?.play();
-              _editorVideoController?.setLooping(true);
-            }
-          });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ሚዲያው በተሳካ ሁኔታ ተጭኗል: ${media.name}')),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Error picking media: $e');
-    }
-  }
-
-  Future<void> _fetchAiFilterAssets(String filterName) async {
-    setState(() {
-      _isLoadingAiAsset = true;
-      _selectedFilter = filterName;
-    });
-
-    if (_pickedFile != null) {
-      await _editorVideoController?.dispose();
-      
-      _editorVideoController = VideoPlayerController.networkUrl(Uri.parse(_pickedFile!.path))
-        ..initialize().then((_) {
-          if (mounted) {
-            setState(() {
-              _isEditorVideoInitialized = true;
-            });
-            
-            if (filterName == 'Funny 😂') {
-              _editorVideoController?.setPlaybackSpeed(1.25);
-              _aiFetchedMessage = 'የተቀናበረው በ: Funny ፌስታ (Laugh Track & Meme FX) 🤪';
-              _funnyCaptionController.text = 'ይህንን አፍታ ሲያዩ ይስቃሉ! 😂🔥';
-            } else if (filterName == 'Cinematic') {
-              _editorVideoController?.setPlaybackSpeed(0.85);
-              _aiFetchedMessage = 'የተቀናበረው በ: Cinematic ስታይል (Color Grading) 🎬';
-              _funnyCaptionController.text = 'አስደናቂ ሲኒማዊ ቅንብር ✨';
-            } else if (filterName == 'Vibe AI') {
-              _editorVideoController?.setPlaybackSpeed(1.0);
-              _aiFetchedMessage = 'የተቀናበረው በ: Vibe AI (Smart Beat Sync) 🚀';
-              _funnyCaptionController.text = 'የዕለቱ ምርጥ ቫይብ ከ VibeShare AI 💎';
-            } else {
-              _editorVideoController?.setPlaybackSpeed(1.0);
-              _aiFetchedMessage = 'ኖርማል ቪዲዮ ማስተካከያ ተመርጧል 🎥';
-              _funnyCaptionController.text = '';
-            }
-
-            _editorVideoController?.play();
-            _editorVideoController?.setLooping(true);
-          }
-        });
-    } else {
-      await Future.delayed(const Duration(milliseconds: 400));
-      if (filterName == 'Funny 😂') {
-        _aiFetchedMessage = 'የተቀናበረው በ: Funny ፌስታ (Laugh Track & Meme FX) 🤪';
-        _funnyCaptionController.text = 'ይህንን አፍታ ሲያዩ ይስቃሉ! 😂🔥';
-      } else if (filterName == 'Cinematic') {
-        _aiFetchedMessage = 'የተቀናበረው በ: Cinematic ስታይል (Color Grading) 🎬';
-        _funnyCaptionController.text = 'አስደናቂ ሲኒማዊ ቅንብር ✨';
-      } else if (filterName == 'Vibe AI') {
-        _aiFetchedMessage = 'የተቀናበረው በ: Vibe AI (Smart Beat Sync) 🚀';
-        _funnyCaptionController.text = 'የዕለቱ ምርጥ ቫይብ ከ VibeShare AI 💎';
-      } else {
-        _aiFetchedMessage = 'ኖርማል ቪዲዮ ማስተካከያ ተመርጧል 🎥';
-        _funnyCaptionController.text = '';
-      }
-    }
-
-    setState(() {
-      _isLoadingAiAsset = false;
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_aiFetchedMessage), duration: const Duration(seconds: 1)),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _editorVideoController?.dispose();
-    _funnyCaptionController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _publishEditedVideoToFeed() async {
-    final caption = _funnyCaptionController.text.trim();
-    if (_pickedFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎ መጀመሪያ ቪዲዮ ወይም ፎቶ ይምረጡ!')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isProcessing = true;
-    });
-
-    try {
-      await Supabase.instance.client.from('videos').insert({
-        'title': caption.isEmpty ? 'ቀና ቀና ባለ ፊልተር የተሰራ ቪዲዮ' : '$caption [Preset: $_selectedFilter]',
-        'video_url': _pickedFile!.path,
-        'likes_count': 0,
-        'comments_count': 0,
-        'shares_count': 0,
-      });
-
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ቪዲዮው ተቀናብሮ ወደ ፌድ (Feed) ተለጥፏል!')),
-        );
-      }
-    } catch (e) {
-      debugPrint('Publish error: $e');
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('መለጠፍ አልተቻለም። ግንኙነትዎን ይፈትሹ።')),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        backgroundColor: Colors.grey[900],
-        title: const Text('ቪዲዮ ማቀናበሪያ ስቱዲዮ', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Container(
-                height: 180,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.redAccent, width: 1.5),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: _isEditorVideoInitialized && _editorVideoController != null
-                      ? FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            width: _editorVideoController!.value.size.width,
-                            height: _editorVideoController!.value.size.height,
-                            child: VideoPlayer(_editorVideoController!),
-                          ),
-                        )
-                      : Center(
-                          child: _isLoadingAiAsset
-                              ? const CircularProgressIndicator(color: Colors.redAccent)
-                              : Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.video_settings, size: 40, color: Colors.redAccent),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      _pickedFile != null ? 'የተመረጠ ፋይል: ${_pickedFile!.name}' : 'ቪዲዮ ለመጫን "Add Media" ይጫኑ',
-                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _aiFetchedMessage,
-                                      style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              TextField(
-                controller: _funnyCaptionController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'አስቂኝ መግለጫ (Caption) ይጻፉ...',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  prefixIcon: const Icon(Icons.mood, color: Colors.amber),
-                ),
-              ),
-              const SizedBox(height: 10),
-              
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text('የቪዲዮ ቆይታ ማስተካከያ', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              ),
-              Slider(
-                value: _trimValue,
-                min: 0.0,
-                max: 1.0,
-                activeColor: Colors.redAccent,
-                inactiveColor: Colors.grey,
-                onChanged: (value) {
-                  setState(() {
-                    _trimValue = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: ['Normal', 'Funny 😂', 'Cinematic', 'Vibe AI'].map((filter) {
-                  bool isSelected = _selectedFilter == filter;
-                  return ChoiceChip(
-                    label: Text(filter, style: const TextStyle(fontSize: 12)),
-                    selected: isSelected,
-                    selectedColor: Colors.redAccent,
-                    backgroundColor: Colors.grey[800],
-                    labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.grey),
-                    onSelected: (selected) {
-                      _fetchAiFilterAssets(filter);
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], padding: const EdgeInsets.all(12)),
-                      icon: const Icon(Icons.add_photo_alternate, color: Colors.white, size: 20),
-                      label: const Text('Add Media', style: TextStyle(color: Colors.white, fontSize: 12)),
-                      onPressed: _pickMediaFile,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.all(12)),
-                      icon: _isProcessing 
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.cloud_upload, color: Colors.white, size: 20),
-                      label: Text(_isProcessing ? 'በመቀናበር ላይ...' : 'Publish to Feed', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      onPressed: _isProcessing ? null : _publishEditedVideoToFeed,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ✍️ የማስታወቂያ ፅሁፍ ስቱዲዮ (Text Ad Post Studio)
+// ✍️ ሙሉ የተስተካከለው የማስታወቂያ ፅሁፍ ስቱዲዮ (Text Post Studio)
 class TextPostStudioScreen extends StatefulWidget {
   const TextPostStudioScreen({super.key});
 
@@ -1112,7 +752,7 @@ class _TextPostStudioScreenState extends State<TextPostStudioScreen> {
     try {
       await Supabase.instance.client.from('videos').insert({
         'title': text,
-        'video_url': 'text_announcement', // ለፅሁፍ ማስታወቂያ የሚሆን መለያ ዩአርኤል
+        'video_url': 'text_announcement_post',
         'likes_count': 0,
         'comments_count': 0,
         'shares_count': 0,
@@ -1146,7 +786,7 @@ class _TextPostStudioScreenState extends State<TextPostStudioScreen> {
       backgroundColor: Colors.grey[900],
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('የማስታወቂያ ፅሁፍ ስቱዲዮ ✍️', style: TextStyle(color: Colors.white)),
+        title: const Text('የማስታወቂያ ፅሁፍ ስቱዲዮ ✍️', style: TextStyle(color: Colors.white, fontSize: 18)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -1248,7 +888,7 @@ class _TextPostStudioScreenState extends State<TextPostStudioScreen> {
                   const SizedBox(height: 15),
                   Row(
                     children: [
-                      const Text('የፊደል መጠን:', style: TextStyle(color: Colors.white70)),
+                      const Text('የፊደል መጠን:', style: TextStyle(color: Colors.white70, fontSize: 13)),
                       Expanded(
                         child: Slider(
                           value: _fontSize,
@@ -1270,128 +910,6 @@ class _TextPostStudioScreenState extends State<TextPostStudioScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// 🎨 ፖስተሮች እና ተለጣፊዎች ስቱዲዮ
-class PosterStickerStudioScreen extends StatefulWidget {
-  const PosterStickerStudioScreen({super.key});
-
-  @override
-  State<PosterStickerStudioScreen> createState() => _PosterStickerStudioScreenState();
-}
-
-class _PosterStickerStudioScreenState extends State<PosterStickerStudioScreen> {
-  String _selectedSticker = '🔥 Vibe Badge';
-  String? _posterImageName;
-  final ImagePicker _picker = ImagePicker();
-
-  Future<void> _pickPosterImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        setState(() {
-          _posterImageName = image.name;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('የፖስተር ዳራ ተጭኗል: ${image.name}')),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Error picking image: $e');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.grey[900],
-        title: const Text('ፖስተር እና ስቲከር ስቱዲዮ', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.amber, width: 1.5),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.brush, size: 70, color: Colors.amber),
-                      const SizedBox(height: 16),
-                      Text(
-                        _posterImageName != null ? 'የፖስተር ፋይል: $_posterImageName' : 'የንድፍ ካንቫስ እና ስቲከር ቦርድ',
-                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'ንቁ ስቲከር: $_selectedSticker',
-                        style: const TextStyle(color: Colors.amberAccent, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text('ተወዳጅ ባጅ / ስቲከር ይምረጡ', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: ['🔥 Vibe Badge', '⭐ Top Creator', '🚀 Viral AI', '💎 Exclusive'].map((sticker) {
-                bool isSelected = _selectedSticker == sticker;
-                return ChoiceChip(
-                  label: Text(sticker),
-                  selected: isSelected,
-                  selectedColor: Colors.amber,
-                  backgroundColor: Colors.grey[800],
-                  labelStyle: TextStyle(color: isSelected ? Colors.black : Colors.grey, fontWeight: FontWeight.bold),
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedSticker = sticker;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], padding: const EdgeInsets.all(12), minimumSize: const Size.fromHeight(45)),
-              icon: const Icon(Icons.image, color: Colors.white),
-              label: const Text('የዳራ ምስል ጨምር', style: TextStyle(color: Colors.white)),
-              onPressed: _pickPosterImage,
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, padding: const EdgeInsets.all(14), minimumSize: const Size.fromHeight(50)),
-              icon: const Icon(Icons.check, color: Colors.black),
-              label: const Text('ፖስተሩን ንድፍ አስቀምጥ', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('የፖስተር ንድፍ ተቀምጧል!')),
-                );
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
