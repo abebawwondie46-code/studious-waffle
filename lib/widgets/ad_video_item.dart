@@ -22,7 +22,6 @@ class AdVideoItem extends StatefulWidget {
   State<AdVideoItem> createState() => _AdVideoItemState();
 }
 
-// 1. AutomaticKeepAliveClientMixin ተጨምሯል (ስክሮል ሲደረግ ዳታ እንዳይጠፋ)
 class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
@@ -39,7 +38,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _shareCount = 112;
   bool _isFollowing = false;
 
-  // 2. ዊጅቱ ሲለወጥ ግዛቱን (State) እንድናስጠብቅ የሚረዳው ትዕዛዝ
   @override
   bool get wantKeepAlive => true;
 
@@ -255,7 +253,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    // 3. KeepAlive እንዲሰራ super.build(context) መጥራት ግዴታ ነው
     super.build(context);
     
     return Scaffold(
@@ -287,10 +284,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                               color: Colors.black45,
                               shape: BoxShape.circle,
                             ),
+                            // እዚህ ጋር የቪዲዮው ሁኔታ ከታየው አዶ ጋር እንዲጣጣም ተስተካክሏል
                             child: Icon(
                               _videoController!.value.isPlaying
-                                  ? Icons.play_arrow
-                                  : Icons.pause,
+                                  ? Icons.pause
+                                  : Icons.play_arrow,
                               color: Colors.white,
                               size: 50,
                             ),
@@ -353,7 +351,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // የፕሮፋይል ፕላስ ቁልፍ (+)
                 GestureDetector(
                   onTap: () {
                     setState(() {
@@ -400,7 +397,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ),
                 ),
 
-                // ላይክ (Like)
                 Column(
                   children: [
                     IconButton(
@@ -419,7 +415,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 ),
                 const SizedBox(height: 10),
 
-                // ኮሜንት (Comment)
                 Column(
                   children: [
                     IconButton(
@@ -429,7 +424,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        const Icon(
                           Icons.chat_bubble,
                           color: Colors.black,
                           size: 20,
@@ -444,7 +439,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ],
                 ),
                 
-                // ሼር (Share)
                 Column(
                   children: [
                     IconButton(
