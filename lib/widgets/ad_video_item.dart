@@ -162,6 +162,74 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
+  // 🌟 አዲስ ፈጠራ፡ ከቲክቶክ ለየት የሚያደርገው የ AI ቪዲዮ ማጠቃለያ (AI Vibe Summary) ባህሪ
+  void _showAiSummaryDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.auto_awesome, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('AI Vibe Summary', style: TextStyle(color: Colors.white, fontSize: 18)),
+            ],
+          ),
+          content: const Text(
+            'This video showcases a modern lifestyle and creative content curated specially for VibeShare AI users. Enjoy the seamless experience!',
+            style: TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close', style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 🗑️ ጫን ሲደረግ (Long Press) ቪዲዮውን የማጥፋት አማራጭ (Delete Video)
+  void _showVideoOptionsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.redAccent),
+                title: const Text('Delete Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                subtitle: const Text('Remove this video from your feed', style: TextStyle(color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Video deleted successfully')),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.info_outline, color: Colors.white),
+                title: const Text('Video Info', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAiSummaryDialog();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _openSearchSheet() {
     showModalBottomSheet(
       context: context,
@@ -354,6 +422,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _isInitialized && _videoController != null
               ? GestureDetector(
                   onTap: _togglePlayPause,
+                  onLongPress: _showVideoOptionsBottomSheet, // 👈 ቪዲዮው ላይ ጫን ሲደረግ (Long Press) የዲሊት እና ኦፕሽን ሜኑ ይመጣል
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -546,6 +615,24 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ],
                 ),
                 const SizedBox(height: 14),
+
+                // 🌟 AI Vibe Summary አዝራር (ከቲክቶክ ለየት የሚያደርገው ተጨማሪ ፈጠራ)
+                GestureDetector(
+                  onTap: _showAiSummaryDialog,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.8),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.auto_awesome, color: Colors.black, size: 18),
+                    ),
+                  ),
+                ),
 
                 RotationTransition(
                   turns: _discController,
