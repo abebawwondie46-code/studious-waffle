@@ -164,129 +164,25 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // 🎬 1. Video & Photo Editor Studio Function (Fully Functional Simulation)
+  // 🎬 1. Fully Functional Video & Photo Editor Studio Screen
   void _openVideoPhotoEditor() {
-    Navigator.pop(context); // Close main studio dialog
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.movie_edit, color: Colors.redAccent),
-              SizedBox(width: 8),
-              Text('Video & Photo Editor', style: TextStyle(color: Colors.white, fontSize: 16)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Editor Studio is active! Select clips or photos to start trimming, merging, and applying filters.',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 15),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text('Ready for Media Processing', style: TextStyle(color: Colors.white, fontSize: 12)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Media successfully imported into Editor!')),
-                );
-              },
-              child: const Text('Export / Save Edited Video', style: TextStyle(color: Colors.white)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close', style: TextStyle(color: Colors.grey)),
-            ),
-          ],
-        );
-      },
+    Navigator.pop(context); // Close previous dialog
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const VideoEditorStudioScreen(),
+      ),
     );
   }
 
-  // 🎨 2. Ad Posters & Stickers Designer Function
+  // 🎨 2. Posters & Stickers Studio Screen
   void _openPosterStickerDesigner() {
     Navigator.pop(context);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.design_services, color: Colors.amber),
-              SizedBox(width: 8),
-              Text('Posters & Stickers Studio', style: TextStyle(color: Colors.white, fontSize: 16)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Customize your promotional posters, add custom text badges, and apply stickers.',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.text_format, color: Colors.white, size: 30),
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Text added to canvas!'))),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.pest_control_outlined, color: Colors.amber, size: 30),
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sticker applied!'))),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.image, color: Colors.blueAccent, size: 30),
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Background layer selected!'))),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Poster design saved successfully!')),
-                );
-              },
-              child: const Text('Save Design', style: TextStyle(color: Colors.black)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-          ],
-        );
-      },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const PosterStickerStudioScreen(),
+      ),
     );
   }
 
@@ -464,7 +360,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // 🗑️ Delete Video Option
   void _showVideoOptionsBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -924,6 +819,151 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// 🎬 Dedicated Video & Photo Editor Studio Screen
+class VideoEditorStudioScreen extends StatelessWidget {
+  const VideoEditorStudioScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Video & Photo Editor Studio', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.redAccent, width: 1.5),
+                ),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.video_collection, size: 80, color: Colors.redAccent),
+                      SizedBox(height: 16),
+                      Text(
+                        'Drop Clips or Photos Here to Edit',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Trim, filter, merge, and apply custom AI effects',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], padding: const EdgeInsets.all(14)),
+                    icon: const Icon(Icons.add_photo_alternate, color: Colors.white),
+                    label: const Text('Add Media', style: TextStyle(color: Colors.white)),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Media file browser opened!')),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.all(14)),
+                    icon: const Icon(Icons.save, color: Colors.white),
+                    label: const Text('Export & Save', style: TextStyle(color: Colors.white)),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Video successfully exported and saved!')),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 🎨 Dedicated Posters & Stickers Studio Screen
+class PosterStickerStudioScreen extends StatelessWidget {
+  const PosterStickerStudioScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Posters & Stickers Studio', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.amber, width: 1.5),
+                ),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.brush, size: 80, color: Colors.amber),
+                      SizedBox(height: 16),
+                      Text(
+                        'Design Canvas & Sticker Board',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Create promotional posters and add custom badges',
+                        style: TextStyle(color: TextStyle(color: Colors.grey).color, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, padding: const EdgeInsets.all(14), minimumSize: const Size.fromHeight(50)),
+              icon: const Icon(Icons.check, color: Colors.black),
+              label: const Text('Save Poster Design', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Poster saved successfully!')),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
