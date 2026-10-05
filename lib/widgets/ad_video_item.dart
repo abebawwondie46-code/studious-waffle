@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:image_picker/image_picker.dart';
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -820,7 +821,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 }
 
-// 🎬 Fully Functional Video & Photo Editor Studio Screen with Interactive Controls
+// 🎬 Fully Functional Video & Photo Editor Studio Screen with File Picker Integration
 class VideoEditorStudioScreen extends StatefulWidget {
   const VideoEditorStudioScreen({super.key});
 
@@ -832,6 +833,32 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
   double _trimValue = 0.5;
   String _selectedFilter = 'Normal';
   bool _isProcessing = false;
+  String? _pickedMediaName;
+
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickMediaFile() async {
+    try {
+      final XFile? media = await _picker.pickMedia();
+      if (media != null) {
+        setState(() {
+          _pickedMediaName = media.name;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Loaded: ${media.name}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking media: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to pick media file.')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -860,13 +887,14 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
                       const Icon(Icons.video_collection, size: 70, color: Colors.redAccent),
                       const SizedBox(height: 12),
                       Text(
-                        'Active Filter: $_selectedFilter',
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        _pickedMediaName != null ? 'File: $_pickedMediaName' : 'No Media Selected',
+                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Adjust timeline and apply AI effects below',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      Text(
+                        'Active Filter: $_selectedFilter',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
                   ),
@@ -874,7 +902,6 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Interactive Trim Slider
             const Align(
               alignment: Alignment.centerLeft,
               child: Text('Trim Video Duration', style: TextStyle(color: Colors.white70, fontSize: 13)),
@@ -892,7 +919,6 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
               },
             ),
             const SizedBox(height: 10),
-            // Filter Options
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: ['Normal', 'Cyberpunk', 'Cinematic', 'Vibe AI'].map((filter) {
@@ -919,11 +945,7 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], padding: const EdgeInsets.all(14)),
                     icon: const Icon(Icons.add_photo_alternate, color: Colors.white),
                     label: const Text('Add Media', style: TextStyle(color: Colors.white)),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Media files successfully loaded into timeline!')),
-                      );
-                    },
+                    onPressed: _pickMediaFile,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -970,6 +992,26 @@ class PosterStickerStudioScreen extends StatefulWidget {
 
 class _PosterStickerStudioScreenState extends State<PosterStickerStudioScreen> {
   String _selectedSticker = '🔥 Vibe Badge';
+  String? _posterImageName;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickPosterImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        setState(() {
+          _posterImageName = image.name;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Poster background loaded: ${image.name}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -997,9 +1039,10 @@ class _PosterStickerStudioScreenState extends State<PosterStickerStudioScreen> {
                     children: [
                       const Icon(Icons.brush, size: 70, color: Colors.amber),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Design Canvas & Sticker Board',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      Text(
+                        _posterImageName != null ? 'Poster Image: $_posterImageName' : 'Design Canvas & Sticker Board',
+                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -1036,6 +1079,13 @@ class _PosterStickerStudioScreenState extends State<PosterStickerStudioScreen> {
               }).toList(),
             ),
             const SizedBox(height: 20),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800], padding: const EdgeInsets.all(12), minimumSize: const Size.fromHeight(45)),
+              icon: const Icon(Icons.image, color: Colors.white),
+              label: const Text('Add Background Image', style: TextStyle(color: Colors.white)),
+              onPressed: _pickPosterImage,
+            ),
+            const SizedBox(height: 10),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, padding: const EdgeInsets.all(14), minimumSize: const Size.fromHeight(50)),
               icon: const Icon(Icons.check, color: Colors.black),
