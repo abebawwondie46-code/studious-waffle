@@ -162,7 +162,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // 🌟 የተሻሻለው የ AI Vibe Summary (ከቪዲዮው ርዕስ ጋር በቀጥታ የተያያዘ)
+  // 🌟 AI Vibe Summary & Creator Studio Hub (የተጠቃሚዎች ማቀናበሪያ እና መፍጠሪያ ማዕከል)
   void _showAiSummaryDialog() {
     showDialog(
       context: context,
@@ -174,34 +174,48 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             children: [
               Icon(Icons.auto_awesome, color: Colors.amber),
               SizedBox(width: 8),
-              Text('AI Vibe Summary', style: TextStyle(color: Colors.white, fontSize: 18)),
+              Text('AI Vibe Creator Studio', style: TextStyle(color: Colors.white, fontSize: 18)),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Video Title: "${widget.title}"',
-                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'AI Analysis: This creative content is optimized for high engagement, showcasing modern trends and clear visual aesthetics tailored for VibeShare AI users.',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Video Title: "${widget.title}"',
+                  style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'AI Analysis: Optimized for high engagement and trendy aesthetics.',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const Divider(color: Colors.grey, height: 25),
+                const Text(
+                  '🎨 Creator Tools & Publishing Hub:',
+                  style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                _buildStudioOption(
+                  icon: Icons.movie_edit,
+                  title: 'Video & Photo Editor',
+                  subtitle: 'Combine clips and photos into stunning videos',
+                ),
+                _buildStudioOption(
+                  icon: Icons.design_services,
+                  title: 'Ad Posters & Stickers',
+                  subtitle: 'Design custom promotional posters and trendy stickers',
+                ),
+                _buildStudioOption(
+                  icon: Icons.cloud_upload,
+                  title: 'Publish to Feed',
+                  subtitle: 'Directly upload your creations to VibeShare AI',
+                ),
+              ],
+            ),
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('AI Summary copied to clipboard!')),
-                );
-              },
-              child: const Text('Copy', style: TextStyle(color: Colors.amber)),
-            ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Close', style: TextStyle(color: Colors.grey)),
@@ -209,6 +223,35 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           ],
         );
       },
+    );
+  }
+
+  Widget _buildStudioOption({required IconData icon, required String title, required String subtitle}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: InkWell(
+        onTap: () {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Opening $title studio...'), duration: const Duration(seconds: 1)),
+          );
+        },
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -237,7 +280,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               ),
               ListTile(
                 leading: const Icon(Icons.auto_awesome, color: Colors.amber),
-                title: const Text('View AI Summary', style: TextStyle(color: Colors.white)),
+                title: const Text('AI Creator Studio', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
                   _showAiSummaryDialog();
