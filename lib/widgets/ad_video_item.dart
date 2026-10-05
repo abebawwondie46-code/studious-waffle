@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -56,25 +54,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     _fetchEngagementData();
   }
 
-  Future<bool> _checkInternetConnection() async {
-    final List<ConnectivityResult> connectivityResults = await (Connectivity().checkConnectivity());
-    if (connectivityResults.contains(ConnectivityResult.none)) {
-      Fluttertoast.showToast(
-        msg: "No internet connection!",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-      return false;
-    }
-    return true;
-  }
-
   Future<void> _fetchEngagementData() async {
     if (widget.videoId == null) return;
-    if (!await _checkInternetConnection()) return;
-
     try {
       final response = await Supabase.instance.client
           .from('videos')
@@ -95,8 +76,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 
   Future<void> _handleLikePressed() async {
-    if (!await _checkInternetConnection()) return;
-
     setState(() {
       _isLiked = !_isLiked;
       _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
@@ -115,8 +94,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 
   Future<void> _handleSharePressed() async {
-    if (!await _checkInternetConnection()) return;
-
     try {
       await Share.share('Check out this amazing video: ${widget.videoUrl}');
       setState(() {
@@ -269,9 +246,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                       ),
                                       onTap: () {
                                         Navigator.pop(context);
-                                        Fluttertoast.showToast(
-                                          msg: "Selected: ${video['title']}",
-                                          toastLength: Toast.LENGTH_SHORT,
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Selected: ${video['title']}'),
+                                            duration: const Duration(seconds: 1),
+                                          ),
                                         );
                                       },
                                     );
@@ -289,7 +268,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
   Future<void> _performSearch(String query, StateSetter setStateModal) async {
     if (query.isEmpty) return;
-    if (!await _checkInternetConnection()) return;
 
     setStateModal(() {
       _isLoadingSearch = true;
@@ -315,7 +293,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         _isLoadingSearch = false;
       });
       debugPrint('Search error: $e');
-      Fluttertoast.showToast(msg: "Search failed. Please try again.");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Search failed. Please check your connection.')),
+        );
+      }
     }
   }
 
@@ -444,9 +426,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     setState(() {
                       _isFollowing = !_isFollowing;
                     });
-                    Fluttertoast.showToast(
-                      msg: _isFollowing ? 'Following user!' : 'Unfollowed user',
-                      toastLength: Toast.LENGTH_SHORT,
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_isFollowing ? 'Following user!' : 'Unfollowed user'),
+                        duration: const Duration(seconds: 1),
+                      ),
                     );
                   },
                   child: Stack(
