@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:share_plus/share_plus.dart'; // ሼር ለማድረግ የሚያስችል ፓኬጅ
+import 'package:share_plus/share_plus.dart';
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -22,7 +22,8 @@ class AdVideoItem extends StatefulWidget {
   State<AdVideoItem> createState() => _AdVideoItemState();
 }
 
-class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStateMixin {
+// 1. AutomaticKeepAliveClientMixin ተጨምሯል (ስክሮል ሲደረግ ዳታ እንዳይጠፋ)
+class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   bool _showPlayIcon = false;
@@ -36,7 +37,11 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
   bool _isLiked = false;
   int _commentCount = 745;
   int _shareCount = 112;
-  bool _isFollowing = false; // የፕሮፋይል ፕላስ ቁልፍ ሁኔታ
+  bool _isFollowing = false;
+
+  // 2. ዊጅቱ ሲለወጥ ግዛቱን (State) እንድናስጠብቅ የሚረዳው ትዕዛዝ
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -88,7 +93,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
     }
   }
 
-  // 1. የሼር ተግባር (Share to apps)
   Future<void> _handleSharePressed() async {
     try {
       await Share.share('ይህንን አስደሳች ቪዲዮ ይመልከቱ: ${widget.videoUrl}');
@@ -139,7 +143,6 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
     super.dispose();
   }
 
-  // 2. የኮሜንት መስኮት መክፈቻ (Comments with videoId support)
   void _openComments() {
     showModalBottomSheet(
       context: context,
@@ -152,7 +155,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
         videoId: widget.videoUrl,
         onCommentCountUpdated: (newCount) {
           setState(() {
-            _commentCount = newCount; // ከታች አዲስ ኮሜንት ሲጨመር የውጪው ቁጥር እንዲቀየር ያደርጋል
+            _commentCount = newCount;
           });
         },
       ),
@@ -252,6 +255,9 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    // 3. KeepAlive እንዲሰራ super.build(context) መጥራት ግዴታ ነው
+    super.build(context);
+    
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -306,7 +312,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
               onPressed: _openSearchDialog,
             ),
           ),
-          // 3. ከስክሪኑ በታች የርዕስ ማሳያ (የጊዜ መስመሩ ተወግዷል)
+          
           Positioned(
             left: 0,
             right: 0,
@@ -347,7 +353,7 @@ class _AdVideoItemState extends State<AdVideoItem> with SingleTickerProviderStat
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 3. የፕሮፋይል ፕላስ ቁልፍ (+) ተግባር
+                // የፕሮፋይል ፕላስ ቁልፍ (+)
                 GestureDetector(
                   onTap: () {
                     setState(() {
