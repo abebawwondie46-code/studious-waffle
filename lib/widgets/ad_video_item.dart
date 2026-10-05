@@ -29,6 +29,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   late AnimationController _discController;
   
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _publishTitleController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
   List<Map<String, dynamic>> _searchResults = [];
@@ -137,6 +138,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   @override
   void dispose() {
     _searchController.dispose();
+    _publishTitleController.dispose();
     _discController.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
@@ -162,7 +164,186 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // 🌟 AI Vibe Summary & Creator Studio Hub (የተጠቃሚዎች ማቀናበሪያ እና መፍጠሪያ ማዕከል)
+  // 🎬 1. Video & Photo Editor Studio Function
+  void _openVideoPhotoEditor() {
+    Navigator.pop(context); // Close main studio dialog
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.movie_edit, color: Colors.redAccent),
+              SizedBox(width: 8),
+              Text('Video & Photo Editor', style: TextStyle(color: Colors.white, fontSize: 16)),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Select and combine your media clips, apply filters, trim videos, and merge photos seamlessly!',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              SizedBox(height: 15),
+              Icon(Icons.video_library, size: 60, color: Colors.grey),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Media editor initialized successfully!')),
+                );
+              },
+              child: const Text('Pick Media & Edit', style: TextStyle(color: Colors.white)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 🎨 2. Ad Posters & Stickers Studio Function
+  void _openPosterStickerDesigner() {
+    Navigator.pop(context); // Close main studio dialog
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.design_services, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('Posters & Stickers', style: TextStyle(color: Colors.white, fontSize: 16)),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Create custom promotional posters, add trendy text, badges, and unique stickers to your content.',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              SizedBox(height: 15),
+              Icon(Icons.brush, size: 60, color: Colors.amber),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Poster canvas opened!')),
+                );
+              },
+              child: const Text('Start Designing', style: TextStyle(color: Colors.black)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ☁️ 3. Publish to Feed Function (Supabase Integration)
+  void _openPublishHub() {
+    Navigator.pop(context); // Close main studio dialog
+    _publishTitleController.clear();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.cloud_upload, color: Colors.greenAccent),
+              SizedBox(width: 8),
+              Text('Publish to Feed', style: TextStyle(color: Colors.white, fontSize: 16)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Share your edited video or poster directly to the VibeShare AI community feed.',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: _publishTitleController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Enter creation title...',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.black54,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: () async {
+                final title = _publishTitleController.text.trim();
+                if (title.isEmpty) return;
+                Navigator.pop(context);
+
+                try {
+                  await Supabase.instance.client.from('videos').insert({
+                    'title': title,
+                    'video_url': widget.videoUrl,
+                    'likes_count': 0,
+                    'comments_count': 0,
+                    'shares_count': 0,
+                  });
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Successfully published to feed!')),
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Publish error: $e');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to publish. Try again.')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Publish Now', style: TextStyle(color: Colors.white)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 🌟 AI Vibe Summary & Creator Studio Hub Dialog
   void _showAiSummaryDialog() {
     showDialog(
       context: context,
@@ -201,16 +382,19 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   icon: Icons.movie_edit,
                   title: 'Video & Photo Editor',
                   subtitle: 'Combine clips and photos into stunning videos',
+                  onTap: _openVideoPhotoEditor,
                 ),
                 _buildStudioOption(
                   icon: Icons.design_services,
                   title: 'Ad Posters & Stickers',
                   subtitle: 'Design custom promotional posters and trendy stickers',
+                  onTap: _openPosterStickerDesigner,
                 ),
                 _buildStudioOption(
                   icon: Icons.cloud_upload,
                   title: 'Publish to Feed',
                   subtitle: 'Directly upload your creations to VibeShare AI',
+                  onTap: _openPublishHub,
                 ),
               ],
             ),
@@ -226,16 +410,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildStudioOption({required IconData icon, required String title, required String subtitle}) {
+  Widget _buildStudioOption({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: InkWell(
-        onTap: () {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Opening $title studio...'), duration: const Duration(seconds: 1)),
-          );
-        },
+        onTap: onTap,
         child: Row(
           children: [
             Icon(icon, color: Colors.white, size: 24),
@@ -255,7 +434,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // 🗑️ ቪዲዮውን የማጥፋት አማራጭ (Delete Video)
+  // 🗑️ Delete Video Option
   void _showVideoOptionsBottomSheet() {
     showModalBottomSheet(
       context: context,
