@@ -95,7 +95,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
   Future<void> _handleSharePressed() async {
     try {
-      await Share.share('Check out this amazing video: ${widget.videoUrl}');
+      await Share.share('Check out this amazing video on kuanyngne: ${widget.videoUrl}');
       setState(() {
         _shareCount += 1;
       });
@@ -162,80 +162,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  void _showAiSummaryDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.auto_awesome, color: Colors.amber),
-              SizedBox(width: 8),
-              Text('AI Vibe Creator Studio', style: TextStyle(color: Colors.white, fontSize: 18)),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Video Title: "${widget.title}"',
-                  style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'AI Analysis: Optimized for high engagement and trendy aesthetics.',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const Divider(color: Colors.grey, height: 25),
-                const Text(
-                  '✍️ ማስታወቂያ እና ፅሁፍ ማሻሻያ:',
-                  style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6.0),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pop(context);
-                      // እዚህ ጋር ለብቻዎ ወደ ፈጠሩት የ Text Post Studio ፋይል (Screen) ማዘዋወሪያ (Navigation) ያስገቡ
-                      // ምሳሌ:
-                      // Navigator.push(context, MaterialPageRoute(builder: (context) => const TextPostStudioScreen()));
-                    },
-                    child: const Row(
-                      children: [
-                        Icon(Icons.text_fields, color: Colors.white, size: 24),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('የማስታወቂያ ፅሁፍ ስቱዲዮ ✍️', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                              Text('ማራኪ ቀለማት ያሏቸው የማስታወቂያ ፅሁፎችን ፍጠር', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ዝጋ', style: TextStyle(color: Colors.grey)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _showVideoOptionsBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -256,14 +182,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Video deleted successfully')),
                   );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.auto_awesome, color: Colors.amber),
-                title: const Text('AI Creator Studio', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showAiSummaryDialog();
                 },
               ),
             ],
@@ -647,23 +565,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ],
                 ),
                 const SizedBox(height: 14),
-
-                GestureDetector(
-                  onTap: _showAiSummaryDialog,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.8),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.auto_awesome, color: Colors.black, size: 18),
-                    ),
-                  ),
-                ),
 
                 RotationTransition(
                   turns: _discController,
