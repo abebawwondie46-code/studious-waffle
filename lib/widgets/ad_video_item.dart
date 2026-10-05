@@ -3,7 +3,6 @@ import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'comments_bottom_sheet.dart';
-import '../vibe_summary_studio.dart'; // የተለየውን የስቱዲዮ ፋይል እዚህ እናስገባዋለን
 
 class AdVideoItem extends StatefulWidget {
   final String title;
@@ -163,11 +162,83 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // የተለየውን የ Vibe Summary ፖፕአፕ ከሌላው ፋይል እንጠራዋለን
+  // Text Post Studio ብቻ እንዲከፈት የሚያደርግ ትስስር
+  void _openTextPostStudio() {
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TextPostStudioScreen(),
+      ),
+    );
+  }
+
   void _showAiSummaryDialog() {
     showDialog(
       context: context,
-      builder: (context) => VibeSummaryDialog(videoTitle: widget.title),
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.auto_awesome, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('AI Vibe Creator Studio', style: TextStyle(color: Colors.white, fontSize: 18)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Video Title: "${widget.title}"',
+                  style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'AI Analysis: Optimized for high engagement and trendy aesthetics.',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const Divider(color: Colors.grey, height: 25),
+                const Text(
+                  '✍️ ማስታወቂያ እና ፅሁፍ ማሻሻያ:',
+                  style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+                  child: InkWell(
+                    onTap: _openTextPostStudio,
+                    child: Row(
+                      children: const [
+                        Icon(Icons.text_fields, color: Colors.white, size: 24),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('የማስታወቂያ ፅሁፍ ስቱዲዮ ✍️', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text('ማራኪ ቀለማት ያሏቸው የማስታወቂያ ፅሁፎችን ፍጠር', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ዝጋ', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -616,6 +687,220 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ✍️ Text Post Studio ስክሪን
+class TextPostStudioScreen extends StatefulWidget {
+  const TextPostStudioScreen({super.key});
+
+  @override
+  State<TextPostStudioScreen> createState() => _TextPostStudioScreenState();
+}
+
+class _TextPostStudioScreenState extends State<TextPostStudioScreen> {
+  final TextEditingController _postController = TextEditingController();
+  
+  int _selectedColorIndex = 0;
+  final List<List<Color>> _backgroundGradients = [
+    [Colors.deepPurple, Colors.indigo],
+    [Colors.pinkAccent, Colors.orangeAccent],
+    [Colors.teal, Colors.green],
+    [Colors.blue, Colors.cyan],
+    [Colors.redAccent, Colors.deepOrange],
+    [Colors.amber, Colors.brown],
+    [Colors.black87, Colors.blueGrey],
+  ];
+
+  double _fontSize = 24.0;
+  final TextAlign _textAlign = TextAlign.center;
+  bool _isPublishing = false;
+
+  @override
+  void dispose() {
+    _postController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _publishTextPost() async {
+    final text = _postController.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎ የሚለቁትን ማስታወቂያ ወይም ፅሁፍ ይጻፉ!')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isPublishing = true;
+    });
+
+    try {
+      await Supabase.instance.client.from('videos').insert({
+        'title': text,
+        'video_url': 'text_announcement_post',
+        'likes_count': 0,
+        _commentCountField: 0, // safe fallback
+        'shares_count': 0,
+      });
+
+      if (mounted) {
+        setState(() {
+          _isPublishing = false;
+        });
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('የማስታወቂያ ፅሁፍዎ በተሳካ ሁኔታ ወደ ፌድ (Feed) ተለጥፏል!')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Text post publish error: $e');
+      if (mounted) {
+        setState(() {
+          _isPublishing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('መለጠፍ አልተቻለም። ግንኙነትዎን ይፈትሹ።')),
+        );
+      }
+    }
+  }
+
+  // Helper field to prevent any naming collision
+  String get _commentCountField => 'comments_count';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[900],
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: const Text('የማስታወቂያ ፅሁፍ ስቱዲዮ ✍️', style: TextStyle(color: Colors.white, fontSize: 18)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: _isPublishing
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.cyanAccent, strokeWidth: 2))
+                : const Icon(Icons.send, color: Colors.cyanAccent),
+            onPressed: _isPublishing ? null : _publishTextPost,
+            tooltip: 'ወደ አፑ ልቀቅ',
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: _backgroundGradients[_selectedColorIndex],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: TextField(
+                  controller: _postController,
+                  maxLines: null,
+                  textAlign: _textAlign,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: _fontSize,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'ማስታወቂያዎን ወይም መልዕክትዎን እዚህ ይጻፉ...',
+                    hintStyle: TextStyle(color: Colors.white60),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'የጀርባ ቀለም ይምረጡ 🎨',
+                    style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 50,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _backgroundGradients.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedColorIndex = index;
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 6),
+                            width: 50,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: _backgroundGradients[index],
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _selectedColorIndex == index ? Colors.cyanAccent : Colors.transparent,
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  Row(
+                    children: [
+                      const Text('የፊደል መጠን:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      Expanded(
+                        child: Slider(
+                          value: _fontSize,
+                          min: 16.0,
+                          max: 40.0,
+                          activeColor: Colors.cyanAccent,
+                          inactiveColor: Colors.white24,
+                          onChanged: (value) {
+                            setState(() {
+                              _fontSize = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
