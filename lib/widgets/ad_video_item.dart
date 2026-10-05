@@ -3,7 +3,7 @@ import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'comments_bottom_sheet.dart';
-import 'vibe_summary_studio.dart'; // የተለየውን የስቱዲዮ ፋይል እዚህ እናስገባዋለን
+import '../vibe_summary_studio.dart'; // የተለየውን የስቱዲዮ ፋይል እዚህ እናስገባዋለን
 
 class AdVideoItem extends StatefulWidget {
   final String title;
