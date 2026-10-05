@@ -173,91 +173,111 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setStateModal) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.75,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Search Videos',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Type title or keywords...',
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      filled: true,
-                      fillColor: Colors.grey[900],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                          setStateModal(() {
-                            _searchResults.clear();
-                          });
-                        },
-                      ),
-                    ),
-                    onSubmitted: (value) async {
-                      await _performSearch(value.trim(), setStateModal);
-                    },
-                  ),
-                  const SizedBox(height: 15),
-                  _isLoadingSearch
-                      ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
-                      : Expanded(
-                          child: _searchResults.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No results found. Try searching something else.',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  itemCount: _searchResults.length,
-                                  itemBuilder: (context, index) {
-                                    final video = _searchResults[index];
-                                    return ListTile(
-                                      leading: const Icon(Icons.play_circle_fill, color: Colors.redAccent, size: 40),
-                                      title: Text(
-                                        video['title'] ?? 'Untitled',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                      ),
-                                      subtitle: Text(
-                                        'Likes: ${video['likes_count'] ?? 0}',
-                                        style: const TextStyle(color: Colors.grey),
-                                      ),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Selected: ${video['title']}'),
-                                            duration: const Duration(seconds: 1),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 16,
+                right: 16,
+                top: 16,
+              ),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.70,
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Search Videos',
+                          style: TextStyle(
+                            color: Colors.white, 
+                            fontSize: 20, 
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                ],
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _searchController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Type title or keywords...',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        filled: true,
+                        fillColor: Colors.grey[900],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, color: Colors.grey),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setStateModal(() {
+                                    _searchResults.clear();
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: (value) {
+                        setStateModal(() {});
+                      },
+                      onSubmitted: (value) async {
+                        await _performSearch(value.trim(), setStateModal);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _isLoadingSearch
+                        ? const Expanded(
+                            child: Center(
+                              child: CircularProgressIndicator(color: Colors.redAccent),
+                            ),
+                          )
+                        : Expanded(
+                            child: _searchResults.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                      'No results found. Try searching something else.',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    itemCount: _searchResults.length,
+                                    itemBuilder: (context, index) {
+                                      final video = _searchResults[index];
+                                      return ListTile(
+                                        leading: const Icon(Icons.play_circle_fill, color: Colors.redAccent, size: 40),
+                                        title: Text(
+                                          video['title'] ?? 'Untitled',
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                        ),
+                                        subtitle: Text(
+                                          'Likes: ${video['likes_count'] ?? 0}',
+                                          style: const TextStyle(color: Colors.grey),
+                                        ),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Selected: ${video['title']}'),
+                                              duration: const Duration(seconds: 1),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                          ),
+                  ],
+                ),
               ),
             );
           },
