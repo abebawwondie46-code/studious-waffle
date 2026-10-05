@@ -164,9 +164,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // 🎬 1. Fully Functional Video & Photo Editor Studio Screen
   void _openVideoPhotoEditor() {
-    Navigator.pop(context); // Close previous dialog
+    Navigator.pop(context);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -175,7 +174,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // 🎨 2. Posters & Stickers Studio Screen
   void _openPosterStickerDesigner() {
     Navigator.pop(context);
     Navigator.push(
@@ -186,7 +184,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // ☁️ 3. Publish to Feed Function (Supabase)
   void _openPublishHub() {
     Navigator.pop(context);
     _publishTitleController.clear();
@@ -269,7 +266,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // 🌟 AI Vibe Summary & Creator Studio Hub Dialog
   void _showAiSummaryDialog() {
     showDialog(
       context: context,
@@ -943,7 +939,7 @@ class PosterStickerStudioScreen extends StatelessWidget {
                       SizedBox(height: 8),
                       Text(
                         'Create promotional posters and add custom badges',
-                        style: TextStyle(color: TextStyle(color: Colors.grey).color, fontSize: 12),
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
                   ),
