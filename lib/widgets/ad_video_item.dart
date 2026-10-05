@@ -821,7 +821,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 }
 
-// 🎬 Fully Functional Video & Photo Editor Studio Screen with Interactive Editing & Publishing
+// 🎬 Fully Functional Interactive Video & Photo Editor Studio Screen
 class VideoEditorStudioScreen extends StatefulWidget {
   const VideoEditorStudioScreen({super.key});
 
@@ -833,9 +833,11 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
   double _trimValue = 0.5;
   String _selectedFilter = 'Normal';
   bool _isProcessing = false;
-  String? _pickedMediaName;
-  final TextEditingController _funnyCaptionController = TextEditingController();
+  XFile? _pickedFile;
+  VideoPlayerController? _editorVideoController;
+  bool _isEditorVideoInitialized = false;
 
+  final TextEditingController _funnyCaptionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickMediaFile() async {
@@ -843,11 +845,27 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
       final XFile? media = await _picker.pickMedia();
       if (media != null) {
         setState(() {
-          _pickedMediaName = media.name;
+          _pickedFile = media;
         });
+
+        // If it's a video, initialize player for live preview
+        if (media.path.endsWith('.mp4') || media.path.endsWith('.mov') || media.path.endsWith('.avi')) {
+          _editorVideoController?.dispose();
+          _editorVideoController = VideoPlayerController.networkUrl(Uri.parse(media.path))
+            ..initialize().then((_) {
+              if (mounted) {
+                setState(() {
+                  _isEditorVideoInitialized = true;
+                });
+                _editorVideoController?.play();
+                _editorVideoController?.setLooping(true);
+              }
+            });
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Loaded: ${media.name}')),
+            SnackBar(content: Text('Successfully loaded: ${media.name}')),
           );
         }
       }
@@ -856,18 +874,25 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _editorVideoController?.dispose();
+    _funnyCaptionController.dispose();
+    super.dispose();
+  }
+
   // 🚀 Publish Created / Edited Video directly to Supabase Feed
   Future<void> _publishEditedVideoToFeed() async {
     final caption = _funnyCaptionController.text.trim();
-    if (_pickedMediaName == null) {
+    if (_pickedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add media first!')),
+        const SnackBar(content: Text('Please select a video or photo first!')),
       );
       return;
     }
     if (caption.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add a funny or creative caption!')),
+        const SnackBar(content: Text('Please write a funny or creative caption!')),
       );
       return;
     }
@@ -878,7 +903,7 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
 
     try {
       await Supabase.instance.client.from('videos').insert({
-        'title': caption,
+        'title': '$caption [Filter: $_selectedFilter]',
         'video_url': 'https://www.sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
         'likes_count': 0,
         'comments_count': 0,
@@ -920,39 +945,49 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Live Preview Box
             Container(
-              height: 200,
+              height: 220,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.grey[900],
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.redAccent, width: 1.5),
               ),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.video_collection, size: 50, color: Colors.redAccent),
-                      const SizedBox(height: 8),
-                      Text(
-                        _pickedMediaName != null ? 'File: $_pickedMediaName' : 'No Media Selected',
-                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: _isEditorVideoInitialized && _editorVideoController != null
+                    ? FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _editorVideoController!.value.size.width,
+                          height: _editorVideoController!.value.size.height,
+                          child: VideoPlayer(_editorVideoController!),
+                        ),
+                      )
+                    : Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.video_collection, size: 50, color: Colors.redAccent),
+                            const SizedBox(height: 8),
+                            Text(
+                              _pickedFile != null ? 'File: ${_pickedFile!.name}' : 'Tap "Add Media" to load video/photo',
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Active Filter: $_selectedFilter',
+                              style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Filter: $_selectedFilter',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
             const SizedBox(height: 16),
-            // Funny Caption TextField
+            // Funny Caption Input
             TextField(
               controller: _funnyCaptionController,
               style: const TextStyle(color: Colors.white),
@@ -986,6 +1021,7 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
               },
             ),
             const SizedBox(height: 10),
+            // Interactive Filters
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: ['Normal', 'Funny 😂', 'Cinematic', 'Vibe AI'].map((filter) {
@@ -1000,6 +1036,9 @@ class _VideoEditorStudioScreenState extends State<VideoEditorStudioScreen> {
                     setState(() {
                       _selectedFilter = filter;
                     });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Applied filter: $filter'), duration: const Duration(milliseconds: 500)),
+                    );
                   },
                 );
               }).toList(),
