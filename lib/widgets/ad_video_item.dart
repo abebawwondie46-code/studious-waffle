@@ -284,7 +284,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                               color: Colors.black45,
                               shape: BoxShape.circle,
                             ),
-                            // እዚህ ጋር የቪዲዮው ሁኔታ ከታየው አዶ ጋር እንዲጣጣም ተስተካክሏል
                             child: Icon(
                               _videoController!.value.isPlaying
                                   ? Icons.pause
@@ -424,7 +423,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        const Icon(
+                        child: const Icon(
                           Icons.chat_bubble,
                           color: Colors.black,
                           size: 20,
