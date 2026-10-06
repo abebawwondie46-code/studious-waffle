@@ -9,7 +9,7 @@ class AdVideoItem extends StatefulWidget {
   final String videoUrl;
   final Map<String, dynamic> templateJson;
   final String? videoId;
-  final VoidCallback? onVideoDeleted; // ቪዲዮ ሲሰረዝ ዋናውን ሊስት ለማደስ የሚረዳ
+  final VoidCallback? onVideoDeleted;
 
   const AdVideoItem({
     super.key,
@@ -165,7 +165,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  // እዚህ ጋር ከሱፐርቤዝ የመሰረዝ ስራው ተካቷል
   Future<void> _deleteVideoFromServer() async {
     if (widget.videoId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -175,19 +174,17 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
 
     try {
-      // ቪዲዮውን ከ Supabase ዳታቤዝ ሰርዝ
       await Supabase.instance.client
           .from('videos')
           .delete()
           .eq('id', widget.videoId!);
 
       if (mounted) {
-        Navigator.pop(context); // የ አማራጭ መስኮቱን ዝጋ
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Video deleted successfully')),
         );
 
-        // ቪዲዮው ሲጠፋ ከሊስቱ ውስጥ እንዲወገድ የሚደረግ ጥሪ
         if (widget.onVideoDeleted != null) {
           widget.onVideoDeleted!();
         }
@@ -197,7 +194,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete video: $e')),
+          const SnackBar(content: Text('No internet connection or failed to delete video.')),
         );
       }
     }
@@ -219,7 +216,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 title: const Text('Delete Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 subtitle: const Text('Remove this video from your feed', style: TextStyle(color: Colors.grey)),
                 onTap: () {
-                  // እዚህ ላይ ትክክለኛው የመሰረዝ ተግባር እንዲጠራ ተደርጓል
                   _deleteVideoFromServer();
                 },
               ),
@@ -313,8 +309,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                             child: _searchResults.isEmpty
                                 ? const Center(
                                     child: Text(
-                                      'No results found. Try searching something else.',
+                                      'No results found. Please check your internet connection or try another keyword.',
                                       style: TextStyle(color: Colors.grey),
+                                      textAlign: TextAlign.center,
                                     ),
                                   )
                                 : ListView.builder(
@@ -381,6 +378,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         _isLoadingSearch = false;
       });
       debugPrint('Search error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No internet connection or search failed.')),
+        );
+      }
     }
   }
 
