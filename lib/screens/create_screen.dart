@@ -141,30 +141,13 @@ class _CreateScreenState extends State<CreateScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 2. Title TextField
-              TextField(
-                controller: _titleController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'title...',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 3. Description TextField
+             // 3. Description TextField
               TextField(
                 controller: _descriptionController,
                 style: const TextStyle(color: Colors.white),
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'description...',
+                  hintText: 'Caption',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
                   fillColor: Colors.grey[900],
