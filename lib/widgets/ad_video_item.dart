@@ -5,7 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
-  final String title;
+  final String caption;
   final String videoUrl;
   final Map<String, dynamic> templateJson;
   final String? videoId;
@@ -13,7 +13,7 @@ class AdVideoItem extends StatefulWidget {
 
   const AdVideoItem({
     super.key,
-    required this.title,
+    required this.caption,
     required this.videoUrl,
     required this.templateJson,
     this.videoId,
@@ -270,7 +270,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                       controller: _searchController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'Type title or keywords...',
+                        hintText: 'Type keywords...',
                         hintStyle: const TextStyle(color: Colors.grey),
                         filled: true,
                         fillColor: Colors.grey[900],
@@ -309,7 +309,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                             child: _searchResults.isEmpty
                                 ? const Center(
                                     child: Text(
-                                      'No results found. Please check your internet connection or try another keyword.',
+                                      'No results found.',
                                       style: TextStyle(color: Colors.grey),
                                       textAlign: TextAlign.center,
                                     ),
@@ -321,7 +321,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                       return ListTile(
                                         leading: const Icon(Icons.play_circle_fill, color: Colors.redAccent, size: 40),
                                         title: Text(
-                                          video['title'] ?? 'Untitled',
+                                          video['caption'] ?? 'Untitled',
                                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                         subtitle: Text(
@@ -330,12 +330,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                         ),
                                         onTap: () {
                                           Navigator.pop(context);
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Selected: ${video['title']}'),
-                                              duration: const Duration(seconds: 1),
-                                            ),
-                                          );
                                         },
                                       );
                                     },
@@ -362,7 +356,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       final results = await Supabase.instance.client
           .from('videos')
           .select()
-          .ilike('title', '%$query%');
+          .ilike('caption', '%$query%');
 
       setStateModal(() {
         _searchResults = List<Map<String, dynamic>>.from(results);
@@ -378,11 +372,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         _isLoadingSearch = false;
       });
       debugPrint('Search error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No internet connection or search failed.')),
-        );
-      }
     }
   }
 
@@ -489,7 +478,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _isSearching ? '${widget.title} (Search: $_searchQuery)' : widget.title,
+                    _isSearching ? '${widget.caption} (Search: $_searchQuery)' : widget.caption,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
