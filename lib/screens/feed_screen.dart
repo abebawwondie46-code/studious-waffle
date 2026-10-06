@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/ad_video_item.dart'; // የቪዲዮ ማጫወቻውን እና የቁጥጥር ክፍሉን የያዘው ፋይል
+import '../widgets/ad_video_item.dart'; // Contains the video player and control components
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -22,7 +22,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Future<void> _fetchAds() async {
     try {
-      // ከ Supabase የቪዲዮ መረጃዎችን መቀበል
+      // Fetch video data from Supabase
       final response = await supabase.from('videos').select();
       setState(() {
         _ads = List<Map<String, dynamic>>.from(response);
@@ -32,6 +32,7 @@ class _FeedScreenState extends State<FeedScreen> {
       setState(() {
         _isLoading = false;
       });
+      debugPrint('Failed to load videos due to no internet connection or error: $e');
     }
   }
 
@@ -50,20 +51,20 @@ class _FeedScreenState extends State<FeedScreen> {
       return Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(
-          title: const Text('VibeShare AI', style: TextStyle(color: Colors.white)),
+          title: const Text('kuanyngne', style: TextStyle(color: Colors.white)),
           backgroundColor: Colors.black,
           centerTitle: true,
         ),
         body: const Center(
           child: Text(
-            'ምንም ቪዲዮዎች አልተገኙም::',
+            'No videos found.',
             style: TextStyle(color: Colors.white70),
           ),
         ),
       );
     }
 
-    // ቪዲዮዎችን በአቀባዊ (Vertical) በቅደም ተከተል ማሳየት
+    // Display videos vertically in sequential order
     return Scaffold(
       backgroundColor: Colors.black,
       body: PageView.builder(
