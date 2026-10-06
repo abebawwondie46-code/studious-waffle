@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class CreateVideoScreen extends StatefulWidget {
-  const CreateVideoScreen({Key? key}) : super(key: key);
+class CreateScreen extends StatefulWidget {
+  const CreateScreen({Key? key}) : super(key: key);
 
   @override
-  State<CreateVideoScreen> createState() => _CreateVideoScreenState();
+  State<CreateScreen> createState() => _CreateScreenState();
 }
 
-class _CreateVideoScreenState extends State<CreateVideoScreen> {
+class _CreateScreenState extends State<CreateScreen> {
   final _titleController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   
