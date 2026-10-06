@@ -119,8 +119,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             setState(() {
               _isInitialized = true;
             });
+            // ቪዲዮው ሲጫን ወዲያውኑ እንዲጫወት (Auto-play) እዚህ ላይ ትዕዛዝ ተሰጥቷል
             _videoController?.play();
             _videoController?.setLooping(true);
+            _discController.repeat();
           }
         });
 
