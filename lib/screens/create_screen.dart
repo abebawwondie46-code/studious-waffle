@@ -11,8 +11,7 @@ class CreateScreen extends StatefulWidget {
 }
 
 class _CreateScreenState extends State<CreateScreen> {
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  final _captionController = TextEditingController(); // <--- ከቲል ወደ ኬፕሽን ተቀየረ
   final ImagePicker _picker = ImagePicker();
   
   File? _selectedVideoFile;
@@ -37,9 +36,9 @@ class _CreateScreenState extends State<CreateScreen> {
       return;
     }
 
-    if (_titleController.text.trim().isEmpty) {
+    if (_captionController.text.trim().isEmpty) { // <--- ማረጋገጫው ወደ caption ተቀየረ
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a video title!')),
+        const SnackBar(content: Text('Please enter a video caption!')),
       );
       return;
     }
@@ -63,10 +62,9 @@ class _CreateScreenState extends State<CreateScreen> {
       // 2. Get public URL of the uploaded video
       final videoUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
-      // 3. Insert record into videos table
+      // 3. Insert record into videos table (ከ title ወደ caption ተቀየረ)
       await supabase.from('videos').insert({
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
+        'caption': _captionController.text.trim(), // <--- እዚህ ጋር caption ሆነ
         'video_url': videoUrl,
         'created_at': DateTime.now().toIso8601String(),
       });
@@ -78,8 +76,7 @@ class _CreateScreenState extends State<CreateScreen> {
       );
 
       // Clear form fields
-      _titleController.clear();
-      _descriptionController.clear();
+      _captionController.clear();
       setState(() {
         _selectedVideoFile = null;
       });
@@ -112,7 +109,7 @@ class _CreateScreenState extends State<CreateScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Gallery Video Picker Box (ጽሁፉ ጠፍቶ አዶው እና የተመረጠበት ሁኔታ ብቻ ቀረ)
+              // 1. Gallery Video Picker Box
               GestureDetector(
                 onTap: _pickVideoFromGallery,
                 child: Container(
@@ -141,23 +138,23 @@ class _CreateScreenState extends State<CreateScreen> {
               ),
               const SizedBox(height: 24),
 
-             // 3. Description TextField
-              TextField(
-                controller: _descriptionController,
-                style: const TextStyle(color: Colors.white),
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Caption',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
+             // 3. Caption TextField
+             TextField(
+               controller: _captionController, // <--- _captionController ተገናኘ
+               style: const TextStyle(color: Colors.white),
+               maxLines: 3,
+               decoration: InputDecoration(
+                 hintText: 'Caption',
+                 hintStyle: const TextStyle(color: Colors.grey),
+                 filled: true,
+                 fillColor: Colors.grey[900],
+                 border: OutlineInputBorder(
+                   borderRadius: BorderRadius.circular(12),
+                   borderSide: BorderSide.none,
+                 ),
+               ),
+             ),
+             const SizedBox(height: 30),
 
               // 4. Upload Button
               SizedBox(
