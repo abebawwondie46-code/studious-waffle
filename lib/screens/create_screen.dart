@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:video_player/video_player.dart'; // የቪዲዮውን ርዝመት ለማረጋገጥ
 
 class CreateScreen extends StatefulWidget {
   const CreateScreen({Key? key}) : super(key: key);
@@ -13,57 +12,34 @@ class CreateScreen extends StatefulWidget {
 
 class _CreateScreenState extends State<CreateScreen> {
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController(); // ለዲስክሪፕሽን (Description)
+  final _descriptionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   
   File? _selectedVideoFile;
   bool _isLoading = false;
 
-  // ከስልኩ ጋለሪ ቪዲዮ መምረጫ እና የርዝመት ማጣሪያ (Auto-length check)
+  // Function to pick video from gallery
   Future<void> _pickVideoFromGallery() async {
     final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
     if (video != null) {
-      final file = File(video.path);
-      
-      // ቪዲዮው ከ30 እስከ 60 ሰከንድ መሆኑን ለማረጋገጥ ርዝመቱን እንፈትሻለን
-      VideoPlayerController controller = VideoPlayerController.file(file);
-      try {
-        await controller.initialize();
-        final duration = controller.value.duration;
-        controller.dispose();
-
-        if (duration.inSeconds < 5) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('ቪዲዮው በጣም አጭር ነው! ቢያንስ ከ5 ሰከንድ በላይ መሆን አለበት።')),
-          );
-          return;
-        }
-
-        setState(() {
-          _selectedVideoFile = file;
-        });
-      } catch (e) {
-        // ማንኛውም የዲኮዲንግ ስህተት ካለ በቀጥታ ፋይሉን እንቀበለዋለን
-        setState(() {
-          _selectedVideoFile = file;
-        });
-      }
+      setState(() {
+        _selectedVideoFile = File(video.path);
+      });
     }
   }
 
-  // ቪዲዮውን ወደ Supabase Storage እና Database የመጫን ሂደት
+  // Function to upload video to Supabase Storage and Database
   Future<void> _uploadVideo() async {
     if (_selectedVideoFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎ መጀመሪያ ቪዲዮ ይምረጡ! (Please select a video)')),
+        const SnackBar(content: Text('Please select a video first!')),
       );
       return;
     }
 
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎ የቪዲዮውን ርዕስ ይጻፉ! (Please enter a title)')),
+        const SnackBar(content: Text('Please enter a video title!')),
       );
       return;
     }
@@ -77,17 +53,17 @@ class _CreateScreenState extends State<CreateScreen> {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
       final filePath = 'videos/$fileName';
 
-      // 1. ቪዲዮውን ወደ Supabase Storage መስቀል
+      // 1. Upload video to Supabase Storage
       await supabase.storage.from('videos').upload(
             filePath,
             _selectedVideoFile!,
             fileOptions: const FileOptions(upsert: false),
           );
 
-      // 2. የፋይሉን የፐብሊክ ሊንክ (Public URL) ማግኘት
+      // 2. Get public URL of the uploaded video
       final videoUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
-      // 3. መረጃውን በ videos ሠንጠረዥ (Table) ውስጥ መመዝገብ (Title እና Description ጨምሮ)
+      // 3. Insert record into videos table
       await supabase.from('videos').insert({
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -98,10 +74,10 @@ class _CreateScreenState extends State<CreateScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ቪዲዮው በተሳካ ሁኔታ ተጭኗል! (Video uploaded successfully!)')),
+        const SnackBar(content: Text('Video uploaded successfully!')),
       );
 
-      // ፎርሙን ማጽዳት
+      // Clear form fields
       _titleController.clear();
       _descriptionController.clear();
       setState(() {
@@ -110,7 +86,7 @@ class _CreateScreenState extends State<CreateScreen> {
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('የተፈጠረው ስህተት: $e')),
+        SnackBar(content: Text('Error occurred: $e')),
       );
     } finally {
       if (mounted) {
@@ -136,7 +112,7 @@ class _CreateScreenState extends State<CreateScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. የጋለሪ ቪዲዮ መምረጫ ሳጥን (አሁን ከላይ ነው ያለው)
+              // 1. Gallery Video Picker Box (ጽሁፉ ጠፍቶ አዶው እና የተመረጠበት ሁኔታ ብቻ ቀረ)
               GestureDetector(
                 onTap: _pickVideoFromGallery,
                 child: Container(
@@ -148,17 +124,7 @@ class _CreateScreenState extends State<CreateScreen> {
                   ),
                   child: Center(
                     child: _selectedVideoFile == null
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.video_library, color: Colors.redAccent, size: 45),
-                              SizedBox(height: 8),
-                              Text(
-                                'Tap to select video from gallery',
-                                style: TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          )
+                        ? const Icon(Icons.video_library, color: Colors.redAccent, size: 50)
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const [
@@ -175,7 +141,7 @@ class _CreateScreenState extends State<CreateScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 2. የርዕስ (Title) ማስገቢያ ሳጥን (ከቪዲዮ መጫኛው በታች)
+              // 2. Title TextField
               TextField(
                 controller: _titleController,
                 style: const TextStyle(color: Colors.white),
@@ -192,7 +158,7 @@ class _CreateScreenState extends State<CreateScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 3. የዲስክሪፕሽን (Description) ማስገቢያ ሳጥን (ከተጨማሪ መግለጫ ጋር)
+              // 3. Description TextField
               TextField(
                 controller: _descriptionController,
                 style: const TextStyle(color: Colors.white),
@@ -210,7 +176,7 @@ class _CreateScreenState extends State<CreateScreen> {
               ),
               const SizedBox(height: 30),
 
-              // 4. የመጫኛ (Upload) ቁልፍ
+              // 4. Upload Button
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
