@@ -75,7 +75,7 @@ class _FeedScreenState extends State<FeedScreen> {
           return AdVideoItem(
             key: ValueKey(ad['id'] ?? index),
             title: ad['title'] ?? '',
-            description: ad['description'] ?? '',
+            Caption: ad['description'] ?? '',
             videoUrl: ad['video_url'] ?? '',
             templateJson: ad['template_json'] ?? {},
           );
