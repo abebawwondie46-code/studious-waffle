@@ -80,7 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'VibeShare AI ፈጣሪ',
+              'kuanyngne ፈጣሪ',
               style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
             const SizedBox(height: 30),
