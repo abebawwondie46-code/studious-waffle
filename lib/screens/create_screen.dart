@@ -11,7 +11,7 @@ class CreateScreen extends StatefulWidget {
 }
 
 class _CreateScreenState extends State<CreateScreen> {
-  final _captionController = TextEditingController(); // <--- ከቲል ወደ ኬፕሽን ተቀየረ
+  final _captionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   
   File? _selectedVideoFile;
@@ -31,14 +31,20 @@ class _CreateScreenState extends State<CreateScreen> {
   Future<void> _uploadVideo() async {
     if (_selectedVideoFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a video first!')),
+        const SnackBar(
+          content: Text('Please select a video first!'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    if (_captionController.text.trim().isEmpty) { // <--- ማረጋገጫው ወደ caption ተቀየረ
+    if (_captionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a video caption!')),
+        const SnackBar(
+          content: Text('Please enter a video caption!'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -62,9 +68,9 @@ class _CreateScreenState extends State<CreateScreen> {
       // 2. Get public URL of the uploaded video
       final videoUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
-      // 3. Insert record into videos table (ከ title ወደ caption ተቀየረ)
+      // 3. Insert record into videos table
       await supabase.from('videos').insert({
-        'caption': _captionController.text.trim(), // <--- እዚህ ጋር caption ሆነ
+        'caption': _captionController.text.trim(),
         'video_url': videoUrl,
         'created_at': DateTime.now().toIso8601String(),
       });
@@ -72,7 +78,10 @@ class _CreateScreenState extends State<CreateScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video uploaded successfully!')),
+        const SnackBar(
+          content: Text('Video uploaded successfully!'),
+          backgroundColor: Colors.green,
+        ),
       );
 
       // Clear form fields
@@ -83,7 +92,10 @@ class _CreateScreenState extends State<CreateScreen> {
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error occurred: $e')),
+        SnackBar(
+          content: Text('Error occurred: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) {
@@ -95,12 +107,22 @@ class _CreateScreenState extends State<CreateScreen> {
   }
 
   @override
+  void dispose() {
+    _captionController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('Create Video', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Create Video',
+          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -109,27 +131,50 @@ class _CreateScreenState extends State<CreateScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Gallery Video Picker Box
+              // 1. Video Picker Container with Cloud Upload Icon and sleek styling
               GestureDetector(
-                onTap: _pickVideoFromGallery,
+                onTap: _isLoading ? null : _pickVideoFromGallery,
                 child: Container(
-                  height: 160,
+                  height: 170,
                   decoration: BoxDecoration(
                     color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade800),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _selectedVideoFile == null ? Colors.grey.shade800 : Colors.green,
+                      width: 1.5,
+                    ),
                   ),
                   child: Center(
                     child: _selectedVideoFile == null
-                        ? const Icon(Icons.video_library, color: Colors.redAccent, size: 50)
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.cloud_upload_rounded,
+                                  color: Colors.green,
+                                  size: 48,
+                                ),
+                              ),
+                            ],
+                          )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: const [
-                              Icon(Icons.check_circle, color: Colors.green, size: 32),
-                              SizedBox(width: 10),
+                              Icon(Icons.check_circle_rounded, color: Colors.green, size: 36),
+                              SizedBox(width: 12),
                               Text(
                                 'Video Selected Successfully!',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
                               ),
                             ],
                           ),
@@ -138,37 +183,60 @@ class _CreateScreenState extends State<CreateScreen> {
               ),
               const SizedBox(height: 24),
 
-             // 3. Caption TextField
-             TextField(
-               controller: _captionController, // <--- _captionController ተገናኘ
-               style: const TextStyle(color: Colors.white),
-               maxLines: 3,
-               decoration: InputDecoration(
-                 hintText: 'Caption',
-                 hintStyle: const TextStyle(color: Colors.grey),
-                 filled: true,
-                 fillColor: Colors.grey[900],
-                 border: OutlineInputBorder(
-                   borderRadius: BorderRadius.circular(12),
-                   borderSide: BorderSide.none,
-                 ),
-               ),
-             ),
-             const SizedBox(height: 30),
+              // 2. Caption TextField
+              TextField(
+                controller: _captionController,
+                style: const TextStyle(color: Colors.white),
+                maxLines: 3,
+                maxLength: 150,
+                decoration: InputDecoration(
+                  hintText: 'Caption',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.grey[900],
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
 
-              // 4. Upload Button
+              // 3. Upload Button
               SizedBox(
-                height: 50,
+                height: 52,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
+                    elevation: 4,
                   ),
                   onPressed: _isLoading ? null : _uploadVideo,
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Uploading...',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ],
+                        )
                       : const Text(
                           'Upload Video',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
