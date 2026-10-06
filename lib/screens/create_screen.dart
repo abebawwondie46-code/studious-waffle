@@ -146,7 +146,7 @@ class _CreateScreenState extends State<CreateScreen> {
                 controller: _titleController,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Enter video title...',
+                  hintText: 'title...',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
                   fillColor: Colors.grey[900],
@@ -164,7 +164,7 @@ class _CreateScreenState extends State<CreateScreen> {
                 style: const TextStyle(color: Colors.white),
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Write a description...',
+                  hintText: 'description...',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
                   fillColor: Colors.grey[900],
