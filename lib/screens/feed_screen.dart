@@ -74,9 +74,10 @@ class _FeedScreenState extends State<FeedScreen> {
           final ad = _ads[index];
           return AdVideoItem(
             key: ValueKey(ad['id'] ?? index),
-            Caption: ad['Caption'] ?? '',
+            caption: ad['caption'] ?? '', // <--- እዚህ ጋር caption ተስተካክሏል
             videoUrl: ad['video_url'] ?? '',
             templateJson: ad['template_json'] ?? {},
+            videoId: ad['id']?.toString(), // Video ID ን ማስተላለፍ ለላይክ/ኮሜንት ይጠቅማል
           );
         },
       ),
