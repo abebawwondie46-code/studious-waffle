@@ -9,6 +9,7 @@ class AdVideoItem extends StatefulWidget {
   final String videoUrl;
   final Map<String, dynamic> templateJson;
   final String? videoId;
+  final VoidCallback? onVideoDeleted; // ቪዲዮ ሲሰረዝ ዋናውን ሊስት ለማደስ የሚረዳ
 
   const AdVideoItem({
     super.key,
@@ -16,6 +17,7 @@ class AdVideoItem extends StatefulWidget {
     required this.videoUrl,
     required this.templateJson,
     this.videoId,
+    this.onVideoDeleted,
   });
 
   @override
@@ -119,7 +121,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             setState(() {
               _isInitialized = true;
             });
-            // ቪዲዮው ሲጫን ወዲያውኑ እንዲጫወት (Auto-play) እዚህ ላይ ትዕዛዝ ተሰጥቷል
             _videoController?.play();
             _videoController?.setLooping(true);
             _discController.repeat();
@@ -164,6 +165,44 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
+  // እዚህ ጋር ከሱፐርቤዝ የመሰረዝ ስራው ተካቷል
+  Future<void> _deleteVideoFromServer() async {
+    if (widget.videoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video ID is missing, cannot delete.')),
+      );
+      return;
+    }
+
+    try {
+      // ቪዲዮውን ከ Supabase ዳታቤዝ ሰርዝ
+      await Supabase.instance.client
+          .from('videos')
+          .delete()
+          .eq('id', widget.videoId!);
+
+      if (mounted) {
+        Navigator.pop(context); // የ አማራጭ መስኮቱን ዝጋ
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Video deleted successfully')),
+        );
+
+        // ቪዲዮው ሲጠፋ ከሊስቱ ውስጥ እንዲወገድ የሚደረግ ጥሪ
+        if (widget.onVideoDeleted != null) {
+          widget.onVideoDeleted!();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting video: $e');
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete video: $e')),
+        );
+      }
+    }
+  }
+
   void _showVideoOptionsBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -180,10 +219,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 title: const Text('Delete Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 subtitle: const Text('Remove this video from your feed', style: TextStyle(color: Colors.grey)),
                 onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Video deleted successfully')),
-                  );
+                  // እዚህ ላይ ትክክለኛው የመሰረዝ ተግባር እንዲጠራ ተደርጓል
+                  _deleteVideoFromServer();
                 },
               ),
             ],
