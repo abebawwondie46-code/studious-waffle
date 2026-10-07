@@ -50,7 +50,7 @@ class _FeedScreenState extends State<FeedScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        // Feed አዝራሩ በግራ ጫፍ ላይ ይገኛል
+        // በግራ ጫፍ ላይ የ Feed አዝራር ይገኛል
         leading: IconButton(
           icon: const Icon(Icons.dynamic_feed_rounded, color: Colors.redAccent),
           tooltip: 'Feed',
@@ -60,8 +60,15 @@ class _FeedScreenState extends State<FeedScreen> {
         ),
         title: const Text('kuanyngne', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        // ከላይ በስተቀኝ የነበረው የሰርች አዝራር ጠፍቷል
-        actions: const [],
+        // በስተቀኝ ጫፍ (ከ kuanyngne ፊት ለፊት) የሰርች አዝራር ተተክሏል
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () {
+              // Search functionality
+            },
+          ),
+        ],
       ),
       body: _ads.isEmpty
           ? const Center(
