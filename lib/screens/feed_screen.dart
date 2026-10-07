@@ -15,7 +15,7 @@ class _FeedScreenState extends State<FeedScreen> {
   List<Map<String, dynamic>> _searchResults = [];
   bool _isLoading = true;
   bool _isLoadingSearch = false;
-  bool _isSearchActive = false; // ሰርች መክፈቻ ሁነታን ለመቆጣጠር
+  bool _isSearchActive = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -39,6 +39,7 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
+  // ቪዲዮዎችን በ caption እና ተጠቃሚዎችን በ username / profile በአንድ ላይ መፈለጊያ
   Future<void> _performSearch(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
@@ -53,13 +54,31 @@ class _FeedScreenState extends State<FeedScreen> {
     });
 
     try {
-      final results = await supabase
+      // 1. ቪዲዮዎችን በ caption መፈለግ
+      final videoResults = await supabase
           .from('videos')
           .select()
           .ilike('caption', '%${query.trim()}%');
 
+      // 2. ተጠቃሚዎችን በፕሮፋይል/ዩዘርኔም ለመፈለግ (ቴብሉ 'profiles' ወይም 'users' ከሆነ)
+      // ማስታወሻ፡ በ Supabase ቴብል ስምዎ መሰረት 'profiles' የሚለውን ማስተካከል ይቻላል
+      List<Map<String, dynamic>> userResults = [];
+      try {
+        final profileQuery = await supabase
+            .from('profiles')
+            .select()
+            .ilike('username', '%${query.trim()}%');
+        userResults = List<Map<String, dynamic>>.from(profileQuery);
+      } catch (_) {
+        // ፕሬፋይል ቴብል ከሌለ ወይም ስሙ የተለየ ከሆነ ስህተት እንዳይፈጥር ይቋቋመዋል
+      }
+
       setState(() {
-        _searchResults = List<Map<String, dynamic>>.from(results);
+        // ውጤቶቹን በአንድ ላይ ማቀናጀት
+        _searchResults = [
+          ...List<Map<String, dynamic>>.from(videoResults),
+          ...userResults,
+        ];
         _isLoadingSearch = false;
       });
     } catch (e) {
@@ -87,14 +106,12 @@ class _FeedScreenState extends State<FeedScreen> {
       );
     }
 
-    // ዝርዝሩን ለማሳየት የሚጠቀሙባቸው ቪዲዮዎች (ሰርች ሲደረግ የሰርቹ ውጤት፣ ካልሆነ ዋናዎቹ ቪዲዮዎች)
     final displayList = _isSearchActive ? _searchResults : _ads;
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        // _isSearchActive ሲሆን የኋላ (Back) አዝራር ይታያል፣ ካልሆነ የ Feed አዝራር
         leading: _isSearchActive
             ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -111,7 +128,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 tooltip: 'Feed',
                 onPressed: () {},
               ),
-        // ሰርቹ ንቁ ሲሆን እንደ ምስሉ ክብ ቅርጽ ያለው የሰርች ሳጥን ይታያል፣ ካልሆነ 'kuanyngne' ጽሁፍ
         title: _isSearchActive
             ? Container(
                 height: 40,
@@ -124,7 +140,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   autofocus: true,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
-                    hintText: 'Search',
+                    hintText: 'Search videos or profiles...',
                     hintStyle: TextStyle(color: Colors.grey),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -139,7 +155,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
         centerTitle: !_isSearchActive,
-        // ሰርቹ ንቁ ካልሆነ የሰርች አዝራሩ በስተቀኝ ጫፍ ይታያል
         actions: _isSearchActive
             ? []
             : [
@@ -161,7 +176,7 @@ class _FeedScreenState extends State<FeedScreen> {
           : displayList.isEmpty
               ? const Center(
                   child: Text(
-                    'No videos found.',
+                    'No videos or profiles found.',
                     style: TextStyle(color: Colors.white70),
                   ),
                 )
@@ -172,7 +187,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     final ad = displayList[index];
                     return AdVideoItem(
                       key: ValueKey(ad['id'] ?? index),
-                      caption: ad['caption'] ?? '',
+                      caption: ad['caption'] ?? ad['username'] ?? '',
                       videoUrl: ad['video_url'] ?? '',
                       templateJson: ad['template_json'] ?? {},
                       videoId: ad['id']?.toString(),
