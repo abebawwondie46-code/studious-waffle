@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -45,26 +44,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   @override
   void initState() {
     super.initState();
-    _checkInternetAndFetchPosts();
-  }
-
-  // የኢንተርኔት ሁኔታን እያረጋገጡ ፖስቶችን ማምጣት
-  Future<void> _checkInternetAndFetchPosts() async {
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No internet connection! Please check your network.'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
     _fetchPosts();
   }
 
@@ -86,20 +65,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     }
   }
 
-  // ፖስትን ከዳታቤዝ የመሰረዝ (Delete) ተግባር
   Future<void> _deletePost(String postId) async {
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No internet connection to delete post!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     try {
       await supabase.from('posts').delete().eq('id', postId);
       setState(() {
@@ -121,19 +87,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   }
 
   Future<void> _uploadPost() async {
-    // የኢንተርኔት ግንኙነት መኖሩን ማረጋገጥ
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No internet connection! Cannot publish post.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     if (_postCaptionController.text.trim().isEmpty && _selectedImageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please write something or select an image!'), backgroundColor: Colors.orange),
@@ -187,7 +140,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       });
 
       Navigator.pop(context);
-      _checkInternetAndFetchPosts();
+      _fetchPosts();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -462,7 +415,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                     ),
                                   ],
                                 ),
-                                // የሰርዝ (Delete) አማራጭ ማኑ (PopupMenuButton)
                                 PopupMenuButton<String>(
                                   icon: const Icon(Icons.more_vert, color: Colors.white70),
                                   color: Colors.grey[850],
