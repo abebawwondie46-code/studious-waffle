@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExploreFeedScreen extends StatefulWidget {
@@ -13,17 +15,23 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
 
+  // Controllers and variables for creating a new post (Poster/Photo)
+  final TextEditingController _postCaptionController = TextEditingController();
+  File? _selectedImageFile;
+  final ImagePicker _picker = ImagePicker();
+  bool _isPosting = false;
+
   @override
   void initState() {
     super.initState();
     _fetchPosts();
   }
 
-  // Fetch posts from Supabase table
+  // Fetch posts (Photos/Posters) from Supabase
   Future<void> _fetchPosts() async {
     try {
       final response = await supabase
-          .from('videos')
+          .from('posts') // የፖስቶች ቴብል ስም
           .select()
           .order('created_at', ascending: false);
 
@@ -35,10 +43,183 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading feed: $e'), backgroundColor: Colors.red),
-      );
+      // ScaffoldMessenger handled safely
     }
+  }
+
+  // Pick an image or poster from gallery
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _selectedImageFile = File(image.path);
+      });
+    }
+  }
+
+  // Upload Photo/Poster to Supabase
+  Future<void> _uploadPost() async {
+    if (_selectedImageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a photo or poster first!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() {
+      _isPosting = true;
+    });
+
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filePath = 'posts/$fileName';
+
+      // 1. Upload image to Supabase Storage
+      await supabase.storage.from('videos').upload(
+            filePath,
+            _selectedImageFile!,
+            fileOptions: const FileOptions(upsert: false),
+          );
+
+      // 2. Get public URL
+      final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
+
+      // 3. Insert record into database table
+      await supabase.from('posts').insert({
+        'caption': _postCaptionController.text.trim(),
+        'media_url': imageUrl,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Poster uploaded successfully!'), backgroundColor: Colors.green),
+      );
+
+      _postCaptionController.clear();
+      setState(() {
+        _selectedImageFile = null;
+      });
+
+      Navigator.pop(context); // Close bottom sheet
+      _fetchPosts(); // Refresh feed
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPosting = false;
+        });
+      }
+    }
+  }
+
+  // Show bottom sheet to create/upload a new poster or photo
+  void _showCreatePostBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                20,
+                16,
+                MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Create New Poster / Photo',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Image Picker Box
+                    GestureDetector(
+                      onTap: () async {
+                        final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                        if (image != null) {
+                          setModalState(() {
+                            _selectedImageFile = File(image.path);
+                          });
+                        }
+                      },
+                      child: Container(
+                        height: 180,
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.grey.shade700),
+                        ),
+                        child: _selectedImageFile == null
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.add_photo_alternate_rounded, color: Colors.redAccent, size: 48),
+                                  SizedBox(height: 8),
+                                  Text('Tap to select poster or photo', style: TextStyle(color: Colors.grey)),
+                                ],
+                              )
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.file(_selectedImageFile!, fit: BoxFit.cover),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Caption Input
+                    TextField(
+                      controller: _postCaptionController,
+                      style: const TextStyle(color: Colors.white),
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Write a caption or description...',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        filled: true,
+                        fillColor: Colors.black,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Submit Button
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _isPosting ? null : _uploadPost,
+                      child: _isPosting
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Post Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -48,7 +229,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: const Text(
-          'Explore Feed',
+          'Explore Feed & Posters',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -58,7 +239,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
           : _posts.isEmpty
               ? const Center(
                   child: Text(
-                    'No posts available yet!',
+                    'No posters or photos available yet!',
                     style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 )
@@ -66,10 +247,11 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                   itemCount: _posts.length,
                   itemBuilder: (context, index) {
                     final post = _posts[index];
-                    final caption = post['caption'] ?? 'No caption';
+                    final caption = post['caption'] ?? '';
+                    final mediaUrl = post['media_url'] ?? '';
 
                     return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       decoration: BoxDecoration(
                         color: Colors.grey[900],
                         borderRadius: BorderRadius.circular(16),
@@ -77,7 +259,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // User header info
+                          // Header
                           Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Row(
@@ -89,26 +271,33 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                                 SizedBox(width: 10),
                                 Text(
-                                  'Creator',
+                                  'Community Creator',
                                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
                           ),
 
-                          // Media Display Container
-                          Container(
-                            height: 300,
-                            width: double.infinity,
-                            color: Colors.black54,
-                            child: const Center(
-                              child: Icon(
-                                Icons.play_circle_filled_rounded,
-                                color: Colors.redAccent,
-                                size: 64,
+                          // Poster / Photo Display
+                          if (mediaUrl.isNotEmpty)
+                            Container(
+                              height: 350,
+                              width: double.infinity,
+                              color: Colors.black,
+                              child: Image.network(
+                                mediaUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(color: Colors.redAccent, strokeWidth: 2),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) => const Center(
+                                  child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                ),
                               ),
                             ),
-                          ),
 
                           // Actions (Like, Comment, Share)
                           Padding(
@@ -125,18 +314,24 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                           ),
 
                           // Caption Text
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                            child: Text(
-                              caption,
-                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                          if (caption.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                              child: Text(
+                                caption,
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     );
                   },
                 ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.redAccent,
+        onPressed: _showCreatePostBottomSheet,
+        child: const Icon(Icons.add_a_photo_rounded, color: Colors.white),
+      ),
     );
   }
 }
