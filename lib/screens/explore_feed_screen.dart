@@ -20,11 +20,9 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isPosting = false;
 
-  // የጀርባ ቀለሞችን መምረጫ እና መደበቂያ ሁኔታዎች
   bool _showColorPicker = false;
   Color _selectedBackgroundColor = Colors.black87;
 
-  // በጣም የሚያምሩ የጀርባ ቀለሞች ዝርዝር
   final List<Color> _backgroundColors = [
     Colors.black87,
     Colors.deepPurple.shade900,
@@ -58,7 +56,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       setState(() {
         _isLoading = false;
       });
-      debugPrint('Error fetching posts: $e');
     }
   }
 
@@ -77,25 +74,28 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     try {
       String imageUrl = '';
       if (_selectedImageFile != null) {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final filePath = 'posts/$fileName';
+        try {
+          final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final filePath = 'posts/$fileName';
 
-        await supabase.storage.from('videos').upload(
-              filePath,
-              _selectedImageFile!,
-              fileOptions: const FileOptions(upsert: false),
-            );
+          await supabase.storage.from('videos').upload(
+                filePath,
+                _selectedImageFile!,
+                fileOptions: const FileOptions(upsert: false),
+              );
 
-        imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
+          imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
+        } catch (storageError) {
+          debugPrint('Storage error: $storageError');
+        }
       }
 
-      // የቀለሙን ነባር ኮድ ወደ String በመቀየር ማስቀመጥ (ለቀጣይ ዲስፕሌይ እንዲመች)
       final colorValue = _selectedBackgroundColor.value.toRadixString(16);
 
       await supabase.from('posts').insert({
         'caption': _postCaptionController.text.trim(),
         'media_url': imageUrl,
-        'bg_color': colorValue, // የጀርባ ቀለሙን መረጃ መመዝገቢያ
+        'bg_color': colorValue,
         'created_at': DateTime.now().toIso8601String(),
       });
 
@@ -158,7 +158,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     ),
                     const SizedBox(height: 20),
                     
-                    // Image Picker Box
                     GestureDetector(
                       onTap: () async {
                         final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -212,9 +211,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Caption Input with Background Color Container
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
+                    Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: _selectedBackgroundColor,
@@ -235,7 +232,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                           ),
                           const Divider(color: Colors.white24),
                           
-                          // (^) ምልክት እና የቀለም መምረጫ ቁልፍ
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -245,7 +241,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   color: Colors.redAccent,
                                   size: 28,
                                 ),
-                                tooltip: 'Choose Background Color',
                                 onPressed: () {
                                   setModalState(() {
                                     _showColorPicker = !_showColorPicker;
@@ -256,7 +251,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                             ],
                           ),
 
-                          // (^) ምልክት ሲነካ የሚታዩ የሚያምሩ የጀርባ ቀለሞች (በ Wrap የተስተካከለ)
                           if (_showColorPicker) ...[
                             const SizedBox(height: 8),
                             Wrap(
@@ -290,7 +284,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Submit Button
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.redAccent,
@@ -347,7 +340,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     final caption = post['caption'] ?? '';
                     final mediaUrl = post['media_url'] ?? '';
                     
-                    // የተቀመጠውን የጀርባ ቀለም መልሶ ማንበብ (ካለ)
                     Color postBgColor = Colors.grey.shade900;
                     if (post['bg_color'] != null) {
                       try {
@@ -390,12 +382,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                               child: Image.network(
                                 mediaUrl,
                                 fit: BoxFit.cover,
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return const Center(
-                                    child: CircularProgressIndicator(color: Colors.redAccent, strokeWidth: 2),
-                                  );
-                                },
                                 errorBuilder: (context, error, stackTrace) => const Center(
                                   child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
                                 ),
@@ -409,18 +395,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 style: const TextStyle(color: Colors.white, fontSize: 15),
                               ),
                             ),
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
-                            child: Row(
-                              children: [
-                                Icon(Icons.favorite_border, color: Colors.white70, size: 24),
-                                SizedBox(width: 16),
-                                Icon(Icons.comment_outlined, color: Colors.white70, size: 22),
-                                SizedBox(width: 16),
-                                Icon(Icons.share_outlined, color: Colors.white70, size: 22),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     );
