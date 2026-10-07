@@ -30,12 +30,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   bool _showPlayIcon = false;
   late AnimationController _discController;
   
-  final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
-  String _searchQuery = '';
-  List<Map<String, dynamic>> _searchResults = [];
-  bool _isLoadingSearch = false;
-
   int _likeCount = 440;
   bool _isLiked = false;
   int _commentCount = 745;
@@ -139,7 +133,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
   @override
   void dispose() {
-    _searchController.dispose();
     _discController.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
@@ -226,155 +219,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     );
   }
 
-  void _openSearchSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.black.withOpacity(0.95),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setStateModal) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16,
-                right: 16,
-                top: 16,
-              ),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.70,
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Search Videos',
-                          style: TextStyle(
-                            color: Colors.white, 
-                            fontSize: 20, 
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Type keywords...',
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        filled: true,
-                        fillColor: Colors.grey[900],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, color: Colors.grey),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setStateModal(() {
-                                    _searchResults.clear();
-                                  });
-                                },
-                              )
-                            : null,
-                      ),
-                      onChanged: (value) {
-                        setStateModal(() {});
-                      },
-                      onSubmitted: (value) async {
-                        await _performSearch(value.trim(), setStateModal);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _isLoadingSearch
-                        ? const Expanded(
-                            child: Center(
-                              child: CircularProgressIndicator(color: Colors.redAccent),
-                            ),
-                          )
-                        : Expanded(
-                            child: _searchResults.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                      'No results found.',
-                                      style: TextStyle(color: Colors.grey),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    itemCount: _searchResults.length,
-                                    itemBuilder: (context, index) {
-                                      final video = _searchResults[index];
-                                      return ListTile(
-                                        leading: const Icon(Icons.play_circle_fill, color: Colors.redAccent, size: 40),
-                                        title: Text(
-                                          video['caption'] ?? 'Untitled',
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                        ),
-                                        subtitle: Text(
-                                          'Likes: ${video['likes_count'] ?? 0}',
-                                          style: const TextStyle(color: Colors.grey),
-                                        ),
-                                        onTap: () {
-                                          Navigator.pop(context);
-                                        },
-                                      );
-                                    },
-                                  ),
-                          ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _performSearch(String query, StateSetter setStateModal) async {
-    if (query.isEmpty) return;
-
-    setStateModal(() {
-      _isLoadingSearch = true;
-    });
-
-    try {
-      final results = await Supabase.instance.client
-          .from('videos')
-          .select()
-          .ilike('caption', '%$query%');
-
-      setStateModal(() {
-        _searchResults = List<Map<String, dynamic>>.from(results);
-        _isLoadingSearch = false;
-      });
-
-      setState(() {
-        _searchQuery = query;
-        _isSearching = true;
-      });
-    } catch (e) {
-      setStateModal(() {
-        _isLoadingSearch = false;
-      });
-      debugPrint('Search error: $e');
-    }
-  }
-
   void _togglePlayPause() {
     setState(() {
       if (_videoController!.value.isPlaying) {
@@ -446,15 +290,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               : const Center(
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
-
-          Positioned(
-            top: 45,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.search, color: Colors.white, size: 28),
-              onPressed: _openSearchSheet,
-            ),
-          ),
           
           Positioned(
             left: 0,
@@ -478,7 +313,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _isSearching ? '${widget.caption} (Search: $_searchQuery)' : widget.caption,
+                    widget.caption,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
