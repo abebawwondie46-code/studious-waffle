@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/feed_screen.dart';
+import 'screens/home_screen.dart'; // HomeScreen ተካቷል
 import 'screens/create_screen.dart';
 import 'screens/profile_screen.dart';
 
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'kuanyngne',
+      title: 'VibeShare AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -43,13 +44,14 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0; // Starts at 0, which is FeedScreen
+  int _currentIndex = 0; // Feed is index 0 (Primary initial screen)
 
-  // List of screens with FeedScreen as the primary initial screen
+  // List of all 4 screens including HomeScreen
   final List<Widget> _screens = [
     const FeedScreen(),     // Index 0: Feed (Main initial screen)
-    const CreateScreen(),   // Index 1: Create Post/Video
-    const ProfileScreen(),  // Index 2: Profile
+    const HomeScreen(),     // Index 1: Home
+    const CreateScreen(),   // Index 2: Create
+    const ProfileScreen(),  // Index 3: Profile
   ];
 
   @override
@@ -71,6 +73,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dynamic_feed_rounded),
             label: 'Feed',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_filled),
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
