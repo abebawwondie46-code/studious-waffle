@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/feed_screen.dart'; // ፌድ (አፑ ሲከፈት መጀመሪያ የሚከፈተው ዋናው ገጽ)
-import 'screens/create_screen.dart';
-import 'screens/profile_screen.dart';
+import 'screens/feed_screen.dart';
+import 'screens/create_screen.dart'; // አዲሱ የቪዲዮ መፍጠሪያ ፋይል
+import 'screens/profile_screen.dart'; // አዲሱ የፕሮፋይል ፋይል
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase with your credentials
+  // የሱፓቤስ ማገናኛ ቁልፎችዎ በትክክል ተካትተዋል
   await Supabase.initialize(
     url: 'https://yszkonhhprwtavxywchz.supabase.co',
     anonKey:
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VibeShare AI',
+      title: 'kuanyngne',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -43,13 +43,13 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0; // Feed መጀመሪያ እንዲከፈት 0 ሆኗል
+  int _currentIndex = 0;
 
-  // Home ፋይሉን ሳይነኩ፣ ፌድ መጀመሪያ እንዲከፈት ተደርጓል
+  // ሦስቱን ዋና ዋና ስክሪኖች እዚህ በንጹህ መልኩ አካተናል
   final List<Widget> _screens = [
-    const FeedScreen(),     // Index 0: Feed (አፑ ሲከፈት መጀመሪያ የሚከፈተው)
-    const CreateScreen(),   // Index 1: Create
-    const ProfileScreen(),  // Index 2: Profile
+    const FeedScreen(),
+    const CreateScreen(),
+    const ProfileScreen(),
   ];
 
   @override
@@ -69,16 +69,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dynamic_feed_rounded),
-            label: 'Feed', // ከሁሉ አስቀድሞ የሚከፈተው የፌድ አዝራር
+            icon: Icon(Icons.home),
+            label: '',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
-            label: 'Create',
+            label: '',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Profile',
+            label: '',
           ),
         ],
       ),
