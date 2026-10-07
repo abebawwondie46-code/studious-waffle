@@ -1,7 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/ad_video_item.dart';
-import 'explore_feed_screen.dart'; // <--- የኤክስፕሎር ፊድ ፋይሉ እዚህ ጋር ተያይዟል
 
 class ExploreFeedScreen extends StatefulWidget {
   const ExploreFeedScreen({super.key});
@@ -10,190 +10,297 @@ class ExploreFeedScreen extends StatefulWidget {
   State<ExploreFeedScreen> createState() => _ExploreFeedScreenState();
 }
 
-class _FeedScreenState extends State<FeedScreen> {
-  final supabase = Supabase.instance.client;
-  List<Map<String, dynamic>> _ads = [];
-  List<Map<String, dynamic>> _searchResults = [];
+class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
+  final SupabaseClient supabase = Supabase.instance.client;
+  List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
-  bool _isLoadingSearch = false;
-  bool _isSearchActive = false;
-  final TextEditingController _searchController = TextEditingController();
+
+  final TextEditingController _postCaptionController = TextEditingController();
+  File? _selectedImageFile;
+  final ImagePicker _picker = ImagePicker();
+  bool _isPosting = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchAds();
+    _fetchPosts();
   }
 
-  Future<void> _fetchAds() async {
+  Future<void> _fetchPosts() async {
     try {
-      final response = await supabase.from('videos').select();
+      final response = await supabase
+          .from('posts')
+          .select()
+          .order('created_at', ascending: false);
+
       setState(() {
-        _ads = List<Map<String, dynamic>>.from(response);
+        _posts = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      debugPrint('Failed to load videos due to no internet connection or error: $e');
     }
   }
 
-  Future<void> _performSearch(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _isLoadingSearch = false;
-      });
+  Future<void> _uploadPost() async {
+    if (_selectedImageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a photo or poster first!'), backgroundColor: Colors.red),
+      );
       return;
     }
 
     setState(() {
-      _isLoadingSearch = true;
+      _isPosting = true;
     });
 
     try {
-      final videoResults = await supabase
-          .from('videos')
-          .select()
-          .ilike('caption', '%${query.trim()}%');
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filePath = 'posts/$fileName';
 
-      List<Map<String, dynamic>> userResults = [];
-      try {
-        final profileQuery = await supabase
-            .from('profiles')
-            .select()
-            .ilike('username', '%${query.trim()}%');
-        userResults = List<Map<String, dynamic>>.from(profileQuery);
-      } catch (_) {}
+      await supabase.storage.from('videos').upload(
+            filePath,
+            _selectedImageFile!,
+            fileOptions: const FileOptions(upsert: false),
+          );
 
-      setState(() {
-        _searchResults = [
-          ...List<Map<String, dynamic>>.from(videoResults),
-          ...userResults,
-        ];
-        _isLoadingSearch = false;
+      final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
+
+      await supabase.from('posts').insert({
+        'caption': _postCaptionController.text.trim(),
+        'media_url': imageUrl,
+        'created_at': DateTime.now().toIso8601String(),
       });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Poster uploaded successfully!'), backgroundColor: Colors.green),
+      );
+
+      _postCaptionController.clear();
+      setState(() {
+        _selectedImageFile = null;
+      });
+
+      Navigator.pop(context);
+      _fetchPosts();
     } catch (e) {
-      setState(() {
-        _isLoadingSearch = false;
-      });
-      debugPrint('Search error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPosting = false;
+        });
+      }
     }
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void _showCreatePostBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                20,
+                16,
+                MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Create New Poster / Photo',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    GestureDetector(
+                      onTap: () async {
+                        final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                        if (image != null) {
+                          setModalState(() {
+                            _selectedImageFile = File(image.path);
+                          });
+                        }
+                      },
+                      child: Container(
+                        height: 180,
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.grey.shade700),
+                        ),
+                        child: _selectedImageFile == null
+                            ? const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_photo_alternate_rounded, color: Colors.redAccent, size: 48),
+                                  SizedBox(height: 8),
+                                  Text('Tap to select poster or photo', style: TextStyle(color: Colors.grey)),
+                                ],
+                              )
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.file(_selectedImageFile!, fit: BoxFit.cover),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _postCaptionController,
+                      style: const TextStyle(color: Colors.white),
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Write a caption or description...',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        filled: true,
+                        fillColor: Colors.black,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _isPosting ? null : _uploadPost,
+                      child: _isPosting
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Post Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.redAccent),
-        ),
-      );
-    }
-
-    final displayList = _isSearchActive ? _searchResults : _ads;
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        // Feed አዝራሩ ሲጫን በቀጥታ ወደ ExploreFeedScreen ይወስዳል
-        leading: _isSearchActive
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () {
-                  setState(() {
-                    _isSearchActive = false;
-                    _searchController.clear();
-                    _searchResults = [];
-                  });
-                },
-              )
-            : IconButton(
-                icon: const Icon(Icons.dynamic_feed_rounded, color: Colors.redAccent),
-                tooltip: 'Feed',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ExploreFeedScreen()),
-                  );
-                },
-              ),
-        title: _isSearchActive
-            ? Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    hintText: 'Search videos or profiles...',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  ),
-                  onChanged: (value) {
-                    _performSearch(value);
-                  },
-                ),
-              )
-            : const Text(
-                'kuanyngne',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-        centerTitle: !_isSearchActive,
-        actions: _isSearchActive
-            ? []
-            : [
-                IconButton(
-                  icon: const Icon(Icons.search, color: Colors.white),
-                  tooltip: 'Search',
-                  onPressed: () {
-                    setState(() {
-                      _isSearchActive = true;
-                    });
-                  },
-                ),
-              ],
+        title: const Text(
+          'Explore Feed & Posters',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
       ),
-      body: _isLoadingSearch
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.redAccent),
-            )
-          : displayList.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+          : _posts.isEmpty
               ? const Center(
                   child: Text(
-                    'No videos or profiles found.',
-                    style: TextStyle(color: Colors.white70),
+                    'No posters or photos available yet!',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 )
-              : PageView.builder(
-                  scrollDirection: Axis.vertical,
-                  itemCount: displayList.length,
+              : ListView.builder(
+                  itemCount: _posts.length,
                   itemBuilder: (context, index) {
-                    final ad = displayList[index];
-                    return AdVideoItem(
-                      key: ValueKey(ad['id'] ?? index),
-                      caption: ad['caption'] ?? ad['username'] ?? '',
-                      videoUrl: ad['video_url'] ?? '',
-                      templateJson: ad['template_json'] ?? {},
-                      videoId: ad['id']?.toString(),
+                    final post = _posts[index];
+                    final caption = post['caption'] ?? '';
+                    final mediaUrl = post['media_url'] ?? '';
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[900],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              children: const [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: Colors.redAccent,
+                                  child: Icon(Icons.person, color: Colors.white, size: 20),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Community Creator',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (mediaUrl.isNotEmpty)
+                            Container(
+                              height: 350,
+                              width: double.infinity,
+                              color: Colors.black,
+                              child: Image.network(
+                                mediaUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(color: Colors.redAccent, strokeWidth: 2),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) => const Center(
+                                  child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                ),
+                              ),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              children: const [
+                                Icon(Icons.favorite_border, color: Colors.white, size: 26),
+                                SizedBox(width: 16),
+                                Icon(Icons.comment_outlined, color: Colors.white, size: 24),
+                                SizedBox(width: 16),
+                                Icon(Icons.share_outlined, color: Colors.white, size: 24),
+                              ],
+                            ),
+                          ),
+                          if (caption.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                              child: Text(
+                                caption,
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                              ),
+                            ),
+                        ],
+                      ),
                     );
                   },
                 ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.redAccent,
+        onPressed: _showCreatePostBottomSheet,
+        child: const Icon(Icons.add_a_photo_rounded, color: Colors.white),
+      ),
     );
   }
 }
