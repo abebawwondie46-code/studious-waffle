@@ -58,10 +58,18 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       setState(() {
         _isLoading = false;
       });
+      debugPrint('Error fetching posts: $e');
     }
   }
 
   Future<void> _uploadPost() async {
+    if (_postCaptionController.text.trim().isEmpty && _selectedImageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please write something or select an image!'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
     setState(() {
       _isPosting = true;
     });
@@ -81,9 +89,13 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
         imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
       }
 
+      // የቀለሙን ነባር ኮድ ወደ String በመቀየር ማስቀመጥ (ለቀጣይ ዲስፕሌይ እንዲመች)
+      final colorValue = _selectedBackgroundColor.value.toRadixString(16);
+
       await supabase.from('posts').insert({
         'caption': _postCaptionController.text.trim(),
         'media_url': imageUrl,
+        'bg_color': colorValue, // የጀርባ ቀለሙን መረጃ መመዝገቢያ
         'created_at': DateTime.now().toIso8601String(),
       });
 
@@ -103,6 +115,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       Navigator.pop(context);
       _fetchPosts();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
@@ -156,7 +169,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                         }
                       },
                       child: Container(
-                        height: 150,
+                        height: 140,
                         decoration: BoxDecoration(
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(14),
@@ -166,21 +179,42 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                             ? const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_rounded, color: Colors.redAccent, size: 40),
+                                  Icon(Icons.add_photo_alternate_rounded, color: Colors.redAccent, size: 36),
                                   SizedBox(height: 6),
-                                  Text('Tap to select photo (Optional)', style: TextStyle(color: Colors.grey)),
+                                  Text('Tap to select photo (Optional)', style: TextStyle(color: Colors.grey, fontSize: 13)),
                                 ],
                               )
-                            : ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: Image.file(_selectedImageFile!, fit: BoxFit.cover),
+                            : Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Image.file(_selectedImageFile!, width: double.infinity, height: 140, fit: BoxFit.cover),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setModalState(() {
+                                          _selectedImageFile = null;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                        child: const Icon(Icons.close, color: Colors.white, size: 18),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
                     // Caption Input with Background Color Container
-                    Container(
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: _selectedBackgroundColor,
@@ -222,38 +256,33 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                             ],
                           ),
 
-                          // (^) ምልክት ሲነካ የሚታዩ የሚያምሩ የጀርባ ቀለሞች
+                          // (^) ምልክት ሲነካ የሚታዩ የሚያምሩ የጀርባ ቀለሞች (በ Wrap የተስተካከለ)
                           if (_showColorPicker) ...[
                             const SizedBox(height: 8),
-                            SizedBox(
-                              height: 45,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _backgroundColors.length,
-                                itemBuilder: (context, index) {
-                                  final color = _backgroundColors[index];
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setModalState(() {
-                                        _selectedBackgroundColor = color;
-                                      });
-                                    },
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: _selectedBackgroundColor == color ? Colors.white : Colors.transparent,
-                                          width: 2,
-                                        ),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _backgroundColors.map((color) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    setModalState(() {
+                                      _selectedBackgroundColor = color;
+                                    });
+                                  },
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: color,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: _selectedBackgroundColor == color ? Colors.white : Colors.transparent,
+                                        width: 2,
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
+                                  ),
+                                );
+                              }).toList(),
                             ),
                           ],
                         ],
@@ -270,8 +299,15 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                       ),
                       onPressed: _isPosting ? null : _uploadPost,
                       child: _isPosting
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Post Now', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text(
+                              'Post Now',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ],
                 ),
@@ -310,12 +346,21 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     final post = _posts[index];
                     final caption = post['caption'] ?? '';
                     final mediaUrl = post['media_url'] ?? '';
+                    
+                    // የተቀመጠውን የጀርባ ቀለም መልሶ ማንበብ (ካለ)
+                    Color postBgColor = Colors.grey.shade900;
+                    if (post['bg_color'] != null) {
+                      try {
+                        postBgColor = Color(int.parse(post['bg_color'], radix: 16));
+                      } catch (_) {}
+                    }
 
                     return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[900],
+                        color: postBgColor,
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade800, width: 0.5),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,7 +384,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                           ),
                           if (mediaUrl.isNotEmpty)
                             Container(
-                              height: 350,
+                              height: 320,
                               width: double.infinity,
                               color: Colors.black,
                               child: Image.network(
@@ -356,26 +401,26 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
                             ),
+                          if (caption.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text(
+                                caption,
+                                style: const TextStyle(color: Colors.white, fontSize: 15),
+                              ),
+                            ),
                           const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
                             child: Row(
                               children: [
-                                Icon(Icons.favorite_border, color: Colors.white, size: 26),
+                                Icon(Icons.favorite_border, color: Colors.white70, size: 24),
                                 SizedBox(width: 16),
-                                Icon(Icons.comment_outlined, color: Colors.white, size: 24),
+                                Icon(Icons.comment_outlined, color: Colors.white70, size: 22),
                                 SizedBox(width: 16),
-                                Icon(Icons.share_outlined, color: Colors.white, size: 24),
+                                Icon(Icons.share_outlined, color: Colors.white70, size: 22),
                               ],
                             ),
                           ),
-                          if (caption.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                              child: Text(
-                                caption,
-                                style: const TextStyle(color: Colors.white, fontSize: 14),
-                              ),
-                            ),
                         ],
                       ),
                     );
