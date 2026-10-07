@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/feed_screen.dart';   // ፌድ (የፖስተሮች እና ፎቶዎች ዋና ገጽ - መጀመሪያ ይከፈታል)
-import 'screens/home_screen.dart';   // ሆም (የቪዲዮዎች ገጽ)
+import 'screens/feed_screen.dart';   // ፌድ (አፑ ሲከፈት መጀመሪያ የሚከፈተው)
+import 'screens/home_screen.dart';   // ሆም (የቪዲዮዎች ገጽ መልሶ ተካቷል)
 import 'screens/create_screen.dart';
 import 'screens/profile_screen.dart';
 
@@ -44,12 +44,12 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0; // Feed is index 0 (Primary initial screen when app opens)
+  int _currentIndex = 0; // Feed መጀመሪያ እንዲከፈት 0 ሆኗል
 
-  // ቅደም ተከተል: Feed መጀመሪያ ይከፈታል፣ ቀጥሎ Home (ቪዲዮዎች) ይመጣሉ
+  // Feed መጀመሪያ (Index 0) ሆኖ፣ Home፣ Create እና Profile ይከተላሉ
   final List<Widget> _screens = [
-    const FeedScreen(),     // Index 0: Feed (Opens first as primary screen)
-    const HomeScreen(),     // Index 1: Home (Videos feed)
+    const FeedScreen(),     // Index 0: Feed (አፑ ሲከፈት መጀመሪያ የሚከፈተው)
+    const HomeScreen(),     // Index 1: Home (የቪዲዮዎች ገጽ)
     const CreateScreen(),   // Index 2: Create
     const ProfileScreen(),  // Index 3: Profile
   ];
@@ -72,11 +72,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dynamic_feed_rounded),
-            label: 'Feed', // አፑ ሲከፈት መጀመሪያ የሚከፈተው ዋናው ገጽ
+            label: 'Feed',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.home_filled),
-            label: 'Home', // የቪዲዮዎች ገጽ
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
