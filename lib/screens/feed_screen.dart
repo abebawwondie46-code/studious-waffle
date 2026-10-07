@@ -22,7 +22,6 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Future<void> _fetchAds() async {
     try {
-      // Fetch video data from Supabase
       final response = await supabase.from('videos').select();
       setState(() {
         _ads = List<Map<String, dynamic>>.from(response);
@@ -47,40 +46,52 @@ class _FeedScreenState extends State<FeedScreen> {
       );
     }
 
-    if (_ads.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          title: const Text('kuanyngne', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.black,
-          centerTitle: true,
-        ),
-        body: const Center(
-          child: Text(
-            'No videos found.',
-            style: TextStyle(color: Colors.white70),
-          ),
-        ),
-      );
-    }
-
-    // Display videos vertically in sequential order
     return Scaffold(
       backgroundColor: Colors.black,
-      body: PageView.builder(
-        scrollDirection: Axis.vertical,
-        itemCount: _ads.length,
-        itemBuilder: (context, index) {
-          final ad = _ads[index];
-          return AdVideoItem(
-            key: ValueKey(ad['id'] ?? index),
-            caption: ad['caption'] ?? '', // <--- እዚህ ጋር caption ተስተካክሏል
-            videoUrl: ad['video_url'] ?? '',
-            templateJson: ad['template_json'] ?? {},
-            videoId: ad['id']?.toString(), // Video ID ን ማስተላለፍ ለላይክ/ኮሜንት ይጠቅማል
-          );
-        },
+      // ከላይ አናት ላይ Search እና ከጎኑ የ Feed አዝራር እንዲኖር የተደረገበት AppBar
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: const Text('kuanyngne', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        actions: [
+          // ከላይ አናት ላይ ከሰርች አጠገብ (በግራ በኩል ጫፍ ላይ) የተተከለው የ Feed / Explore አዝራር
+          IconButton(
+            icon: const Icon(Icons.dynamic_feed_rounded, color: Colors.redAccent),
+            tooltip: 'Feed',
+            onPressed: () {
+              // እዚህ ጋር ወደ ፖስተሮች/ፎቶዎች ፊድ ወይም የሚፈልጉት ገጽ መሸጋገሪያ ማስቀመጥ ይቻላል
+            },
+          ),
+          // የሰርች አዝራር (Search)
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () {
+              // Search functionality
+            },
+          ),
+        ],
       ),
+      body: _ads.isEmpty
+          ? const Center(
+              child: Text(
+                'No videos found.',
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
+          : PageView.builder(
+              scrollDirection: Axis.vertical,
+              itemCount: _ads.length,
+              itemBuilder: (context, index) {
+                final ad = _ads[index];
+                return AdVideoItem(
+                  key: ValueKey(ad['id'] ?? index),
+                  caption: ad['caption'] ?? '',
+                  videoUrl: ad['video_url'] ?? '',
+                  templateJson: ad['template_json'] ?? {},
+                  videoId: ad['id']?.toString(),
+                );
+              },
+            ),
     );
   }
 }
