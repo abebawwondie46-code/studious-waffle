@@ -48,25 +48,24 @@ class _FeedScreenState extends State<FeedScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      // ከላይ አናት ላይ Search እና ከጎኑ የ Feed አዝራር እንዲኖር የተደረገበት AppBar
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: const Text('kuanyngne', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
-          // ከላይ አናት ላይ ከሰርች አጠገብ (በግራ በኩል ጫፍ ላይ) የተተከለው የ Feed / Explore አዝራር
-          IconButton(
-            icon: const Icon(Icons.dynamic_feed_rounded, color: Colors.redAccent),
-            tooltip: 'Feed',
-            onPressed: () {
-              // እዚህ ጋር ወደ ፖስተሮች/ፎቶዎች ፊድ ወይም የሚፈልጉት ገጽ መሸጋገሪያ ማስቀመጥ ይቻላል
-            },
-          ),
-          // የሰርች አዝራር (Search)
+          // 1. የሰርች አዝራር (Search) አሁን በግራ በኩል ተቀምጧል
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () {
               // Search functionality
+            },
+          ),
+          // 2. የ Feed አዝራር አሁን በስተቀኝ ጫፍ ላይ ተተክሏል
+          IconButton(
+            icon: const Icon(Icons.dynamic_feed_rounded, color: Colors.redAccent),
+            tooltip: 'Feed',
+            onPressed: () {
+              // Feed button action
             },
           ),
         ],
