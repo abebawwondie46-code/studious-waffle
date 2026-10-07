@@ -140,7 +140,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   autofocus: true,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
-                    hintText: 'Search videos or profiles...',
+                    hintText: 'Search',
                     hintStyle: TextStyle(color: Colors.grey),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -176,7 +176,7 @@ class _FeedScreenState extends State<FeedScreen> {
           : displayList.isEmpty
               ? const Center(
                   child: Text(
-                    'No videos or profiles found.',
+                    'No found.',
                     style: TextStyle(color: Colors.white70),
                   ),
                 )
