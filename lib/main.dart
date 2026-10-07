@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/feed_screen.dart';
-import 'screens/home_screen.dart'; // Make sure you have home_screen.dart if needed, or adjust accordingly
 import 'screens/create_screen.dart';
 import 'screens/profile_screen.dart';
 
@@ -46,12 +45,11 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0; // Starts at 0, which is FeedScreen
 
-  // List of screens with FeedScreen as the very first primary screen
+  // List of screens with FeedScreen as the primary initial screen
   final List<Widget> _screens = [
     const FeedScreen(),     // Index 0: Feed (Main initial screen)
-    const HomeScreen(),     // Index 1: Home
-    const CreateScreen(),   // Index 2: Create Post/Video
-    const ProfileScreen(),  // Index 3: Profile
+    const CreateScreen(),   // Index 1: Create Post/Video
+    const ProfileScreen(),  // Index 2: Profile
   ];
 
   @override
@@ -73,10 +71,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dynamic_feed_rounded),
             label: 'Feed',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled),
-            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
