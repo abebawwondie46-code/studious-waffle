@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/ad_video_item.dart';
-import 'explore_feed_screen.dart'; // <--- የ ExploreFeedScreen ፋይል እዚህ ጋር ተያይዟል[cite: 8]
+import 'explore_feed_screen.dart'; // <--- የ ExploreFeedScreen ፋይል እዚህ ጋር መጥራቱን ያረጋግጡ
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -61,8 +61,7 @@ class _FeedScreenState extends State<FeedScreen> {
           .select()
           .ilike('caption', '%${query.trim()}%');
 
-      // 2. ተጠቃሚዎችን በፕሮፋይል/ዩዘርኔም ለመፈለግ (ቴብሉ 'profiles' ወይም 'users' ከሆነ)
-      // ማስታወሻ፡ በ Supabase ቴብል ስምዎ መሰረት 'profiles' የሚለውን ማስተካከል ይቻላል
+      // 2. ተጠቃሚዎችን በፕሮፋይል/ዩዘርኔም ለመፈለግ
       List<Map<String, dynamic>> userResults = [];
       try {
         final profileQuery = await supabase
@@ -71,7 +70,7 @@ class _FeedScreenState extends State<FeedScreen> {
             .ilike('username', '%${query.trim()}%');
         userResults = List<Map<String, dynamic>>.from(profileQuery);
       } catch (_) {
-        // ፕሬፋይል ቴብል ከሌለ ወይም ስሙ የተለየ ከሆነ ስህተት እንዳይፈጥር ይቋቋመዋል
+        // ፕሬፋይል ቴብል ከሌለ ስህተት እንዳይፈጥር ይቋቋመዋል
       }
 
       setState(() {
@@ -127,7 +126,15 @@ class _FeedScreenState extends State<FeedScreen> {
             : IconButton(
                 icon: const Icon(Icons.dynamic_feed_rounded, color: Colors.redAccent),
                 tooltip: 'Feed',
-                onPressed: () {},
+                onPressed: () {
+                  // Feed ቁልፉ ሲነካ ወደ ExploreFeedScreen በሰላም እንዲከፈት ተደርጓል
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ExploreFeedScreen(),
+                    ),
+                  );
+                },
               ),
         title: _isSearchActive
             ? Container(
