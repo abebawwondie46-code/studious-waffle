@@ -3,11 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/ad_video_item.dart';
 import 'explore_feed_screen.dart'; // <--- የኤክስፕሎር ፊድ ፋይሉ እዚህ ጋር ተያይዟል
 
-class FeedScreen extends StatefulWidget {
-  const FeedScreen({super.key});
+class ExploreFeedScreen extends StatefulWidget {
+  const ExploreFeedScreen({super.key});
 
   @override
-  State<FeedScreen> createState() => _FeedScreenState();
+  State<ExploreFeedScreen> createState() => _ExploreFeedScreenState();
 }
 
 class _FeedScreenState extends State<FeedScreen> {
