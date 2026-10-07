@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/feed_screen.dart';
-import 'screens/home_screen.dart'; // HomeScreen ተካቷል
 import 'screens/create_screen.dart';
 import 'screens/profile_screen.dart';
 
@@ -32,6 +31,32 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.black,
       ),
       home: const MainNavigationScreen(),
+    );
+  }
+}
+
+// Inline HomeScreen to prevent 'No such file or directory' errors
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: const Text(
+          'Home',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
+      body: const Center(
+        child: Text(
+          'Welcome to Home Screen',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+      ),
     );
   }
 }
