@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/ad_video_item.dart';
+import 'explore_feed_screen.dart'; // <--- የ ExploreFeedScreen ፋይል እዚህ ጋር ተያይዟል[cite: 8]
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
