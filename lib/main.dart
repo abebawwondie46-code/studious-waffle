@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/feed_screen.dart';   // ፌድ (አፑ ሲከፈት መጀመሪያ የሚከፈተው)
-import 'screens/home_screen.dart';   // ሆም (የቪዲዮዎች ገጽ መልሶ ተካቷል)
+import 'screens/feed_screen.dart'; // ፌድ (አፑ ሲከፈት መጀመሪያ የሚከፈተው ዋናው ገጽ)
 import 'screens/create_screen.dart';
 import 'screens/profile_screen.dart';
 
@@ -46,12 +45,11 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0; // Feed መጀመሪያ እንዲከፈት 0 ሆኗል
 
-  // Feed መጀመሪያ (Index 0) ሆኖ፣ Home፣ Create እና Profile ይከተላሉ
+  // Home ፋይሉን ሳይነኩ፣ ፌድ መጀመሪያ እንዲከፈት ተደርጓል
   final List<Widget> _screens = [
     const FeedScreen(),     // Index 0: Feed (አፑ ሲከፈት መጀመሪያ የሚከፈተው)
-    const HomeScreen(),     // Index 1: Home (የቪዲዮዎች ገጽ)
-    const CreateScreen(),   // Index 2: Create
-    const ProfileScreen(),  // Index 3: Profile
+    const CreateScreen(),   // Index 1: Create
+    const ProfileScreen(),  // Index 2: Profile
   ];
 
   @override
@@ -72,11 +70,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dynamic_feed_rounded),
-            label: 'Feed',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled),
-            label: 'Home',
+            label: 'Feed', // ከሁሉ አስቀድሞ የሚከፈተው የፌድ አዝራር
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
