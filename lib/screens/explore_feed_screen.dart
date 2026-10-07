@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,7 +24,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   bool _showColorPicker = false;
   Color _selectedBackgroundColor = Colors.black87;
 
-  // እጅግ ብዙ እና ውብ የጀርባ ቀለሞች ዝርዝር
   final List<Color> _backgroundColors = [
     Colors.black87,
     Colors.deepPurple.shade900,
@@ -45,6 +45,26 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   @override
   void initState() {
     super.initState();
+    _checkInternetAndFetchPosts();
+  }
+
+  // የኢንተርኔት ሁኔታን እያረጋገጡ ፖስቶችን ማምጣት
+  Future<void> _checkInternetAndFetchPosts() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No internet connection! Please check your network.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
     _fetchPosts();
   }
 
@@ -66,7 +86,54 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     }
   }
 
+  // ፖስትን ከዳታቤዝ የመሰረዝ (Delete) ተግባር
+  Future<void> _deletePost(String postId) async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No internet connection to delete post!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await supabase.from('posts').delete().eq('id', postId);
+      setState(() {
+        _posts.removeWhere((post) => post['id'].toString() == postId);
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Post deleted successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   Future<void> _uploadPost() async {
+    // የኢንተርኔት ግንኙነት መኖሩን ማረጋገጥ
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No internet connection! Cannot publish post.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_postCaptionController.text.trim().isEmpty && _selectedImageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please write something or select an image!'), backgroundColor: Colors.orange),
@@ -120,7 +187,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       });
 
       Navigator.pop(context);
-      _fetchPosts();
+      _checkInternetAndFetchPosts();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -291,7 +358,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // የ Post Now አዝራር (በጥሩ እና ማራኪ ዲዛይን የተስተካከለ)
                     Container(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
@@ -356,6 +422,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                   itemCount: _posts.length,
                   itemBuilder: (context, index) {
                     final post = _posts[index];
+                    final postId = post['id']?.toString() ?? '';
                     final caption = post['caption'] ?? '';
                     final mediaUrl = post['media_url'] ?? '';
                     
@@ -376,19 +443,46 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.all(12.0),
+                          Padding(
+                            padding: const EdgeInsets.all(12.0),
                             child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.deepPurpleAccent,
-                                  child: Icon(Icons.person, color: Colors.white, size: 20),
+                                const Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: Colors.deepPurpleAccent,
+                                      child: Icon(Icons.person, color: Colors.white, size: 20),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      'Community Creator',
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(width: 10),
-                                Text(
-                                  'Community Creator',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                // የሰርዝ (Delete) አማራጭ ማኑ (PopupMenuButton)
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert, color: Colors.white70),
+                                  color: Colors.grey[850],
+                                  onSelected: (value) {
+                                    if (value == 'delete' && postId.isNotEmpty) {
+                                      _deletePost(postId);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                                          SizedBox(width: 8),
+                                          Text('Delete Post', style: TextStyle(color: Colors.white)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
