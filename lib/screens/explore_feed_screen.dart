@@ -20,6 +20,23 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isPosting = false;
 
+  // የጀርባ ቀለሞችን መምረጫ እና መደበቂያ ሁኔታዎች
+  bool _showColorPicker = false;
+  Color _selectedBackgroundColor = Colors.black87;
+
+  // በጣም የሚያምሩ የጀርባ ቀለሞች ዝርዝር
+  final List<Color> _backgroundColors = [
+    Colors.black87,
+    Colors.deepPurple.shade900,
+    Colors.indigo.shade900,
+    Colors.teal.shade900,
+    Colors.brown.shade900,
+    Colors.pink.shade900,
+    Colors.orange.shade900,
+    Colors.blueGrey.shade900,
+    Colors.red.shade900,
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -45,28 +62,24 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   }
 
   Future<void> _uploadPost() async {
-    if (_selectedImageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a photo or poster first!'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
     setState(() {
       _isPosting = true;
     });
 
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final filePath = 'posts/$fileName';
+      String imageUrl = '';
+      if (_selectedImageFile != null) {
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final filePath = 'posts/$fileName';
 
-      await supabase.storage.from('videos').upload(
-            filePath,
-            _selectedImageFile!,
-            fileOptions: const FileOptions(upsert: false),
-          );
+        await supabase.storage.from('videos').upload(
+              filePath,
+              _selectedImageFile!,
+              fileOptions: const FileOptions(upsert: false),
+            );
 
-      final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
+        imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
+      }
 
       await supabase.from('posts').insert({
         'caption': _postCaptionController.text.trim(),
@@ -77,12 +90,14 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Poster uploaded successfully!'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('Posted successfully!'), backgroundColor: Colors.green),
       );
 
       _postCaptionController.clear();
       setState(() {
         _selectedImageFile = null;
+        _selectedBackgroundColor = Colors.black87;
+        _showColorPicker = false;
       });
 
       Navigator.pop(context);
@@ -124,11 +139,13 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
-                      'Create New Poster / Photo',
+                      'Create New Post',
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
+                    
+                    // Image Picker Box
                     GestureDetector(
                       onTap: () async {
                         final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -139,7 +156,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                         }
                       },
                       child: Container(
-                        height: 180,
+                        height: 150,
                         decoration: BoxDecoration(
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(14),
@@ -149,9 +166,9 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                             ? const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_rounded, color: Colors.redAccent, size: 48),
-                                  SizedBox(height: 8),
-                                  Text('Tap to select poster or photo', style: TextStyle(color: Colors.grey)),
+                                  Icon(Icons.add_photo_alternate_rounded, color: Colors.redAccent, size: 40),
+                                  SizedBox(height: 6),
+                                  Text('Tap to select photo (Optional)', style: TextStyle(color: Colors.grey)),
                                 ],
                               )
                             : ClipRRect(
@@ -161,22 +178,90 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: _postCaptionController,
-                      style: const TextStyle(color: Colors.white),
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        hintText: 'Write a caption or description...',
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        filled: true,
-                        fillColor: Colors.black,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
+
+                    // Caption Input with Background Color Container
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _selectedBackgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade700),
+                      ),
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _postCaptionController,
+                            style: const TextStyle(color: Colors.white),
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              hintText: 'Write a caption or description...',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                          const Divider(color: Colors.white24),
+                          
+                          // (^) ምልክት እና የቀለም መምረጫ ቁልፍ
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  _showColorPicker ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
+                                  color: Colors.redAccent,
+                                  size: 28,
+                                ),
+                                tooltip: 'Choose Background Color',
+                                onPressed: () {
+                                  setModalState(() {
+                                    _showColorPicker = !_showColorPicker;
+                                  });
+                                },
+                              ),
+                              const Text('^ Style', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+
+                          // (^) ምልክት ሲነካ የሚታዩ የሚያምሩ የጀርባ ቀለሞች
+                          if (_showColorPicker) ...[
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 45,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _backgroundColors.length,
+                                itemBuilder: (context, index) {
+                                  final color = _backgroundColors[index];
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setModalState(() {
+                                        _selectedBackgroundColor = color;
+                                      });
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: _selectedBackgroundColor == color ? Colors.white : Colors.transparent,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // Submit Button
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.redAccent,
@@ -215,7 +300,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
           : _posts.isEmpty
               ? const Center(
                   child: Text(
-                    'No posters or photos available yet!',
+                    'No posts or photos available yet!',
                     style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 )
@@ -235,10 +320,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.all(12.0),
+                          const Padding(
+                            padding: EdgeInsets.all(12.0),
                             child: Row(
-                              children: const [
+                              children: [
                                 CircleAvatar(
                                   radius: 18,
                                   backgroundColor: Colors.redAccent,
@@ -271,10 +356,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
                             ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             child: Row(
-                              children: const [
+                              children: [
                                 Icon(Icons.favorite_border, color: Colors.white, size: 26),
                                 SizedBox(width: 16),
                                 Icon(Icons.comment_outlined, color: Colors.white, size: 24),
