@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/feed_screen.dart';
+import 'screens/feed_screen.dart';   // ፌድ (የፖስተሮች እና ፎቶዎች ዋና ገጽ - መጀመሪያ ይከፈታል)
+import 'screens/home_screen.dart';   // ሆም (የቪዲዮዎች ገጽ)
 import 'screens/create_screen.dart';
 import 'screens/profile_screen.dart';
 
@@ -35,32 +36,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Inline HomeScreen to prevent 'No such file or directory' errors
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text(
-          'Home',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
-      body: const Center(
-        child: Text(
-          'Welcome to Home Screen',
-          style: TextStyle(color: Colors.white, fontSize: 18),
-        ),
-      ),
-    );
-  }
-}
-
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -69,12 +44,12 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0; // Feed is index 0 (Primary initial screen)
+  int _currentIndex = 0; // Feed is index 0 (Primary initial screen when app opens)
 
-  // List of all 4 screens including HomeScreen
+  // ቅደም ተከተል: Feed መጀመሪያ ይከፈታል፣ ቀጥሎ Home (ቪዲዮዎች) ይመጣሉ
   final List<Widget> _screens = [
-    const FeedScreen(),     // Index 0: Feed (Main initial screen)
-    const HomeScreen(),     // Index 1: Home
+    const FeedScreen(),     // Index 0: Feed (Opens first as primary screen)
+    const HomeScreen(),     // Index 1: Home (Videos feed)
     const CreateScreen(),   // Index 2: Create
     const ProfileScreen(),  // Index 3: Profile
   ];
@@ -97,11 +72,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dynamic_feed_rounded),
-            label: 'Feed',
+            label: 'Feed', // አፑ ሲከፈት መጀመሪያ የሚከፈተው ዋናው ገጽ
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.home_filled),
-            label: 'Home',
+            label: 'Home', // የቪዲዮዎች ገጽ
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
