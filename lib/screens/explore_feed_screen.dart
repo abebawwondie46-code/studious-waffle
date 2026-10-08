@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:gal/gal.dart'; // ፎቶዎችን በቀጥታ ወደ ስልክ ጋለሪ ለማስቀመጥ
+import 'package:path_provider/path_provider.dart';
 
 class ExploreFeedScreen extends StatefulWidget {
   const ExploreFeedScreen({super.key});
@@ -96,28 +96,23 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     }
   }
 
-  // ፎቶን በቀጥታ ወደ ስልክ ጋለሪ (Gallery) የማስቀመጥ ተግባር
   Future<void> _downloadImage(String imageUrl) async {
     try {
       if (imageUrl.isEmpty) return;
-
-      // ፈቃድ መጠየቅ (አስፈላጊ ከሆነ)
-      final hasAccess = await Gal.hasAccess();
-      if (!hasAccess) {
-        await Gal.requestAccess();
-      }
       
-      // ከኢንተርኔት ፋይሉን ማውረድ
       final res = await http.get(Uri.parse(imageUrl));
       if (res.statusCode == 200) {
-        // ፎቶውን በጋለሪ ውስጥ ማስቀመጥ
-        await Gal.putImageBytes(res.bodyBytes);
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/poster_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final file = File(filePath);
+        await file.writeAsBytes(res.bodyBytes);
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Image saved to Gallery successfully!'),
+          SnackBar(
+            content: Text('Image saved successfully to: $filePath'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
