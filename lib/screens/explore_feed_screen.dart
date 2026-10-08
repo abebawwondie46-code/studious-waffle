@@ -110,7 +110,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Image saved successfully to: $filePath'),
+            content: Text('Image downloaded successfully to: $filePath'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
           ),
@@ -120,7 +120,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save image: $e'),
+          content: Text('Failed to download image: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -474,19 +474,19 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   onSelected: (value) {
                                     if (value == 'delete' && postId.isNotEmpty) {
                                       _deletePost(postId);
-                                    } else if (value == 'save' && mediaUrl.isNotEmpty) {
+                                    } else if (value == 'download' && mediaUrl.isNotEmpty) {
                                       _downloadImage(mediaUrl);
                                     }
                                   },
                                   itemBuilder: (context) => [
                                     if (mediaUrl.isNotEmpty)
                                       const PopupMenuItem(
-                                        value: 'save',
+                                        value: 'download',
                                         child: Row(
                                           children: [
                                             Icon(Icons.download, color: Colors.blueAccent, size: 20),
                                             SizedBox(width: 8),
-                                            Text('Save Image', style: TextStyle(color: Colors.white)),
+                                            Text('Download Image', style: TextStyle(color: Colors.white)),
                                           ],
                                         ),
                                       ),
