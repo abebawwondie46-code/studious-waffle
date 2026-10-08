@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import 'package:gal/gal.dart'; // ፎቶዎችን በቀጥታ ወደ ስልክ ጋለሪ ለማስቀመጥ
 
 class ExploreFeedScreen extends StatefulWidget {
   const ExploreFeedScreen({super.key});
@@ -25,7 +25,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   bool _showColorPicker = false;
   Color _selectedBackgroundColor = const Color(0xFF1A1A2E);
 
-  // እጅግ ብዙ እና ውብ የጀርባ ቀለሞች (በመጠኑ ትናንሽ የሆኑ)
   final List<Color> _backgroundColors = [
     const Color(0xFF1A1A2E),
     const Color(0xFF16213E),
@@ -97,24 +96,28 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     }
   }
 
-  // ፎቶን አውርዶ ወደ ስልክ ማከማቻ (Downloads / Application Directory) የማስቀመጥ ተግባር
+  // ፎቶን በቀጥታ ወደ ስልክ ጋለሪ (Gallery) የማስቀመጥ ተግባር
   Future<void> _downloadImage(String imageUrl) async {
     try {
       if (imageUrl.isEmpty) return;
+
+      // ፈቃድ መጠየቅ (አስፈላጊ ከሆነ)
+      final hasAccess = await Gal.hasAccess();
+      if (!hasAccess) {
+        await Gal.requestAccess();
+      }
       
+      // ከኢንተርኔት ፋይሉን ማውረድ
       final res = await http.get(Uri.parse(imageUrl));
       if (res.statusCode == 200) {
-        final directory = await getApplicationDocumentsDirectory();
-        final filePath = '${directory.path}/poster_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final file = File(filePath);
-        await file.writeAsBytes(res.bodyBytes);
+        // ፎቶውን በጋለሪ ውስጥ ማስቀመጥ
+        await Gal.putImageBytes(res.bodyBytes);
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Image saved successfully to: $filePath'),
+          const SnackBar(
+            content: Text('Image saved to Gallery successfully!'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
           ),
         );
       }
