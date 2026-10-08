@@ -62,6 +62,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       setState(() {
         _isLoading = false;
       });
+      // ኢንተርኔት ከሌለ የሚመጣውን ኤርር በጸጥታ ይዞ ቶስት ሊያሳይ ይችላል
     }
   }
 
@@ -81,7 +82,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('No internet connection! Failed to delete.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -143,8 +147,12 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       _fetchPosts();
     } catch (e) {
       if (!mounted) return;
+      // ቀይ የኤርር ስክሪን እንዳይመጣ በቶስት (SnackBar) ብቻ ማሳየት
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('No internet connection! Please check your network.'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) {
