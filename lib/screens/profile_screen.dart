@@ -36,11 +36,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = supabase.auth.currentUser;
       
-      // ከ Supabase የ ፖስቶች ብዛት ማምጣት
-      final postsResponse = await supabase.from('posts').select('id');
-      int postsLen = (postsResponse as List).length;
+      // 1. የ ፖስቶች ብዛት ማምጣት
+      int postsLen = 0;
+      try {
+        final postsResponse = await supabase.from('posts').select('id');
+        postsLen = (postsResponse as List).length;
+      } catch (_) {}
 
-      // ከ profiles ቴብል የተጠቃሚውን ስም፣ ስልክ እና የፕሮፋይል ፎቶ ዩአርኤል ማምጣት
+      // 2. ከ profiles ቴብል የተጠቃሚውን ስም፣ ስልክ እና ፎቶ ማምጣት
       if (user != null) {
         try {
           final profileData = await supabase
@@ -59,13 +62,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         } catch (_) {}
       }
 
-      // Likes እና Followers ቆጠራ
+      // 3. Likes ቆጠራ
       int likesLen = 0;
       try {
         final likesResponse = await supabase.from('likes').select('id');
         likesLen = (likesResponse as List).length;
       } catch (_) {}
 
+      // 4. Followers ቆጠራ
       int followersLen = 0;
       try {
         final followersResponse = await supabase.from('followers').select('id');
@@ -103,7 +107,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final fileName = 'profile_${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final filePath = 'avatars/$fileName';
 
-      // ፎቶውን ወደ Supabase Storage (videos ወይም avatars ባኬት) መስቀል
       await supabase.storage.from('videos').upload(
             filePath,
             file,
@@ -112,7 +115,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
-      // ዩአርኤሉን በ profiles ቴብል ውስጥ ማዘመን (Upsert)
       await supabase.from('profiles').upsert({
         'id': user.id,
         'avatar_url': imageUrl,
@@ -136,6 +138,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
         SnackBar(content: Text('Failed to upload image: $e'), backgroundColor: Colors.red),
       );
     }
+  }
+
+  // ስም እና ስልክ ቁጥር ማስተካከያ ፖፕአፕ (Edit Profile Dialog)
+  void _showEditProfileDialog() {
+    final TextEditingController nameController = TextEditingController(text: _userName);
+    final TextEditingController phoneController = TextEditingController(text: _phoneNumber == 'Not provided' ? '' : _phoneNumber);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1F1F23),
+          title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  labelStyle: TextStyle(color: Colors.white54),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  labelStyle: TextStyle(color: Colors.white54),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2575FC)),
+              onPressed: () async {
+                final user = supabase.auth.currentUser;
+                if (user == null) return;
+
+                final newName = nameController.text.trim();
+                final newPhone = phoneController.text.trim();
+
+                try {
+                  await supabase.from('profiles').upsert({
+                    'id': user.id,
+                    'full_name': newName,
+                    'phone_number': newPhone,
+                  });
+
+                  setState(() {
+                    _userName = newName;
+                    _phoneNumber = newPhone;
+                  });
+
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              },
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _signOut() async {
@@ -169,12 +252,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_rounded, color: Colors.white70),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings clicked!'), backgroundColor: Colors.indigo),
-              );
-            },
+            icon: const Icon(Icons.edit_rounded, color: Colors.white70),
+            onPressed: _showEditProfileDialog,
+            tooltip: 'Edit Profile',
           ),
         ],
       ),
@@ -184,7 +264,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 10),
             
-            // የፕሮፋይል ፎቶ መቀየሪያ (GestureDetector ከካሜራ ምልክት ጋር)
+            // የፕሮፋይል ፎቶ መቀየሪያ (ከካሜራ አዶ ጋር)
             Stack(
               children: [
                 CircleAvatar(
@@ -222,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 12),
             
-            // የተጠቃሚው ስም (Full Name)
+            // የተጠቃሚው ስም
             Text(
               _userName,
               style: const TextStyle(
@@ -275,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             const Spacer(),
             
-            // ከመተግበሪያው የመውጫ ቁልፍ (Sign Out)
+            // Log Out አዝራር
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
@@ -305,7 +385,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// የስታቲስቲክስ ማሳያ ረዳት ዊጅት
 class _ProfileStatItem extends StatelessWidget {
   final String title;
   final String count;
