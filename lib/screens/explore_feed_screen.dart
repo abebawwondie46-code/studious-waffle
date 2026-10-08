@@ -81,6 +81,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
         const SnackBar(
           content: Text('Post deleted successfully!'),
           backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
@@ -89,6 +90,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
         const SnackBar(
           content: Text('Failed to delete post! Check connection.'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -97,7 +99,11 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   Future<void> _uploadPost() async {
     if (_postCaptionController.text.trim().isEmpty && _selectedImageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please write something or select an image!'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('Please write something or select an image!'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -137,7 +143,11 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Posted successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('Posted successfully!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
 
       _postCaptionController.clear();
@@ -155,6 +165,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
         const SnackBar(
           content: Text('No internet connection! Please check your network.'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -384,107 +395,125 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)))
-          : _posts.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No posts or photos available yet!',
-                    style: TextStyle(color: Colors.white38, fontSize: 16),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _posts.length,
-                  itemBuilder: (context, index) {
-                    final post = _posts[index];
-                    final postId = post['id']?.toString() ?? '';
-                    final caption = post['caption'] ?? '';
-                    final mediaUrl = post['media_url'] ?? '';
-                    
-                    Color postBgColor = const Color(0xFF16161A);
-                    if (post['bg_color'] != null) {
-                      try {
-                        postBgColor = Color(int.parse(post['bg_color'], radix: 16));
-                      } catch (_) {}
-                    }
-
-                    return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: postBgColor,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.white10, width: 0.5),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: Color(0xFF2575FC),
-                                      child: Icon(Icons.person, color: Colors.white, size: 20),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Text(
-                                      'Community Creator',
-                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
-                                ),
-                                PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert, color: Colors.white70),
-                                  color: const Color(0xFF1F1F23),
-                                  onSelected: (value) {
-                                    if (value == 'delete' && postId.isNotEmpty) {
-                                      _deletePost(postId);
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                                          SizedBox(width: 8),
-                                          Text('Delete Post', style: TextStyle(color: Colors.white)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+          : RefreshIndicator(
+              onRefresh: _fetchPosts,
+              color: const Color(0xFF2575FC),
+              backgroundColor: const Color(0xFF1F1F23),
+              child: _posts.isEmpty
+                  ? ListView(
+                      children: const [
+                        SizedBox(height: 200),
+                        Center(
+                          child: Text(
+                            'No posts or photos available yet!',
+                            style: TextStyle(color: Colors.white38, fontSize: 16),
                           ),
-                          if (mediaUrl.isNotEmpty)
-                            Container(
-                              height: 320,
-                              width: double.infinity,
-                              color: Colors.black,
-                              child: Image.network(
-                                mediaUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Center(
-                                  child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      itemCount: _posts.length,
+                      itemBuilder: (context, index) {
+                        final post = _posts[index];
+                        final postId = post['id']?.toString() ?? '';
+                        final caption = post['caption'] ?? '';
+                        final mediaUrl = post['media_url'] ?? '';
+                        
+                        Color postBgColor = const Color(0xFF16161A);
+                        if (post['bg_color'] != null) {
+                          try {
+                            postBgColor = Color(int.parse(post['bg_color'], radix: 16));
+                          } catch (_) {}
+                        }
+
+                        return Container(
+                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: postBgColor,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: Colors.white10, width: 0.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 18,
+                                          backgroundColor: Color(0xFF2575FC),
+                                          child: Icon(Icons.person, color: Colors.white, size: 20),
+                                        ),
+                                        SizedBox(width: 10),
+                                        Text(
+                                          'Community Creator',
+                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(Icons.more_vert, color: Colors.white70),
+                                      color: const Color(0xFF1F1F23),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      onSelected: (value) {
+                                        if (value == 'delete' && postId.isNotEmpty) {
+                                          _deletePost(postId);
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                                              SizedBox(width: 8),
+                                              Text('Delete Post', style: TextStyle(color: Colors.white)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          if (caption.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Text(
-                                caption,
-                                style: const TextStyle(color: Colors.white, fontSize: 15),
-                              ),
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                              if (mediaUrl.isNotEmpty)
+                                Container(
+                                  height: 320,
+                                  width: double.infinity,
+                                  color: Colors.black,
+                                  child: Image.network(
+                                    mediaUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => const Center(
+                                      child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                    ),
+                                  ),
+                                ),
+                              if (caption.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text(
+                                    caption,
+                                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF2575FC),
         onPressed: _showCreatePostBottomSheet,
