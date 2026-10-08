@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:gal/gal.dart'; // ፎቶዎችን ወደ ስልክ ጋለሪ ለማስቀመጥ (ማስታወሻ: gal ፓኬጅን በ pubspec.yaml ውስጥ ማካተት ይቻላል)
+import 'package:path_provider/path_provider.dart';
 
 class ExploreFeedScreen extends StatefulWidget {
   const ExploreFeedScreen({super.key});
@@ -25,7 +25,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   bool _showColorPicker = false;
   Color _selectedBackgroundColor = const Color(0xFF1A1A2E);
 
-  // እጅግ ብዙ እና ውብ የጀርባ ቀለሞች (በመጠኑ ትናንሽ እንዲሆኑ የተደረጉ)
+  // እጅግ ብዙ እና ውብ የጀርባ ቀለሞች (በመጠኑ ትናንሽ የሆኑ)
   final List<Color> _backgroundColors = [
     const Color(0xFF1A1A2E),
     const Color(0xFF16213E),
@@ -97,21 +97,24 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     }
   }
 
-  // ፎቶን ወደ ስልክ የማስቀመጥ (Save/Download) ተግባር
+  // ፎቶን አውርዶ ወደ ስልክ ማከማቻ (Downloads / Application Directory) የማስቀመጥ ተግባር
   Future<void> _downloadImage(String imageUrl) async {
     try {
       if (imageUrl.isEmpty) return;
       
-      // ከኢንተርኔት ፋይሉን ማውረድ
       final res = await http.get(Uri.parse(imageUrl));
       if (res.statusCode == 200) {
-        // በ Gal አማካኝነት ወደ ጋለሪ ማስቀመጥ (ወይም በሌላ የማስቀመጫ መንገድ)
-        await Gal.putImageBytes(res.bodyBytes);
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/poster_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final file = File(filePath);
+        await file.writeAsBytes(res.bodyBytes);
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Image saved to gallery successfully!'),
+          SnackBar(
+            content: Text('Image saved successfully to: $filePath'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -281,7 +284,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ለስለስ ያለ የጀርባ ቀለም ያለው የጽሁፍ ማቀፊያ
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       padding: const EdgeInsets.all(12),
@@ -323,7 +325,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                             ],
                           ),
 
-                          // የተስተካከሉ ትናንሽ እና በርካታ የቀለም ምርጫዎች
                           if (_showColorPicker) ...[
                             const SizedBox(height: 8),
                             Wrap(
@@ -337,7 +338,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                     });
                                   },
                                   child: Container(
-                                    width: 26, // ቦታ እንዳይጠብ የተደረገ አነስተኛ መጠን
+                                    width: 26,
                                     height: 26,
                                     decoration: BoxDecoration(
                                       color: color,
@@ -357,7 +358,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ለስለስ ያለ ማራኪ ግሬዲየንት ያለው የ Post Now አዝራር
                     Container(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
