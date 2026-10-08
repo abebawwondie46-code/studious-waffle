@@ -9,7 +9,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final supabase = Supabase.instance.client;
+  final SupabaseClient supabase = Supabase.instance.client;
   User? _currentUser;
   bool _isLoading = true;
 
@@ -33,85 +33,115 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _signOut() async {
+    try {
+      await supabase.auth.signOut();
+      if (!mounted) return;
+      // ወደ ሎጊን ገጽ ለመመለስ (የራሳቸውን ሮውት መጠቀም ይቻላል)
+      Navigator.of(context).pushReplacementNamed('/login');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to sign out: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.redAccent)),
+        backgroundColor: Color(0xFF0A0A0C),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF2575FC))),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0A0A0C),
       appBar: AppBar(
-        title: const Text('ፕሮፋይል', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.black,
+        title: const Text('Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF0A0A0C),
+        elevation: 0,
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
+            icon: const Icon(Icons.settings_rounded, color: Colors.white70),
             onPressed: () {
-              // የቅንብሮች ማስተካከያ ገጽ (Settings)
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Settings clicked!'), backgroundColor: Colors.indigo),
+              );
             },
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             const SizedBox(height: 20),
             // የፕሮፋይል ፎቶ
             const CircleAvatar(
               radius: 50,
-              backgroundColor: Colors.grey,
-              child: Icon(Icons.person, size: 60, color: Colors.white),
+              backgroundColor: Color(0xFF2575FC),
+              child: Icon(Icons.person, size: 50, color: Colors.white),
             ),
             const SizedBox(height: 16),
-            // የተጠቃሚው ኢሜይል ወይም ስም
+            // የተጠቃሚው ኢሜይል
             Text(
-              _currentUser?.email ?? 'ተጠቃሚ (Guest)',
+              _currentUser?.email ?? 'Guest User',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             const Text(
-              'kuanyngne ፈጣሪ',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
+              'Community Creator',
+              style: TextStyle(color: Colors.white54, fontSize: 14),
             ),
             const SizedBox(height: 30),
-            // ስታቲስቲክስ (Videos, Likes, etc.)
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _ProfileStatItem(title: 'ቪዲዮዎች', count: '0'),
-                _ProfileStatItem(title: 'ላይክ', count: '0'),
-                _ProfileStatItem(title: 'ተከታዮች', count: '0'),
-              ],
-            ),
-            const Spacer(),
-            // ከመተግበሪያው የመውጫ ቁልፍ (Sign Out) - child: ተጨምሯል
-            ElevatedButton(
-              onPressed: () async {
-                await supabase.auth.signOut();
-                if (mounted) {
-                  Navigator.of(context).pushReplacementNamed('/login');
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[900],
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+            
+            // ስታቲስቲክስ (Posts, Likes, Followers)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF16161A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white10, width: 0.5),
               ),
-              child: const Text(
-                'ውጣ (Log Out)',
-                style: TextStyle(color: Colors.redAccent, fontSize: 16),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _ProfileStatItem(title: 'Posts', count: '0'),
+                  _ProfileStatItem(title: 'Likes', count: '0'),
+                  _ProfileStatItem(title: 'Followers', count: '0'),
+                ],
+              ),
+            ),
+            
+            const Spacer(),
+            
+            // ከመተግበሪያው የመውጫ ቁልፍ (Sign Out)
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+              ),
+              child: ElevatedButton(
+                onPressed: _signOut,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1F1F23),
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Log Out',
+                  style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -144,7 +174,7 @@ class _ProfileStatItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           title,
-          style: const TextStyle(color: Colors.grey, fontSize: 14),
+          style: const TextStyle(color: Colors.white38, fontSize: 14),
         ),
       ],
     );
