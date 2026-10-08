@@ -12,18 +12,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   User? _currentUser;
   bool _isLoading = true;
+  int _postsCount = 0;
+  int _likesCount = 0;
+  int _followersCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
+    _loadUserProfileAndStats();
   }
 
-  Future<void> _loadUserProfile() async {
+  Future<void> _loadUserProfileAndStats() async {
     try {
       final user = supabase.auth.currentUser;
+      
+      // ከ Supabase የ posts ብዛት (Count) ማምጣት
+      final postsResponse = await supabase
+          .from('posts')
+          .select('id');
+      
+      int postsLen = (postsResponse as List).length;
+
       setState(() {
         _currentUser = user;
+        _postsCount = postsLen;
+        _likesCount = 0; // ለወደፊት የไลክ ቴብል ሲኖር እዚህ ይስተካከላል
+        _followersCount = 0; // ለወደፊት የፎሎወርስ ቴብል ሲኖር እዚህ ይስተካከላል
         _isLoading = false;
       });
     } catch (e) {
@@ -37,7 +51,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await supabase.auth.signOut();
       if (!mounted) return;
-      // ወደ ሎጊን ገጽ ለመመለስ (የራሳቸውን ሮውት መጠቀም ይቻላል)
       Navigator.of(context).pushReplacementNamed('/login');
     } catch (e) {
       if (!mounted) return;
@@ -102,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 30),
             
-            // ስታቲስቲክስ (Posts, Likes, Followers)
+            // ስታቲስቲክስ (Posts, Likes, Followers) ከዳታቤዝ የሚመጡበት
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
@@ -110,12 +123,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.white10, width: 0.5),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _ProfileStatItem(title: 'Posts', count: '0'),
-                  _ProfileStatItem(title: 'Likes', count: '0'),
-                  _ProfileStatItem(title: 'Followers', count: '0'),
+                  _ProfileStatItem(title: 'Posts', count: _postsCount.toString()),
+                  _ProfileStatItem(title: 'Likes', count: _likesCount.toString()),
+                  _ProfileStatItem(title: 'Followers', count: _followersCount.toString()),
                 ],
               ),
             ),
