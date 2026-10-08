@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:gal/gal.dart'; // ፎቶዎችን ወደ ስልክ ጋለሪ ለማስቀመጥ (ማስታወሻ: gal ፓኬጅን በ pubspec.yaml ውስጥ ማካተት ይቻላል)
 
 class ExploreFeedScreen extends StatefulWidget {
   const ExploreFeedScreen({super.key});
@@ -21,10 +23,15 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   bool _isPosting = false;
 
   bool _showColorPicker = false;
-  Color _selectedBackgroundColor = Colors.black87;
+  Color _selectedBackgroundColor = const Color(0xFF1A1A2E);
 
+  // እጅግ ብዙ እና ውብ የጀርባ ቀለሞች (በመጠኑ ትናንሽ እንዲሆኑ የተደረጉ)
   final List<Color> _backgroundColors = [
-    Colors.black87,
+    const Color(0xFF1A1A2E),
+    const Color(0xFF16213E),
+    const Color(0xFF0F3460),
+    const Color(0xFF533483),
+    const Color(0xFFE94560),
     Colors.deepPurple.shade900,
     Colors.indigo.shade900,
     Colors.blue.shade900,
@@ -39,6 +46,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     Colors.blueGrey.shade900,
     Colors.red.shade900,
     Colors.grey.shade900,
+    Colors.black87,
   ];
 
   @override
@@ -62,7 +70,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       setState(() {
         _isLoading = false;
       });
-      // ኢንተርኔት ከሌለ የሚመጣውን ኤርር በጸጥታ ይዞ ቶስት ሊያሳይ ይችላል
     }
   }
 
@@ -83,7 +90,36 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No internet connection! Failed to delete.'),
+          content: Text('Failed to delete post! Check connection.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ፎቶን ወደ ስልክ የማስቀመጥ (Save/Download) ተግባር
+  Future<void> _downloadImage(String imageUrl) async {
+    try {
+      if (imageUrl.isEmpty) return;
+      
+      // ከኢንተርኔት ፋይሉን ማውረድ
+      final res = await http.get(Uri.parse(imageUrl));
+      if (res.statusCode == 200) {
+        // በ Gal አማካኝነት ወደ ጋለሪ ማስቀመጥ (ወይም በሌላ የማስቀመጫ መንገድ)
+        await Gal.putImageBytes(res.bodyBytes);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image saved to gallery successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save image: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -139,7 +175,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       _postCaptionController.clear();
       setState(() {
         _selectedImageFile = null;
-        _selectedBackgroundColor = Colors.black87;
+        _selectedBackgroundColor = const Color(0xFF1A1A2E);
         _showColorPicker = false;
       });
 
@@ -147,7 +183,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       _fetchPosts();
     } catch (e) {
       if (!mounted) return;
-      // ቀይ የኤርር ስክሪን እንዳይመጣ በቶስት (SnackBar) ብቻ ማሳየት
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No internet connection! Please check your network.'),
@@ -167,9 +202,9 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.grey[900],
+      backgroundColor: const Color(0xFF121214),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -177,9 +212,9 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
             return Padding(
               padding: EdgeInsets.fromLTRB(
                 16,
-                20,
+                24,
                 16,
-                MediaQuery.of(context).viewInsets.bottom + 20,
+                MediaQuery.of(context).viewInsets.bottom + 24,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -188,7 +223,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                   children: [
                     const Text(
                       'Create New Post',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
@@ -203,26 +238,26 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                         }
                       },
                       child: Container(
-                        height: 140,
+                        height: 130,
                         decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.grey.shade700),
+                          color: const Color(0xFF1F1F23),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white12),
                         ),
                         child: _selectedImageFile == null
                             ? const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_rounded, color: Colors.deepPurpleAccent, size: 36),
+                                  Icon(Icons.add_photo_alternate_rounded, color: Colors.indigoAccent, size: 34),
                                   SizedBox(height: 6),
-                                  Text('Tap to select photo (Optional)', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                  Text('Tap to select photo (Optional)', style: TextStyle(color: Colors.white54, fontSize: 13)),
                                 ],
                               )
                             : Stack(
                                 children: [
                                   ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Image.file(_selectedImageFile!, width: double.infinity, height: 140, fit: BoxFit.cover),
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.file(_selectedImageFile!, width: double.infinity, height: 130, fit: BoxFit.cover),
                                   ),
                                   Positioned(
                                     top: 8,
@@ -246,12 +281,14 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    Container(
+                    // ለስለስ ያለ የጀርባ ቀለም ያለው የጽሁፍ ማቀፊያ
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: _selectedBackgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade700),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white10),
                       ),
                       child: Column(
                         children: [
@@ -261,11 +298,11 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                             maxLines: 3,
                             decoration: const InputDecoration(
                               hintText: 'Write a caption or description...',
-                              hintStyle: TextStyle(color: Colors.grey),
+                              hintStyle: TextStyle(color: Colors.white38),
                               border: InputBorder.none,
                             ),
                           ),
-                          const Divider(color: Colors.white24),
+                          const Divider(color: Colors.white12),
                           
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -273,8 +310,8 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                               IconButton(
                                 icon: Icon(
                                   _showColorPicker ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
-                                  color: Colors.deepPurpleAccent,
-                                  size: 28,
+                                  color: Colors.indigoAccent,
+                                  size: 26,
                                 ),
                                 onPressed: () {
                                   setModalState(() {
@@ -282,15 +319,16 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   });
                                 },
                               ),
-                              const Text('^ Style', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                              const Text('^ Style', style: TextStyle(color: Colors.white38, fontSize: 12)),
                             ],
                           ),
 
+                          // የተስተካከሉ ትናንሽ እና በርካታ የቀለም ምርጫዎች
                           if (_showColorPicker) ...[
                             const SizedBox(height: 8),
                             Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
+                              spacing: 6,
+                              runSpacing: 6,
                               children: _backgroundColors.map((color) {
                                 return GestureDetector(
                                   onTap: () {
@@ -299,14 +337,14 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                     });
                                   },
                                   child: Container(
-                                    width: 34,
-                                    height: 34,
+                                    width: 26, // ቦታ እንዳይጠብ የተደረገ አነስተኛ መጠን
+                                    height: 26,
                                     decoration: BoxDecoration(
                                       color: color,
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: _selectedBackgroundColor == color ? Colors.white : Colors.transparent,
-                                        width: 2.5,
+                                        width: 2,
                                       ),
                                     ),
                                   ),
@@ -319,21 +357,29 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     ),
                     const SizedBox(height: 20),
 
+                    // ለስለስ ያለ ማራኪ ግሬዲየንት ያለው የ Post Now አዝራር
                     Container(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Colors.deepPurple, Colors.indigoAccent],
+                          colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2575FC).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                         onPressed: _isPosting ? null : _uploadPost,
                         child: _isPosting
@@ -361,9 +407,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0A0A0C),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF0A0A0C),
+        elevation: 0,
         title: const Text(
           'Explore Feed & Posters',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -371,12 +418,12 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.deepPurpleAccent))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)))
           : _posts.isEmpty
               ? const Center(
                   child: Text(
                     'No posts or photos available yet!',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                    style: TextStyle(color: Colors.white38, fontSize: 16),
                   ),
                 )
               : ListView.builder(
@@ -387,7 +434,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     final caption = post['caption'] ?? '';
                     final mediaUrl = post['media_url'] ?? '';
                     
-                    Color postBgColor = Colors.grey.shade900;
+                    Color postBgColor = const Color(0xFF16161A);
                     if (post['bg_color'] != null) {
                       try {
                         postBgColor = Color(int.parse(post['bg_color'], radix: 16));
@@ -398,8 +445,8 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                       decoration: BoxDecoration(
                         color: postBgColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade800, width: 0.5),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white10, width: 0.5),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,7 +460,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   children: [
                                     CircleAvatar(
                                       radius: 18,
-                                      backgroundColor: Colors.deepPurpleAccent,
+                                      backgroundColor: Color(0xFF2575FC),
                                       child: Icon(Icons.person, color: Colors.white, size: 20),
                                     ),
                                     SizedBox(width: 10),
@@ -425,13 +472,26 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                                 PopupMenuButton<String>(
                                   icon: const Icon(Icons.more_vert, color: Colors.white70),
-                                  color: Colors.grey[850],
+                                  color: const Color(0xFF1F1F23),
                                   onSelected: (value) {
                                     if (value == 'delete' && postId.isNotEmpty) {
                                       _deletePost(postId);
+                                    } else if (value == 'save' && mediaUrl.isNotEmpty) {
+                                      _downloadImage(mediaUrl);
                                     }
                                   },
                                   itemBuilder: (context) => [
+                                    if (mediaUrl.isNotEmpty)
+                                      const PopupMenuItem(
+                                        value: 'save',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.download, color: Colors.blueAccent, size: 20),
+                                            SizedBox(width: 8),
+                                            Text('Save Image', style: TextStyle(color: Colors.white)),
+                                          ],
+                                        ),
+                                      ),
                                     const PopupMenuItem(
                                       value: 'delete',
                                       child: Row(
@@ -474,7 +534,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                   },
                 ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: const Color(0xFF2575FC),
         onPressed: _showCreatePostBottomSheet,
         child: const Icon(Icons.add_a_photo_rounded, color: Colors.white),
       ),
