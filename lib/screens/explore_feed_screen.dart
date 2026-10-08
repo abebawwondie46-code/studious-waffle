@@ -2,8 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 
 class ExploreFeedScreen extends StatefulWidget {
   const ExploreFeedScreen({super.key});
@@ -90,37 +88,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Failed to delete post! Check connection.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _downloadImage(String imageUrl) async {
-    try {
-      if (imageUrl.isEmpty) return;
-      
-      final res = await http.get(Uri.parse(imageUrl));
-      if (res.statusCode == 200) {
-        final directory = await getApplicationDocumentsDirectory();
-        final filePath = '${directory.path}/poster_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final file = File(filePath);
-        await file.writeAsBytes(res.bodyBytes);
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Image downloaded successfully to: $filePath'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to download image: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -474,22 +441,9 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   onSelected: (value) {
                                     if (value == 'delete' && postId.isNotEmpty) {
                                       _deletePost(postId);
-                                    } else if (value == 'download' && mediaUrl.isNotEmpty) {
-                                      _downloadImage(mediaUrl);
                                     }
                                   },
                                   itemBuilder: (context) => [
-                                    if (mediaUrl.isNotEmpty)
-                                      const PopupMenuItem(
-                                        value: 'download',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.download, color: Colors.blueAccent, size: 20),
-                                            SizedBox(width: 8),
-                                            Text('Download Image', style: TextStyle(color: Colors.white)),
-                                          ],
-                                        ),
-                                      ),
                                     const PopupMenuItem(
                                       value: 'delete',
                                       child: Row(
