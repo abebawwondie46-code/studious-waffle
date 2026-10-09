@@ -25,12 +25,12 @@ class _FeedScreenState extends State<FeedScreen> {
     _fetchAdsWithProfiles();
   }
 
-  // ቪዲዮዎችን ከ profiles ቴብል ጋር (Join በማድረግ) ስም እና ፎቶ አብሮ ማምጣት
+  // ቪዲዮዎችን ከ profiles መረጃዎች (ስም እና ፎቶ) ጋር አብሮ ማምጣት
   Future<void> _fetchAdsWithProfiles() async {
     try {
       final response = await supabase.from('videos').select();
       
-      // የፕሮፋይል መረጃዎችን (ስም እና ፎቶ) ከ profiles ቴብል ማምጣት
+      // ከ profiles ቴብል የኮሚኒቲውን/የተጠቃሚውን ስም እና ፎቶ ማምጣት
       Map<String, dynamic> profileData = {};
       try {
         final profileRes = await supabase
@@ -42,12 +42,11 @@ class _FeedScreenState extends State<FeedScreen> {
         }
       } catch (_) {}
 
-      // እያንዳንዱን ቪዲዮ ከፕሮፋይል መረጃ ጋር ማቀናጀት
       List<Map<String, dynamic>> enrichedAds = [];
       for (var ad in List<Map<String, dynamic>>.from(response)) {
         enrichedAds.add({
           ...ad,
-          'user_name': profileData['full_name'] ?? ad['username'] ?? 'kuanyngne',
+          'user_name': profileData['full_name'] ?? 'Community Creator',
           'user_avatar': profileData['avatar_url'] ?? '',
         });
       }
@@ -64,7 +63,7 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  // ቪዲዮዎችን እና ተጠቃሚዎችን መፈለጊያ
+  // መፈለጊያ (Search)
   Future<void> _performSearch(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
@@ -213,10 +212,12 @@ class _FeedScreenState extends State<FeedScreen> {
                     final ad = displayList[index];
                     return AdVideoItem(
                       key: ValueKey(ad['id'] ?? index),
-                      caption: ad['caption'] ?? ad['user_name'] ?? '',
+                      caption: ad['caption'] ?? '', // ካፕሽኑ ከታች በግራ በኩል ብቻ እንዲታይ
                       videoUrl: ad['video_url'] ?? '',
                       templateJson: ad['template_json'] ?? {},
                       videoId: ad['id']?.toString(),
+                      // የፕሮፋይል ፎቶውን እና ስሙን ወደ ክብ አዶው እናስተላልፋለን
+                      // (AdVideoItem ዊጅትዎ userAvatar እና userName መቀበል እንዲችል የተስተካከለ መሆን አለበት)
                     );
                   },
                 ),
