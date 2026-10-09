@@ -187,10 +187,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2575FC)),
               onPressed: () async {
-                final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
+                final session = supabase.auth.currentSession;
+                final user = supabase.auth.currentUser ?? session?.user;
+
                 if (user == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No logged in user found! Please log in again.'), backgroundColor: Colors.red),
+                    const SnackBar(content: Text('Please log out and log in again to refresh session!'), backgroundColor: Colors.red),
                   );
                   return;
                 }
