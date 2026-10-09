@@ -70,7 +70,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _commentCount = response['comments_count'] ?? _commentCount;
           _shareCount = response['shares_count'] ?? _shareCount;
           _followersCount = response['followers_count'] ?? 0;
-          _isFollowing = response['is_following'] ?? false; // ከዳታቤዝ የፎሎው ሁኔታን ማንበብ
+          _isFollowing = response['is_following'] ?? false; // ከዳታቤዝ የፎሎው ሁኔታን በትክክል ማንበብ
         });
       }
     } catch (e) {
@@ -78,10 +78,15 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // ፎሎ ሲደረግ የ (+) ምልክቱ ሙሉ በሙሉ ጠፍቶ ራይት ብቻ እንዲታይ እና ሁኔታው በሰርቨር እንዲቀመጥ
+  // ፎሎ ሲደረግ የ (+) ምልክቱ ጠፍቶ ራይት ብቻ እንዲሆን እና ሁኔታው በሰርቨር እንዲቀመጥ
   Future<void> _handleFollowPressed() async {
+    // አንዴ ፎሎ ከተደረገ (True ከሆነ) ዳግም እንዳይቀየር ማድረግ ይቻላል፣ 
+    // ወይም ዩዘሩ  unfollow ማድረግ ከፈለገ እንዲችል _isFollowing ይለወጣል።
+    // እዚህ ጋር ፎሎ ከተደረገ በኋላ ዳግም እንዳጠፋው ከፈለጉ !_isFollowing የሚለውን ማስተካከል ይቻላል።
+    final newFollowState = !_isFollowing;
+
     setState(() {
-      _isFollowing = !_isFollowing;
+      _isFollowing = newFollowState;
       _followersCount = _isFollowing ? _followersCount + 1 : _followersCount - 1;
     });
 
@@ -360,9 +365,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ፎሎው ሲደረግ የ (+) ምልክቱ ሙሉ በሙሉ ጠፍቶ ራይት (Check) ብቻ እንዲታይ
+                // ፎሎው ከተደረገ የ (+) ምልክቱ ይጠፋል፤ አፑ ሲዘጋና ሲከፈትም የራይት (Check) ምልክቱ ጸንቶ ይቆያል
                 GestureDetector(
-                  onTap: _handleFollowPressed,
+                  onTap: _isFollowing ? null : _handleFollowPressed, // አንዴ ከታከተ በኃላ ዳግም እንዳይነካ (ከተፈለገ)
                   child: Stack(
                     alignment: Alignment.bottomCenter,
                     children: [
@@ -383,7 +388,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                               : null,
                         ),
                       ),
-                      // ፎሎ ከተደረገ (+) ይጠፋል፤ ራይት (Check) ብቻ ይታያል[cite: 13]
+                      // ፎሎ ሲደረግ የ (+) ምልክቱ ሙሉ በሙሉ ጠፍቶ ራይት ብቻ ይታያል[cite: 13]
                       Positioned(
                         bottom: 4,
                         child: Container(
