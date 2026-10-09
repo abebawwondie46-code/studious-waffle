@@ -179,27 +179,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final newEmail = _emailController.text.trim();
     final newPhone = _phoneController.text.trim();
 
+    // የኢሜይል ፎርማት ማረጋገጫ (Regex)
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    // የውጭ ሀገር እና የሀገር ውስጥ ስልክ ቁጥሮችን (ቁጥሮችን እና የ + ምልክትን) የሚፈቅድ ፎርማት
+    final phoneRegex = RegExp(r'^\+?[\d\s\-\(\)]{7,15}$');
 
-    // 1. መረጃዎች ሙሉ በሙሉ መሞላታቸውን እና ቫሊዴሽን ማለፋቸውን ማረጋገጥ
+    // 1. የሙሉ ስም ማረጋገጫ
     if (newName.isEmpty || !newName.contains(' ')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your full name (including last name)!'), backgroundColor: Colors.red),
       );
       return;
     }
+    // 2. የኢሜይል ማረጋገጫ
     if (newEmail.isEmpty || !emailRegex.hasMatch(newEmail)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email address!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please fix your email address!'), backgroundColor: Colors.red),
       );
       return;
     }
-    if (newPhone.isEmpty || newPhone.length < 5) {
+    // 3. የስልክ ቁጥር ማረጋገጫ (የውጭ ሀገር እና የሀገር ውስጥ ቁጥሮችን የሚቀበል)
+    if (newPhone.isEmpty || !phoneRegex.hasMatch(newPhone)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid phone number (at least 5 digits)!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please fix your phone number!'), backgroundColor: Colors.red),
       );
       return;
     }
+    // 4. የፕሮፋይል ፎቶ ማረጋገጫ
     if (_profileImageUrl == null || _profileImageUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a profile picture!'), backgroundColor: Colors.red),
@@ -222,7 +228,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() {
         _isSaving = false;
-        _isEditing = false; // ሁሉም ነገር ትክክል ከሆነ ብቻ ኤዲት ሞድ ይዘጋል
+        _isEditing = false; // ሁሉም ነገር ትክክል ሲሆን ኤዲት ሞድ ይዘጋል
       });
 
       if (!mounted) return;
@@ -398,14 +404,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // ስልክ ቁጥር መጻፊያ
+                      // ስልክ ቁጥር መጻፊያ (የውጭ ሀገር እና የሀገር ውስጥ ቁጥሮችን የሚቀበል)
                       TextField(
                         controller: _phoneController,
                         style: const TextStyle(color: Colors.white, fontSize: 14),
                         keyboardType: TextInputType.phone,
                         textAlign: TextAlign.start,
                         decoration: InputDecoration(
-                          labelText: 'Phone Number (Min 5 digits)',
+                          labelText: 'Phone Number (Local or International)',
                           labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                           filled: true,
                           fillColor: const Color(0xFF16161A),
@@ -417,7 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   )
                 : Column(
                     children: [
-                      // ኖርማል ቪው (Normal Display View - ኢሜይል በደህንነት በኮከብ/ነጥቦች የተሸፈነ)
+                      // ኖርማል ቪው (Normal Display View)
                       Text(
                         _nameController.text.isNotEmpty ? _nameController.text : 'Community Creator',
                         style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
