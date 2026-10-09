@@ -46,26 +46,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         postsLen = (postsResponse as List).length;
       } catch (_) {}
 
-      // 2. ከ profiles ቴብል የተጠቃሚውን ስም እና ስልክ ማምጣት
+      // 2. ከ profiles ቴብል የተጠቃሚውን ስም፣ ስልክ እና ኢሜይል ማምጣት
       try {
         final profileData = await supabase
             .from('profiles')
-            .select('full_name, phone_number, avatar_url')
+            .select('full_name, phone_number, email, avatar_url')
             .maybeSingle();
 
         if (profileData != null) {
           _nameController.text = profileData['full_name'] ?? '';
           _phoneController.text = profileData['phone_number'] ?? '';
+          _emailController.text = profileData['email'] ?? '';
           _profileImageUrl = profileData['avatar_url'];
         }
       } catch (_) {}
-
-      // ኢሜይሉን ከዩዘር አውት (Auth) በቀጥታ ማምጣት
-      if (user != null && user.email != null) {
-        _emailController.text = user.email!;
-      } else {
-        _emailController.text = 'No Email';
-      }
 
       // 3. Likes ቆጠራ
       int likesLen = 0;
@@ -177,7 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // መረጃዎችን በቀጥታ ሴቭ ማድረግ
+  // መረጃዎችን (ስም፣ ኢሜይል፣ ስልክ) በቀጥታ ሴቭ ማድረግ
   Future<void> _saveProfileChanges() async {
     setState(() {
       _isSaving = true;
@@ -185,11 +179,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final newName = _nameController.text.trim();
+      final newEmail = _emailController.text.trim();
       final newPhone = _phoneController.text.trim();
 
       await supabase.from('profiles').upsert({
         'id': 1,
         'full_name': newName.isNotEmpty ? newName : 'Community Creator',
+        'email': newEmail.isNotEmpty ? newEmail : '',
         'phone_number': newPhone.isNotEmpty ? newPhone : 'Not provided',
       });
 
@@ -297,7 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
             
-            // የተጠቃሚው ስም (TextField - ከግራ ጀምሮ የሚፃፍ)
+            // የተጠቃሚው ስም (TextField)
             TextField(
               controller: _nameController,
               style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
@@ -313,16 +309,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
 
-            // የተጠቃሚው ኢሜይል (Secure/Obscured & ReadOnly - እንዲደበቅ እና ደህንነቱ የተጠበቀ እንዲሆን)
+            // የተጠቃሚው ኢሜይል (TextField - Secure/Obscured & Editable)
             TextField(
               controller: _emailController,
-              readOnly: true,
-              obscureText: true, // ኢሜይሉ በነጥቦች/በኮከብ እንዲሸፈን
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              readOnly: false, // እንዲፃፍበት ተፈቅዷል
+              obscureText: true, // ሲፃፍ በነጥብ (••••) እንዲሸፈን
+              style: const TextStyle(color: Colors.white, fontSize: 14),
               textAlign: TextAlign.start,
+              keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'Email Address (Secure)',
-                labelStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                 filled: true,
                 fillColor: const Color(0xFF16161A),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -331,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
 
-            // የተጠቃሚው ስልክ ቁጥር (TextField - ከግራ ጀምሮ)
+            // የተጠቃሚው ስልክ ቁጥር (TextField)
             TextField(
               controller: _phoneController,
               style: const TextStyle(color: Colors.white, fontSize: 14),
