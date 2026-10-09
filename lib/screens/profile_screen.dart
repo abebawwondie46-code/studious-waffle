@@ -95,9 +95,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ፎቶን ከጋለሪ መርጦ ወደ Supabase Storage መጫን እና ፕሮፋይል ማዘመን
-  Future<void> _pickAndUploadProfileImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+  // ከጋለሪ ወይም ከካሜራ ፎቶ መምረጫ / ማንሻ ሜኑ
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F1F23),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.white),
+                title: const Text('Pick from Gallery', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndUploadProfileImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.white),
+                title: const Text('Take a Photo', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndUploadProfileImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ፎቶን መርጦ ወይም አንስቶ ወደ Supabase Storage መጫን
+  Future<void> _pickAndUploadProfileImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
     if (image == null) return;
 
     setState(() {
@@ -224,7 +259,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 10),
             
-            // የፕሮፋይል ፎቶ መቀየሪያ
+            // የፕሮፋይል ፎቶ መቀየሪያ (ካሜራ ወይም ጋለሪ ምርጫ ያለው)
             Stack(
               children: [
                 CircleAvatar(
@@ -241,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   bottom: 0,
                   right: 0,
                   child: GestureDetector(
-                    onTap: _isUploadingImage ? null : _pickAndUploadProfileImage,
+                    onTap: _isUploadingImage ? null : _showImageSourceDialog,
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
@@ -262,7 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
             
-            // የተጠቃሚው ስም (TextField - ከግራ በኩል ጀምሮ እንዲፃፍ)
+            // የተጠቃሚው ስም (TextField - ከግራ በኩል ጀምሮ የሚፃፍ)
             TextField(
               controller: _nameController,
               style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
