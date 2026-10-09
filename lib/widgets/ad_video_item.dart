@@ -55,6 +55,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     _fetchEngagementData();
   }
 
+  // ከዳታቤዝ ላይ የላይክ፣ የሼር፣ የፎሎወር ብዛት እና የፎሎው ሁኔታን (is_following) ማንበብ
   Future<void> _fetchEngagementData() async {
     if (widget.videoId == null) return;
     try {
@@ -70,7 +71,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _commentCount = response['comments_count'] ?? _commentCount;
           _shareCount = response['shares_count'] ?? _shareCount;
           _followersCount = response['followers_count'] ?? 0;
-          _isFollowing = response['is_following'] ?? false; // ከዳታቤዝ የፎሎው ሁኔታን በትክክል ማንበብ
+          _isFollowing = response['is_following'] ?? false; // አፑ ሲዘጋና ሲከፈት የፎሎው ሁኔታ እንዳይጠፋ ያደርጋል
         });
       }
     } catch (e) {
@@ -78,11 +79,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // ፎሎ ሲደረግ የ (+) ምልክቱ ጠፍቶ ራይት ብቻ እንዲሆን እና ሁኔታው በሰርቨር እንዲቀመጥ
+  // ፎሎ ሲደረግ የ (+) ምልክቱ ጠፍቶ ራይት ብቻ እንዲሆን እና ሰርቨር ላይ እንዲመዘገብ
   Future<void> _handleFollowPressed() async {
-    // አንዴ ፎሎ ከተደረገ (True ከሆነ) ዳግም እንዳይቀየር ማድረግ ይቻላል፣ 
-    // ወይም ዩዘሩ  unfollow ማድረግ ከፈለገ እንዲችል _isFollowing ይለወጣል።
-    // እዚህ ጋር ፎሎ ከተደረገ በኋላ ዳግም እንዳጠፋው ከፈለጉ !_isFollowing የሚለውን ማስተካከል ይቻላል።
     final newFollowState = !_isFollowing;
 
     setState(() {
@@ -365,9 +363,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ፎሎው ከተደረገ የ (+) ምልክቱ ይጠፋል፤ አፑ ሲዘጋና ሲከፈትም የራይት (Check) ምልክቱ ጸንቶ ይቆያል
+                // ፎሎው ሲደረግ (+) ጠፍቶ ራይት (Check) ብቻ ይታያል፣ አፑ ሲዘጋና ሲከፈትም ጸንቶ ይቆያል
                 GestureDetector(
-                  onTap: _isFollowing ? null : _handleFollowPressed, // አንዴ ከታከተ በኃላ ዳግም እንዳይነካ (ከተፈለገ)
+                  onTap: _handleFollowPressed,
                   child: Stack(
                     alignment: Alignment.bottomCenter,
                     children: [
@@ -388,7 +386,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                               : null,
                         ),
                       ),
-                      // ፎሎ ሲደረግ የ (+) ምልክቱ ሙሉ በሙሉ ጠፍቶ ራይት ብቻ ይታያል[cite: 13]
                       Positioned(
                         bottom: 4,
                         child: Container(
