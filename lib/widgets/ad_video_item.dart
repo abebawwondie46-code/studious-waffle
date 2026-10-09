@@ -39,7 +39,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _commentCount = 745;
   int _shareCount = 112;
   bool _isFollowing = false;
-  int _followersCount = 0; // የፎሎወሮች ብዛት
+  int _followersCount = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -55,12 +55,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     _fetchEngagementData();
   }
 
+  // ከዳታቤዝ የላይክ፣ ሼር፣ ፎሎወር ብዛት እና የፎሎው ሁኔታን (is_following) ማንበብ
   Future<void> _fetchEngagementData() async {
     if (widget.videoId == null) return;
     try {
       final response = await Supabase.instance.client
           .from('videos')
-          .select('likes_count, comments_count, shares_count, followers_count')
+          .select('likes_count, comments_count, shares_count, followers_count, is_following')
           .eq('id', widget.videoId!)
           .single();
 
@@ -70,6 +71,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _commentCount = response['comments_count'] ?? _commentCount;
           _shareCount = response['shares_count'] ?? _shareCount;
           _followersCount = response['followers_count'] ?? 0;
+          _isFollowing = response['is_following'] ?? false; // አፑ ሲዘጋና ሲከፈት የፎሎው ሁኔታ ጸንቶ እንዲቆይ ያደርጋል
         });
       }
     } catch (e) {
@@ -77,18 +79,24 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // (+) ሲነካ ራይት ሆኖ በሰርቨር ፎሎወር እንዲጨምር/እንዲቀንስ
+  // ፎሎ ሲደረግ ራይት ሆኖ በሰርቨር ፎሎወር እንዲጨምር/እንዲቀነስ እና is_following እንዲዘምን
   Future<void> _handleFollowPressed() async {
+    final newFollowState = !_isFollowing;
+    final newFollowersCount = newFollowState ? _followersCount + 1 : _followersCount - 1;
+
     setState(() {
-      _isFollowing = !_isFollowing;
-      _followersCount = _isFollowing ? _followersCount + 1 : _followersCount - 1;
+      _isFollowing = newFollowState;
+      _followersCount = newFollowersCount;
     });
 
     if (widget.videoId != null) {
       try {
         await Supabase.instance.client
             .from('videos')
-            .update({'followers_count': _followersCount})
+            .update({
+              'followers_count': newFollowersCount,
+              'is_following': newFollowState,
+            })
             .eq('id', widget.videoId!);
       } catch (e) {
         debugPrint('Failed to update followers on server: $e');
