@@ -19,42 +19,47 @@ class _FeedScreenState extends State<FeedScreen> {
   bool _isSearchActive = false;
   final TextEditingController _searchController = TextEditingController();
 
+  // የአሁኑ ተጠቃሚ ፕሮፋይል መረጃ (ፎቶ እና ስም)
+  String _profileName = 'Community Creator';
+  String _profileAvatar = '';
+
   @override
   void initState() {
     super.initState();
-    _fetchAdsWithProfiles();
+    _fetchProfileAndAds();
   }
 
-  // ቪዲዮዎችን ከ profiles ቴብል ጋር በማገናኘት (Join) ስም እና ፎቶ አብሮ ማምጣት
-  Future<void> _fetchAdsWithProfiles() async {
+  // 1. መጀመሪያ የፕሮፋይሉን ስም እና ፎቶ ከ profiles ቴብል እናመጣለን
+  // 2. ከዚያም የቪዲዮ ዝርዝሮችን ከ videos ቴብል እንጭናለን
+  Future<void> _fetchProfileAndAds() async {
     try {
-      // ቪዲዮዎችን እና ከ profiles ቴብል full_name እና avatar_url አብሮ መጥራት
-      final response = await supabase.from('videos').select('''
-        *,
-        profiles:user_id (
-          full_name,
-          avatar_url
-        )
-      ''');
+      // የፕሮፋይል መረጃ ማምጣት
+      try {
+        final profileRes = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .maybeSingle();
+        
+        if (profileRes != null) {
+          setState(() {
+            _profileName = profileRes['full_name'] ?? 'Community Creator';
+            _profileAvatar = profileRes['avatar_url'] ?? '';
+          });
+        }
+      } catch (_) {}
 
+      // የቪዲዮዎች ዝርዝር ማምጣት
+      final response = await supabase.from('videos').select();
+      
       setState(() {
         _ads = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
     } catch (e) {
-      // ጆይን ከሌለ በስተቀር መደበኛውን ቪዲዮ ብቻ ለማምጣት
-      try {
-        final fallbackResponse = await supabase.from('videos').select();
-        setState(() {
-          _ads = List<Map<String, dynamic>>.from(fallbackResponse);
-          _isLoading = false;
-        });
-      } catch (err) {
-        setState(() {
-          _isLoading = false;
-        });
-        debugPrint('Failed to load videos: $err');
-      }
+      setState(() {
+        _isLoading = false;
+      });
+      debugPrint('Failed to load data: $e');
     }
   }
 
@@ -192,11 +197,6 @@ class _FeedScreenState extends State<FeedScreen> {
                   itemCount: displayList.length,
                   itemBuilder: (context, index) {
                     final ad = displayList[index];
-                    
-                    // ከ profiles ቴብል የመጣውን ፎቶ እና ስም ማውጣት
-                    final profileMap = ad['profiles'] is Map ? ad['profiles'] : {};
-                    final userAvatar = profileMap['avatar_url'] ?? '';
-                    final userName = profileMap['full_name'] ?? '';
 
                     return AdVideoItem(
                       key: ValueKey(ad['id'] ?? index),
@@ -204,8 +204,9 @@ class _FeedScreenState extends State<FeedScreen> {
                       videoUrl: ad['video_url'] ?? '',
                       templateJson: ad['template_json'] ?? {},
                       videoId: ad['id']?.toString(),
-                      userAvatar: userAvatar,
-                      userName: userName,
+                      // የፕሮፋይል ፎቶውን እና ስሙን በቀጥታ እናልፋለን
+                      userAvatar: _profileAvatar,
+                      userName: _profileName,
                     );
                   },
                 ),
