@@ -55,23 +55,21 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     _fetchEngagementData();
   }
 
-  // ከዳታቤዝ ላይ የላይክ፣ የሼር፣ የፎሎወር ብዛት እና የፎሎው ሁኔታን (is_following) በትክክል ማንበብ
   Future<void> _fetchEngagementData() async {
-    if (widget.videoId == null) return;
     try {
-      final response = await Supabase.instance.client
-          .from('videos')
-          .select('likes_count, comments_count, shares_count, followers_count, is_following')
-          .eq('id', widget.videoId!)
-          .single();
+      final query = Supabase.instance.client.from('videos').select('likes_count, comments_count, shares_count, followers_count, is_following');
+      
+      final response = widget.videoId != null
+          ? await query.eq('id', widget.videoId!).maybeSingle()
+          : await query.eq('video_url', widget.videoUrl).maybeSingle();
 
-      if (mounted) {
+      if (response != null && mounted) {
         setState(() {
           _likeCount = response['likes_count'] ?? _likeCount;
           _commentCount = response['comments_count'] ?? _commentCount;
           _shareCount = response['shares_count'] ?? _shareCount;
           _followersCount = response['followers_count'] ?? 0;
-          _isFollowing = response['is_following'] ?? false; 
+          _isFollowing = response['is_following'] ?? false;
         });
       }
     } catch (e) {
@@ -79,60 +77,74 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // ፎሎ ሲደረግ የ (+) ምልክቱ ጠፍቶ ራይት ብቻ እንዲሆን እና ሁኔታው በሰርቨር (Supabase) እንዲቀመጥ
   Future<void> _handleFollowPressed() async {
     final newFollowState = !_isFollowing;
+    final newFollowersCount = newFollowState ? _followersCount + 1 : _followersCount - 1;
 
     setState(() {
       _isFollowing = newFollowState;
-      _followersCount = _isFollowing ? _followersCount + 1 : _followersCount - 1;
+      _followersCount = newFollowersCount;
     });
 
-    if (widget.videoId != null) {
-      try {
-        await Supabase.instance.client
-            .from('videos')
-            .update({
-              'followers_count': _followersCount,
-              'is_following': _isFollowing,
-            })
-            .eq('id', widget.videoId!);
-      } catch (e) {
-        debugPrint('Failed to update follow status on server: $e');
+    try {
+      final query = Supabase.instance.client.from('videos');
+      
+      if (widget.videoId != null) {
+        await query.update({
+          'followers_count': newFollowersCount,
+          'is_following': newFollowState,
+        }).eq('id', widget.videoId!);
+      } else {
+        await query.update({
+          'followers_count': newFollowersCount,
+          'is_following': newFollowState,
+        }).eq('video_url', widget.videoUrl);
       }
+    } catch (e) {
+      debugPrint('Failed to update follow status on server: $e');
     }
   }
 
   Future<void> _handleLikePressed() async {
+    final newLikeState = !_isLiked;
+    final newLikeCount = newLikeState ? _likeCount + 1 : _likeCount - 1;
+
     setState(() {
-      _isLiked = !_isLiked;
-      _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
+      _isLiked = newLikeState;
+      _likeCount = newLikeCount;
     });
 
-    if (widget.videoId != null) {
-      try {
-        await Supabase.instance.client
-            .from('videos')
-            .update({'likes_count': _likeCount})
-            .eq('id', widget.videoId!);
-      } catch (e) {
-        debugPrint('Failed to update like on server: $e');
+    try {
+      final query = Supabase.instance.client.from('videos');
+
+      if (widget.videoId != null) {
+        await query.update({
+          'likes_count': newLikeCount,
+        }).eq('id', widget.videoId!);
+      } else {
+        await query.update({
+          'likes_count': newLikeCount,
+        }).eq('video_url', widget.videoUrl);
       }
+    } catch (e) {
+      debugPrint('Failed to update like on server: $e');
     }
   }
 
   Future<void> _handleSharePressed() async {
     try {
       await Share.share('Check out this amazing video on kuanyngne: ${widget.videoUrl}');
+      final newShareCount = _shareCount + 1;
+      
       setState(() {
-        _shareCount += 1;
+        _shareCount = newShareCount;
       });
 
+      final query = Supabase.instance.client.from('videos');
       if (widget.videoId != null) {
-        await Supabase.instance.client
-            .from('videos')
-            .update({'shares_count': _shareCount})
-            .eq('id', widget.videoId!);
+        await query.update({'shares_count': newShareCount}).eq('id', widget.videoId!);
+      } else {
+        await query.update({'shares_count': newShareCount}).eq('video_url', widget.videoUrl);
       }
     } catch (e) {
       debugPrint('Error sharing video: $e');
@@ -191,25 +203,19 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 
   Future<void> _deleteVideoFromServer() async {
-    if (widget.videoId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video ID is missing, cannot delete.')),
-      );
-      return;
-    }
-
     try {
-      await Supabase.instance.client
-          .from('videos')
-          .delete()
-          .eq('id', widget.videoId!);
+      final query = Supabase.instance.client.from('videos');
+      if (widget.videoId != null) {
+        await query.delete().eq('id', widget.videoId!);
+      } else {
+        await query.delete().eq('video_url', widget.videoUrl);
+      }
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Video deleted successfully')),
         );
-
         if (widget.onVideoDeleted != null) {
           widget.onVideoDeleted!();
         }
@@ -219,7 +225,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No internet connection or failed to delete video.')),
+          const SnackBar(content: Text('Failed to delete video.')),
         );
       }
     }
@@ -356,14 +362,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች
           Positioned(
             right: 12,
             bottom: 80,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ፎሎው ሲደረግ (+) ጠፍቶ ራይት (Check) ብቻ ይታያል፣ አፑ ሲዘጋና ሲከፈትም ከሰርቨር ተነቦ ጸንቶ ይቆያል
                 GestureDetector(
                   onTap: _handleFollowPressed,
                   child: Stack(
