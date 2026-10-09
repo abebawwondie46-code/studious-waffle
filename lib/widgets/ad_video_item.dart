@@ -10,8 +10,8 @@ class AdVideoItem extends StatefulWidget {
   final Map<String, dynamic> templateJson;
   final String? videoId;
   final VoidCallback? onVideoDeleted;
-  final String? userAvatar; // የፕሮፋይል ፎቶ ሊንክ
-  final String? userName;   // የተጠቃሚው ስም
+  final String? userAvatar; 
+  final String? userName;   
 
   const AdVideoItem({
     super.key,
@@ -39,6 +39,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _commentCount = 745;
   int _shareCount = 112;
   bool _isFollowing = false;
+  int _followersCount = 0; // የፎሎወሮች ብዛት
 
   @override
   bool get wantKeepAlive => true;
@@ -59,7 +60,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     try {
       final response = await Supabase.instance.client
           .from('videos')
-          .select('likes_count, comments_count, shares_count')
+          .select('likes_count, comments_count, shares_count, followers_count')
           .eq('id', widget.videoId!)
           .single();
 
@@ -68,6 +69,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _likeCount = response['likes_count'] ?? _likeCount;
           _commentCount = response['comments_count'] ?? _commentCount;
           _shareCount = response['shares_count'] ?? _shareCount;
+          _followersCount = response['followers_count'] ?? 0;
         });
       }
     } catch (e) {
@@ -75,28 +77,22 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // (+) ሲነካ ወደ ራይት (Check) የሚቀየርበት እና በዳታቤዝ followers ቴብል የሚመዘገብበት ሎጂክ
+  // (+) ሲነካ ራይት ሆኖ በሰርቨር ፎሎወር እንዲጨምር/እንዲቀንስ
   Future<void> _handleFollowPressed() async {
     setState(() {
       _isFollowing = !_isFollowing;
+      _followersCount = _isFollowing ? _followersCount + 1 : _followersCount - 1;
     });
 
-    try {
-      final supabase = Supabase.instance.client;
-      if (_isFollowing) {
-        // ፎሎ ሲደረግ ወደ followers ቴብል መመዝገብ
-        await supabase.from('followers').insert({
-          'created_at': DateTime.now().toIso8601String(),
-        });
-      } else {
-        // ፎሎው ሲነሳ ከ ቴብል መሰረዝ
-        final response = await supabase.from('followers').select('id').limit(1);
-        if (response.isNotEmpty) {
-          await supabase.from('followers').delete().eq('id', response[0]['id']);
-        }
+    if (widget.videoId != null) {
+      try {
+        await Supabase.instance.client
+            .from('videos')
+            .update({'followers_count': _followersCount})
+            .eq('id', widget.videoId!);
+      } catch (e) {
+        debugPrint('Failed to update followers on server: $e');
       }
-    } catch (e) {
-      debugPrint('Error updating follow status: $e');
     }
   }
 
@@ -320,7 +316,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
           
-          // የቪዲዮው ካፕሽን (Caption) ከታች በግራ በኩል
           Positioned(
             left: 0,
             right: 0,
@@ -354,14 +349,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች (ፕሮፋይል ፎቶ ከ (+) / ራይት ምልክት ጋር)
           Positioned(
             right: 12,
             bottom: 80,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // የፕሮፋይል ፎቶ ከ (+) አዶ ጋር (ሲነካ ወደ ራይት ይቀየራል እና ዳታቤዝ ላይ ይመዘገባል)
                 GestureDetector(
                   onTap: _handleFollowPressed,
                   child: Stack(
