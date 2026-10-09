@@ -46,7 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         postsLen = (postsResponse as List).length;
       } catch (_) {}
 
-      // 2. ከ profiles ቴብል የተጠቃሚውን ስም፣ ስልክ እና ፎቶ ማምጣት
+      // 2. ከ profiles ቴብል የተጠቃሚውን ስም እና ስልክ ማምጣት
       try {
         final profileData = await supabase
             .from('profiles')
@@ -60,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // የኢሜይል መረጃን ከክረንት ዩዘር መሙላት
+      // ኢሜይሉን ከዩዘር አውት (Auth) በቀጥታ ማምጣት
       if (user != null && user.email != null) {
         _emailController.text = user.email!;
       } else {
@@ -207,7 +207,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         centerTitle: true,
         actions: [
-          // የሴቲንግ አዶ (Settings Icon) ከተጠየቀበት ቦታ ላይ
           IconButton(
             icon: const Icon(Icons.settings_rounded, color: Colors.white70),
             onPressed: () {
@@ -263,52 +262,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
             
-            // የተጠቃሚው ስም (TextField - በቀጥታ የሚፃፍበት)
+            // የተጠቃሚው ስም (TextField - ከግራ በኩል ጀምሮ እንዲፃፍ)
             TextField(
               controller: _nameController,
               style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
               decoration: InputDecoration(
                 labelText: 'Full Name',
                 labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                 filled: true,
                 fillColor: const Color(0xFF16161A),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
             const SizedBox(height: 14),
 
-            // የተጠቃሚው ኢሜይል (TextField)
+            // የተጠቃሚው ኢሜይል (TextField - ReadOnly ከግራ ጀምሮ)
             TextField(
               controller: _emailController,
-              readOnly: true, // ኢሜይል በራሱ እንዲነበብ ብቻ
+              readOnly: true,
               style: const TextStyle(color: Colors.white54, fontSize: 14),
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
               decoration: InputDecoration(
                 labelText: 'Email Address',
                 labelStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                 filled: true,
                 fillColor: const Color(0xFF16161A),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
             const SizedBox(height: 14),
 
-            // የተጠቃሚው ስልክ ቁጥር (TextField)
+            // የተጠቃሚው ስልክ ቁጥር (TextField - ከግራ ጀምሮ)
             TextField(
               controller: _phoneController,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               keyboardType: TextInputType.phone,
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
               decoration: InputDecoration(
                 labelText: 'Phone Number',
                 labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                 filled: true,
                 fillColor: const Color(0xFF16161A),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
             
