@@ -34,7 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserProfileAndStats() async {
     try {
-      final user = supabase.auth.currentUser;
+      final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
       
       // 1. የ ፖስቶች ብዛት ማምጣት
       int postsLen = 0;
@@ -100,8 +100,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      final user = supabase.auth.currentUser;
-      if (user == null) return;
+      final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
+      if (user == null) {
+        setState(() => _isUploadingImage = false);
+        return;
+      }
 
       final file = File(image.path);
       final fileName = 'profile_${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -184,10 +187,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2575FC)),
               onPressed: () async {
-                final user = supabase.auth.currentUser;
+                final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
                 if (user == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No logged in user found!'), backgroundColor: Colors.red),
+                    const SnackBar(content: Text('No logged in user found! Please log in again.'), backgroundColor: Colors.red),
                   );
                   return;
                 }
