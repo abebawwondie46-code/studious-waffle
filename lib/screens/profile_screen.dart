@@ -142,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ስም እና ስልክ ቁጥር ማስተካከያ ፖፕአፕ (Edit Profile Dialog)
   void _showEditProfileDialog() {
-    final TextEditingController nameController = TextEditingController(text: _userName);
+    final TextEditingController nameController = TextEditingController(text: _userName == 'Community Creator' ? '' : _userName);
     final TextEditingController phoneController = TextEditingController(text: _phoneNumber == 'Not provided' ? '' : _phoneNumber);
 
     showDialog(
@@ -185,21 +185,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2575FC)),
               onPressed: () async {
                 final user = supabase.auth.currentUser;
-                if (user == null) return;
+                if (user == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No logged in user found!'), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
 
                 final newName = nameController.text.trim();
                 final newPhone = phoneController.text.trim();
 
                 try {
+                  // መረጃውን ወደ Supabase profiles ቴብል መላክ
                   await supabase.from('profiles').upsert({
                     'id': user.id,
-                    'full_name': newName,
-                    'phone_number': newPhone,
+                    'full_name': newName.isNotEmpty ? newName : 'Community Creator',
+                    'phone_number': newPhone.isNotEmpty ? newPhone : 'Not provided',
                   });
 
                   setState(() {
-                    _userName = newName;
-                    _phoneNumber = newPhone;
+                    _userName = newName.isNotEmpty ? newName : 'Community Creator';
+                    _phoneNumber = newPhone.isNotEmpty ? newPhone : 'Not provided';
                   });
 
                   if (!mounted) return;
@@ -208,6 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
                   );
                 } catch (e) {
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Failed to update: $e'), backgroundColor: Colors.red),
                   );
