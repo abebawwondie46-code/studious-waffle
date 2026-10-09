@@ -39,7 +39,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _commentCount = 745;
   int _shareCount = 112;
   bool _isFollowing = false;
-  int _followersCount = 0; // የፎሎወሮች ብዛት
+  int _followersCount = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -60,7 +60,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     try {
       final response = await Supabase.instance.client
           .from('videos')
-          .select('likes_count, comments_count, shares_count, followers_count')
+          .select('likes_count, comments_count, shares_count, followers_count, is_following')
           .eq('id', widget.videoId!)
           .single();
 
@@ -70,6 +70,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _commentCount = response['comments_count'] ?? _commentCount;
           _shareCount = response['shares_count'] ?? _shareCount;
           _followersCount = response['followers_count'] ?? 0;
+          _isFollowing = response['is_following'] ?? false; // ከዳታቤዝ የፎሎው ሁኔታን ማንበብ
         });
       }
     } catch (e) {
@@ -77,7 +78,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // (+) ሲነካ ራይት ሆኖ በሰርቨር ፎሎወር እንዲጨምር/እንዲቀንስ
+  // ፎሎ ሲደረግ የ (+) ምልክቱ ሙሉ በሙሉ ጠፍቶ ራይት ብቻ እንዲታይ እና ሁኔታው በሰርቨር እንዲቀመጥ
   Future<void> _handleFollowPressed() async {
     setState(() {
       _isFollowing = !_isFollowing;
@@ -88,10 +89,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       try {
         await Supabase.instance.client
             .from('videos')
-            .update({'followers_count': _followersCount})
+            .update({
+              'followers_count': _followersCount,
+              'is_following': _isFollowing,
+            })
             .eq('id', widget.videoId!);
       } catch (e) {
-        debugPrint('Failed to update followers on server: $e');
+        debugPrint('Failed to update follow status on server: $e');
       }
     }
   }
@@ -349,12 +353,14 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
+          // የቀኝ በኩል አዝራሮች
           Positioned(
             right: 12,
             bottom: 80,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // ፎሎው ሲደረግ የ (+) ምልክቱ ሙሉ በሙሉ ጠፍቶ ራይት (Check) ብቻ እንዲታይ
                 GestureDetector(
                   onTap: _handleFollowPressed,
                   child: Stack(
@@ -377,6 +383,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                               : null,
                         ),
                       ),
+                      // ፎሎ ከተደረገ (+) ይጠፋል፤ ራይት (Check) ብቻ ይታያል[cite: 13]
                       Positioned(
                         bottom: 4,
                         child: Container(
