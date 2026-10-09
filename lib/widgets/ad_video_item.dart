@@ -55,7 +55,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     _fetchEngagementData();
   }
 
-  // ከዳታቤዝ ላይ የላይክ፣ የሼር፣ የፎሎወር ብዛት እና የፎሎው ሁኔታን (is_following) ማንበብ
+  // ከዳታቤዝ ላይ የላይክ፣ የሼር፣ የፎሎወር ብዛት እና የፎሎው ሁኔታን (is_following) በትክክል ማንበብ
   Future<void> _fetchEngagementData() async {
     if (widget.videoId == null) return;
     try {
@@ -71,7 +71,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _commentCount = response['comments_count'] ?? _commentCount;
           _shareCount = response['shares_count'] ?? _shareCount;
           _followersCount = response['followers_count'] ?? 0;
-          _isFollowing = response['is_following'] ?? false; // አፑ ሲዘጋና ሲከፈት የፎሎው ሁኔታ እንዳይጠፋ ያደርጋል
+          _isFollowing = response['is_following'] ?? false; 
         });
       }
     } catch (e) {
@@ -79,7 +79,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // ፎሎ ሲደረግ የ (+) ምልክቱ ጠፍቶ ራይት ብቻ እንዲሆን እና ሰርቨር ላይ እንዲመዘገብ
+  // ፎሎ ሲደረግ የ (+) ምልክቱ ጠፍቶ ራይት ብቻ እንዲሆን እና ሁኔታው በሰርቨር (Supabase) እንዲቀመጥ
   Future<void> _handleFollowPressed() async {
     final newFollowState = !_isFollowing;
 
@@ -363,7 +363,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ፎሎው ሲደረግ (+) ጠፍቶ ራይት (Check) ብቻ ይታያል፣ አፑ ሲዘጋና ሲከፈትም ጸንቶ ይቆያል
+                // ፎሎው ሲደረግ (+) ጠፍቶ ራይት (Check) ብቻ ይታያል፣ አፑ ሲዘጋና ሲከፈትም ከሰርቨር ተነቦ ጸንቶ ይቆያል
                 GestureDetector(
                   onTap: _handleFollowPressed,
                   child: Stack(
