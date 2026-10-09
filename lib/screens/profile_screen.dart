@@ -16,6 +16,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isUploadingImage = false;
   bool _isSaving = false;
+  bool _obscureEmail = true; // ኢሜይሉን ለመደበቅ ወይም ለማሳየት የሚያገለግል ተለዋዋጭ
   
   int _postsCount = 0;
   int _likesCount = 0;
@@ -309,11 +310,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
 
-            // የተጠቃሚው ኢሜይል (TextField - Secure/Obscured & Editable)
+            // የተጠቃሚው ኢሜይል (TextField - ከእይታ መቆጣጠሪያ አይን ምልክት ጋር)
             TextField(
               controller: _emailController,
-              readOnly: false, // እንዲፃፍበት ተፈቅዷል
-              obscureText: true, // ሲፃፍ በነጥብ (••••) እንዲሸፈን
+              readOnly: false,
+              obscureText: _obscureEmail, // በጠየቁት መሰረት በአይን ምልክት የሚቆጣጠር
               style: const TextStyle(color: Colors.white, fontSize: 14),
               textAlign: TextAlign.start,
               keyboardType: TextInputType.emailAddress,
@@ -324,6 +325,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fillColor: const Color(0xFF16161A),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureEmail ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.white54,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureEmail = !_obscureEmail;
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 14),
