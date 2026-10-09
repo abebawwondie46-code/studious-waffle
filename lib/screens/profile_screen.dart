@@ -148,6 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
+      // ፎቶውን በቀጥታ በ profiles ቴብል እናዘምነዋለን (ለዋናው ገጽ እንዲሰራ)
       await supabase.from('profiles').upsert({
         'id': 1,
         'avatar_url': imageUrl,
@@ -179,9 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final newEmail = _emailController.text.trim();
     final newPhone = _phoneController.text.trim();
 
-    // የኢሜይል ፎርማት ማረጋገጫ (Regex)
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    // የውጭ ሀገር እና የሀገር ውስጥ ስልክ ቁጥሮችን (ቁጥሮችን እና የ + ምልክትን) የሚፈቅድ ፎርማት
     final phoneRegex = RegExp(r'^\+?[\d\s\-\(\)]{7,15}$');
 
     // 1. የሙሉ ስም ማረጋገጫ
@@ -198,7 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       return;
     }
-    // 3. የስልክ ቁጥር ማረጋገጫ (የውጭ ሀገር እና የሀገር ውስጥ ቁጥሮችን የሚቀበል)
+    // 3. የስልክ ቁጥር ማረጋገጫ
     if (newPhone.isEmpty || !phoneRegex.hasMatch(newPhone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fix your phone number!'), backgroundColor: Colors.red),
@@ -218,6 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
+      // መረጃዎችን ወደ Supabase profiles ቴብል መላክ (በዋናው ገጽ እንዲነበብ)
       await supabase.from('profiles').upsert({
         'id': 1,
         'full_name': newName,
@@ -228,7 +228,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() {
         _isSaving = false;
-        _isEditing = false; // ሁሉም ነገር ትክክል ሲሆን ኤዲት ሞድ ይዘጋል
+        _isEditing = false;
       });
 
       if (!mounted) return;
@@ -275,7 +275,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFF0A0A0C),
         elevation: 0,
         centerTitle: true,
-        // የእርሳስ አዶ በግራ በኩል
         leading: IconButton(
           icon: _isSaving
               ? const SizedBox(
@@ -354,11 +353,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
             
-            // _isEditing ሲበራ ቴክስት ፊልድ ይሆናል፣ ካልበራ በደህና ሁኔታ ይታያል
             _isEditing
                 ? Column(
                     children: [
-                      // ስም መጻፊያ
                       TextField(
                         controller: _nameController,
                         style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
@@ -374,7 +371,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // ኢሜይል መጻፊያ
                       TextField(
                         controller: _emailController,
                         readOnly: false,
@@ -404,14 +400,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // ስልክ ቁጥር መጻፊያ (የውጭ ሀገር እና የሀገር ውስጥ ቁጥሮችን የሚቀበል)
                       TextField(
                         controller: _phoneController,
                         style: const TextStyle(color: Colors.white, fontSize: 14),
                         keyboardType: TextInputType.phone,
                         textAlign: TextAlign.start,
                         decoration: InputDecoration(
-                          labelText: 'Phone Number (Local or International)',
+                          labelText: 'Phone Number',
                           labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                           filled: true,
                           fillColor: const Color(0xFF16161A),
@@ -423,7 +418,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   )
                 : Column(
                     children: [
-                      // ኖርማል ቪው (Normal Display View)
                       Text(
                         _nameController.text.isNotEmpty ? _nameController.text : 'Community Creator',
                         style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
@@ -452,7 +446,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             const SizedBox(height: 24),
             
-            // ስታቲስቲክስ (Posts, Likes, Followers)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
@@ -472,7 +465,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             const SizedBox(height: 40),
             
-            // Log Out አዝራር
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
