@@ -16,6 +16,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isUploadingImage = false;
   bool _isSaving = false;
+  bool _isEditing = false; // ኤዲት ማድረግ መጀመሩን / አለመጀመሩን ለመቆጣጠር
   bool _obscureEmail = true;
   
   int _postsCount = 0;
@@ -172,16 +173,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // መረጃዎችን ማረጋገጥ እና ሴቭ ማድረግ (የእርሳስ አዶው ሲነካ የሚሰራ)
+  // መረጃዎችን ማረጋገጥ እና ሴቭ ማድረግ
   Future<void> _saveProfileChanges() async {
     final newName = _nameController.text.trim();
     final newEmail = _emailController.text.trim();
     final newPhone = _phoneController.text.trim();
 
-    // የኢሜይል ፎርማት ማረጋገጫ (Regex Validation)
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
-    // 1. መረጃዎቹ ሙሉ በሙሉ መሞላታቸውን እና ትክክለኛ መሆናቸውን ማረጋገጥ
     if (newName.isEmpty || !newName.contains(' ')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your full name (including last name)!'), backgroundColor: Colors.red),
@@ -222,6 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() {
         _isSaving = false;
+        _isEditing = false; // ሴቭ ሲደረግ ኤዲት ሞድ ይጠፋል
       });
 
       if (!mounted) return;
@@ -268,7 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFF0A0A0C),
         elevation: 0,
         centerTitle: true,
-        // ከግራ በኩል እርሳስ አዶ፣ ከቀኝ በኩል ሴቲንግ አዶ
+        // የእርሳስ አዶ በግራ በኩል (ሲነካ ኤዲት መብራት ወይም ሴቭ መሆን እንዲጀምር)
         leading: IconButton(
           icon: _isSaving
               ? const SizedBox(
@@ -276,9 +276,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   height: 20,
                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                 )
-              : const Icon(Icons.edit_rounded, color: Colors.white70),
-          onPressed: _isSaving ? null : _saveProfileChanges,
-          tooltip: 'Save Profile Changes',
+              : Icon(_isEditing ? Icons.check_rounded : Icons.edit_rounded, color: Colors.white70),
+          onPressed: _isSaving
+              ? null
+              : () {
+                  if (_isEditing) {
+                    _saveProfileChanges(); // ኤዲት ላይ ከነበረ አሁን ሴቭ ይደረጋል
+                  } else {
+                    setState(() {
+                      _isEditing = true; // ኤዲት മോድ ይከፈታል
+                    });
+                  }
+                },
+          tooltip: _isEditing ? 'Save Changes' : 'Edit Profile',
         ),
         actions: [
           IconButton(
@@ -311,94 +321,127 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? const Icon(Icons.person, size: 50, color: Colors.white)
                       : null,
                 ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: _isUploadingImage ? null : _showImageSourceDialog,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2575FC),
-                        shape: BoxShape.circle,
+                if (_isEditing) // ፎቶ መቀየር የሚቻለው ኤዲት ሞድ ላይ ሲሆን ብቻ
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: _isUploadingImage ? null : _showImageSourceDialog,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF2575FC),
+                          shape: BoxShape.circle,
+                        ),
+                        child: _isUploadingImage
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.camera_alt, color: Colors.white, size: 18),
                       ),
-                      child: _isUploadingImage
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Icon(Icons.camera_alt, color: Colors.white, size: 18),
                     ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 24),
             
-            // የተጠቃሚው ስም (TextField)
-            TextField(
-              controller: _nameController,
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.start,
-              decoration: InputDecoration(
-                labelText: 'Full Name (ስም ከነአባት)',
-                labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-                filled: true,
-                fillColor: const Color(0xFF16161A),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              ),
-            ),
-            const SizedBox(height: 14),
+            // _isEditing ሲበራ ቴክስት ፊልድ (TextField) ይሆናል፣ ካልበራ ደግሞ ውብ ጽሁፍ ሆኖ ይታያል
+            _isEditing
+                ? Column(
+                    children: [
+                      // ስም መጻፊያ
+                      TextField(
+                        controller: _nameController,
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.start,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name (ስም ከነአባት)',
+                          labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                          filled: true,
+                          fillColor: const Color(0xFF16161A),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
 
-            // የተጠቃሚው ኢሜይል (TextField)
-            TextField(
-              controller: _emailController,
-              readOnly: false,
-              obscureText: _obscureEmail,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              textAlign: TextAlign.start,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                labelText: 'Email Address (Secure)',
-                labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-                filled: true,
-                fillColor: const Color(0xFF16161A),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscureEmail ? Icons.visibility_off : Icons.visibility,
-                    color: Colors.white54,
+                      // ኢሜይል መጻፊያ
+                      TextField(
+                        controller: _emailController,
+                        readOnly: false,
+                        obscureText: _obscureEmail,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        textAlign: TextAlign.start,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: 'Email Address (Secure)',
+                          labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                          filled: true,
+                          fillColor: const Color(0xFF16161A),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureEmail ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.white54,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureEmail = !_obscureEmail;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // ስልክ ቁጥር መጻፊያ
+                      TextField(
+                        controller: _phoneController,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        keyboardType: TextInputType.phone,
+                        textAlign: TextAlign.start,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number',
+                          labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                          filled: true,
+                          fillColor: const Color(0xFF16161A),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      // ኖርማል ቪው (Normal Display View)
+                      Text(
+                        _nameController.text.isNotEmpty ? _nameController.text : 'Community Creator',
+                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _emailController.text.isNotEmpty ? _emailController.text : 'No Email',
+                        style: const TextStyle(color: Colors.white54, fontSize: 14),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.phone, color: Colors.white54, size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            _phoneController.text.isNotEmpty ? _phoneController.text : 'Not provided',
+                            style: const TextStyle(color: Colors.white54, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _obscureEmail = !_obscureEmail;
-                    });
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // የተጠቃሚው ስልክ ቁጥር (TextField)
-            TextField(
-              controller: _phoneController,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              keyboardType: TextInputType.phone,
-              textAlign: TextAlign.start,
-              decoration: InputDecoration(
-                labelText: 'Phone Number',
-                labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-                filled: true,
-                fillColor: const Color(0xFF16161A),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              ),
-            ),
             
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             
             // ስታቲስቲክስ (Posts, Likes, Followers)
             Container(
