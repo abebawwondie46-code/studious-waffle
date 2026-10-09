@@ -16,7 +16,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isUploadingImage = false;
   bool _isSaving = false;
-  bool _isEditing = false; // ኤዲት ማድረግ መጀመሩን / አለመጀመሩን ለመቆጣጠር
+  bool _isEditing = false;
   bool _obscureEmail = true;
   
   int _postsCount = 0;
@@ -181,6 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
+    // 1. መረጃዎች ሙሉ በሙሉ መሞላታቸውን እና ቫሊዴሽን ማለፋቸውን ማረጋገጥ
     if (newName.isEmpty || !newName.contains(' ')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your full name (including last name)!'), backgroundColor: Colors.red),
@@ -193,9 +194,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       return;
     }
-    if (newPhone.isEmpty) {
+    if (newPhone.isEmpty || newPhone.length < 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your phone number!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please enter a valid phone number (at least 5 digits)!'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -221,7 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() {
         _isSaving = false;
-        _isEditing = false; // ሴቭ ሲደረግ ኤዲት ሞድ ይጠፋል
+        _isEditing = false; // ሁሉም ነገር ትክክል ከሆነ ብቻ ኤዲት ሞድ ይዘጋል
       });
 
       if (!mounted) return;
@@ -268,7 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFF0A0A0C),
         elevation: 0,
         centerTitle: true,
-        // የእርሳስ አዶ በግራ በኩል (ሲነካ ኤዲት መብራት ወይም ሴቭ መሆን እንዲጀምር)
+        // የእርሳስ አዶ በግራ በኩል
         leading: IconButton(
           icon: _isSaving
               ? const SizedBox(
@@ -281,10 +282,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? null
               : () {
                   if (_isEditing) {
-                    _saveProfileChanges(); // ኤዲት ላይ ከነበረ አሁን ሴቭ ይደረጋል
+                    _saveProfileChanges();
                   } else {
                     setState(() {
-                      _isEditing = true; // ኤዲት മോድ ይከፈታል
+                      _isEditing = true;
                     });
                   }
                 },
@@ -321,7 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? const Icon(Icons.person, size: 50, color: Colors.white)
                       : null,
                 ),
-                if (_isEditing) // ፎቶ መቀየር የሚቻለው ኤዲት ሞድ ላይ ሲሆን ብቻ
+                if (_isEditing)
                   Positioned(
                     bottom: 0,
                     right: 0,
@@ -347,7 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
             
-            // _isEditing ሲበራ ቴክስት ፊልድ (TextField) ይሆናል፣ ካልበራ ደግሞ ውብ ጽሁፍ ሆኖ ይታያል
+            // _isEditing ሲበራ ቴክስት ፊልድ ይሆናል፣ ካልበራ በደህና ሁኔታ ይታያል
             _isEditing
                 ? Column(
                     children: [
@@ -404,7 +405,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         keyboardType: TextInputType.phone,
                         textAlign: TextAlign.start,
                         decoration: InputDecoration(
-                          labelText: 'Phone Number',
+                          labelText: 'Phone Number (Min 5 digits)',
                           labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                           filled: true,
                           fillColor: const Color(0xFF16161A),
@@ -416,14 +417,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   )
                 : Column(
                     children: [
-                      // ኖርማል ቪው (Normal Display View)
+                      // ኖርማል ቪው (Normal Display View - ኢሜይል በደህንነት በኮከብ/ነጥቦች የተሸፈነ)
                       Text(
                         _nameController.text.isNotEmpty ? _nameController.text : 'Community Creator',
                         style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _emailController.text.isNotEmpty ? _emailController.text : 'No Email',
+                        _emailController.text.isNotEmpty 
+                            ? ('•' * (_emailController.text.length > 10 ? 10 : _emailController.text.length)) 
+                            : 'No Email',
                         style: const TextStyle(color: Colors.white54, fontSize: 14),
                       ),
                       const SizedBox(height: 6),
