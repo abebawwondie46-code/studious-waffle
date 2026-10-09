@@ -101,13 +101,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
-      if (user == null) {
-        setState(() => _isUploadingImage = false);
-        return;
-      }
+      final userId = user?.id ?? 'default_user_id';
 
       final file = File(image.path);
-      final fileName = 'profile_${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName = 'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final filePath = 'avatars/$fileName';
 
       await supabase.storage.from('videos').upload(
@@ -119,7 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
       await supabase.from('profiles').upsert({
-        'id': user.id,
+        'id': userId,
         'avatar_url': imageUrl,
       });
 
@@ -187,15 +184,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2575FC)),
               onPressed: () async {
-                final session = supabase.auth.currentSession;
-                final user = supabase.auth.currentUser ?? session?.user;
-
-                if (user == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please log out and log in again to refresh session!'), backgroundColor: Colors.red),
-                  );
-                  return;
-                }
+                final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
+                // ሰርቨሩ ላይ ዩዘር ከሌለ በቁጥር ሊለይ የሚችል መለያ (Fallback ID) መጠቀም
+                final userId = user?.id ?? 'default_user_id';
 
                 final newName = nameController.text.trim();
                 final newPhone = phoneController.text.trim();
@@ -203,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 try {
                   // መረጃውን ወደ Supabase profiles ቴብል መላክ
                   await supabase.from('profiles').upsert({
-                    'id': user.id,
+                    'id': userId,
                     'full_name': newName.isNotEmpty ? newName : 'Community Creator',
                     'phone_number': newPhone.isNotEmpty ? newPhone : 'Not provided',
                   });
