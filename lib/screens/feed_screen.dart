@@ -25,45 +25,39 @@ class _FeedScreenState extends State<FeedScreen> {
     _fetchAdsWithProfiles();
   }
 
-  // ቪዲዮዎችን ከ profiles መረጃዎች (ስም እና ፎቶ) ጋር አብሮ ማምጣት
+  // ቪዲዮዎችን ከ profiles ቴብል ጋር በማገናኘት (Join) ስም እና ፎቶ አብሮ ማምጣት
   Future<void> _fetchAdsWithProfiles() async {
     try {
-      final response = await supabase.from('videos').select();
-      
-      // ከ profiles ቴብል የኮሚኒቲውን/የተጠቃሚውን ስም እና ፎቶ ማምጣት
-      Map<String, dynamic> profileData = {};
-      try {
-        final profileRes = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .maybeSingle();
-        if (profileRes != null) {
-          profileData = profileRes;
-        }
-      } catch (_) {}
-
-      List<Map<String, dynamic>> enrichedAds = [];
-      for (var ad in List<Map<String, dynamic>>.from(response)) {
-        enrichedAds.add({
-          ...ad,
-          'user_name': profileData['full_name'] ?? 'Community Creator',
-          'user_avatar': profileData['avatar_url'] ?? '',
-        });
-      }
+      // ቪዲዮዎችን እና ከ profiles ቴብል full_name እና avatar_url አብሮ መጥራት
+      final response = await supabase.from('videos').select('''
+        *,
+        profiles:user_id (
+          full_name,
+          avatar_url
+        )
+      ''');
 
       setState(() {
-        _ads = enrichedAds;
+        _ads = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      debugPrint('Failed to load videos: $e');
+      // ጆይን ከሌለ በስተቀር መደበኛውን ቪዲዮ ብቻ ለማምጣት
+      try {
+        final fallbackResponse = await supabase.from('videos').select();
+        setState(() {
+          _ads = List<Map<String, dynamic>>.from(fallbackResponse);
+          _isLoading = false;
+        });
+      } catch (err) {
+        setState(() {
+          _isLoading = false;
+        });
+        debugPrint('Failed to load videos: $err');
+      }
     }
   }
 
-  // መፈለጊያ (Search)
   Future<void> _performSearch(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
@@ -83,20 +77,8 @@ class _FeedScreenState extends State<FeedScreen> {
           .select()
           .ilike('caption', '%${query.trim()}%');
 
-      List<Map<String, dynamic>> userResults = [];
-      try {
-        final profileQuery = await supabase
-            .from('profiles')
-            .select()
-            .ilike('full_name', '%${query.trim()}%');
-        userResults = List<Map<String, dynamic>>.from(profileQuery);
-      } catch (_) {}
-
       setState(() {
-        _searchResults = [
-          ...List<Map<String, dynamic>>.from(videoResults),
-          ...userResults,
-        ];
+        _searchResults = List<Map<String, dynamic>>.from(videoResults);
         _isLoadingSearch = false;
       });
     } catch (e) {
@@ -210,14 +192,20 @@ class _FeedScreenState extends State<FeedScreen> {
                   itemCount: displayList.length,
                   itemBuilder: (context, index) {
                     final ad = displayList[index];
+                    
+                    // ከ profiles ቴብል የመጣውን ፎቶ እና ስም ማውጣት
+                    final profileMap = ad['profiles'] is Map ? ad['profiles'] : {};
+                    final userAvatar = profileMap['avatar_url'] ?? '';
+                    final userName = profileMap['full_name'] ?? '';
+
                     return AdVideoItem(
                       key: ValueKey(ad['id'] ?? index),
-                      caption: ad['caption'] ?? '', // ካፕሽኑ ከታች በግራ በኩል ብቻ እንዲታይ
+                      caption: ad['caption'] ?? '',
                       videoUrl: ad['video_url'] ?? '',
                       templateJson: ad['template_json'] ?? {},
                       videoId: ad['id']?.toString(),
-                      // የፕሮፋይል ፎቶውን እና ስሙን ወደ ክብ አዶው እናስተላልፋለን
-                      // (AdVideoItem ዊጅትዎ userAvatar እና userName መቀበል እንዲችል የተስተካከለ መሆን አለበት)
+                      userAvatar: userAvatar,
+                      userName: userName,
                     );
                   },
                 ),
