@@ -10,6 +10,8 @@ class AdVideoItem extends StatefulWidget {
   final Map<String, dynamic> templateJson;
   final String? videoId;
   final VoidCallback? onVideoDeleted;
+  final String? userAvatar; // የፕሮፋይል ፎቶ ሊንክ
+  final String? userName;   // የተጠቃሚው ስም (ለምሳሌ አበበ በቀለ)
 
   const AdVideoItem({
     super.key,
@@ -18,6 +20,8 @@ class AdVideoItem extends StatefulWidget {
     required this.templateJson,
     this.videoId,
     this.onVideoDeleted,
+    this.userAvatar,
+    this.userName,
   });
 
   @override
@@ -291,6 +295,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
           
+          // የቪዲዮው ካፕሽን (Caption) ከታች በግራ በኩል
           Positioned(
             left: 0,
             right: 0,
@@ -312,12 +317,24 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // የተጠቃሚው ስም ከካፕሽኑ በላይ ወይም ጋር እንዲታይ ከፈለጉ
+                  if (widget.userName != null && widget.userName!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6.0),
+                      child: Text(
+                        widget.userName!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   Text(
                     widget.caption,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -325,12 +342,14 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
+          // የቀኝ በኩል አዝራሮች (ፕሮፋይል ፎቶ ከ (+) ምልክት ጋር፣ ላይክ፣ ኮሜንት፣ ሼር)
           Positioned(
             right: 12,
             bottom: 80,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // የፕሮፋይል ፎቶ ከ (+) አዶ ጋር (ከ Supabase profiles የሚመጣ)
                 GestureDetector(
                   onTap: () {
                     setState(() {
@@ -346,10 +365,15 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 1.5),
                         ),
-                        child: const CircleAvatar(
+                        child: CircleAvatar(
                           radius: 22,
                           backgroundColor: Colors.grey,
-                          child: Icon(Icons.person, color: Colors.white, size: 26),
+                          backgroundImage: (widget.userAvatar != null && widget.userAvatar!.isNotEmpty)
+                              ? NetworkImage(widget.userAvatar!)
+                              : null,
+                          child: (widget.userAvatar == null || widget.userAvatar!.isEmpty)
+                              ? const Icon(Icons.person, color: Colors.white, size: 26)
+                              : null,
                         ),
                       ),
                       Positioned(
