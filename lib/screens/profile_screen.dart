@@ -172,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // መረጃዎችን ማረጋገጥ እና ሴቭ ማድረግ
+  // መረጃዎችን ማረጋገጥ እና ሴቭ ማድረግ (የእርሳስ አዶው ሲነካ የሚሰራ)
   Future<void> _saveProfileChanges() async {
     final newName = _nameController.text.trim();
     final newEmail = _emailController.text.trim();
@@ -268,6 +268,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFF0A0A0C),
         elevation: 0,
         centerTitle: true,
+        // ከግራ በኩል እርሳስ አዶ፣ ከቀኝ በኩል ሴቲንግ አዶ
+        leading: IconButton(
+          icon: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                )
+              : const Icon(Icons.edit_rounded, color: Colors.white70),
+          onPressed: _isSaving ? null : _saveProfileChanges,
+          tooltip: 'Save Profile Changes',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_rounded, color: Colors.white70),
@@ -406,30 +418,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             
-            const SizedBox(height: 24),
-
-            // Save Changes አዝራር
-            ElevatedButton(
-              onPressed: _isSaving ? null : _saveProfileChanges,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2575FC),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Text(
-                      'Save Changes',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 40),
             
             // Log Out አዝራር
             Container(
