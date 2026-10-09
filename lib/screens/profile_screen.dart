@@ -15,15 +15,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   User? _currentUser;
   bool _isLoading = true;
   bool _isUploadingImage = false;
+  bool _isSaving = false;
   
   int _postsCount = 0;
   int _likesCount = 0;
   int _followersCount = 0;
   
-  String _userName = 'Community Creator';
-  String _phoneNumber = 'Not provided';
+  // ለጽሁፍ መቀበያ መቆጣጠሪያዎች (Controllers)
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  
   String? _profileImageUrl;
-
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -51,13 +54,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .maybeSingle();
 
         if (profileData != null) {
-          setState(() {
-            _userName = profileData['full_name'] ?? 'Community Creator';
-            _phoneNumber = profileData['phone_number'] ?? 'Not provided';
-            _profileImageUrl = profileData['avatar_url'];
-          });
+          _nameController.text = profileData['full_name'] ?? '';
+          _phoneController.text = profileData['phone_number'] ?? '';
+          _profileImageUrl = profileData['avatar_url'];
         }
       } catch (_) {}
+
+      // የኢሜይል መረጃን ከክረንት ዩዘር መሙላት
+      if (user != null && user.email != null) {
+        _emailController.text = user.email!;
+      } else {
+        _emailController.text = 'No Email';
+      }
 
       // 3. Likes ቆጠራ
       int likesLen = 0;
@@ -110,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
       await supabase.from('profiles').upsert({
-        'id': 1, // ለአሁን በ int8 ቴብል መሰረት ቋሚ ቁጥር መጠቀም
+        'id': 1,
         'avatar_url': imageUrl,
       });
 
@@ -134,84 +142,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ስም እና ስልክ ቁጥር ማስተካከያ ፖፕአፕ (Edit Profile Dialog)
-  void _showEditProfileDialog() {
-    final TextEditingController nameController = TextEditingController(text: _userName == 'Community Creator' ? '' : _userName);
-    final TextEditingController phoneController = TextEditingController(text: _phoneNumber == 'Not provided' ? '' : _phoneNumber);
+  // መረጃዎችን በቀጥታ ሴቭ ማድረግ
+  Future<void> _saveProfileChanges() async {
+    setState(() {
+      _isSaving = true;
+    });
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1F1F23),
-          title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  labelStyle: TextStyle(color: Colors.white54),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneController,
-                style: const TextStyle(color: Colors.white),
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  labelStyle: TextStyle(color: Colors.white54),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2575FC)),
-              onPressed: () async {
-                final newName = nameController.text.trim();
-                final newPhone = phoneController.text.trim();
+    try {
+      final newName = _nameController.text.trim();
+      final newPhone = _phoneController.text.trim();
 
-                try {
-                  // መረጃውን ወደ Supabase profiles ቴብል መላክ (id: 1 በመጠቀም)
-                  await supabase.from('profiles').upsert({
-                    'id': 1,
-                    'full_name': newName.isNotEmpty ? newName : 'Community Creator',
-                    'phone_number': newPhone.isNotEmpty ? newPhone : 'Not provided',
-                  });
+      await supabase.from('profiles').upsert({
+        'id': 1,
+        'full_name': newName.isNotEmpty ? newName : 'Community Creator',
+        'phone_number': newPhone.isNotEmpty ? newPhone : 'Not provided',
+      });
 
-                  setState(() {
-                    _userName = newName.isNotEmpty ? newName : 'Community Creator';
-                    _phoneNumber = newPhone.isNotEmpty ? newPhone : 'Not provided';
-                  });
+      setState(() {
+        _isSaving = false;
+      });
 
-                  if (!mounted) return;
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
-                  );
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to update: $e'), backgroundColor: Colors.red),
-                  );
-                }
-              },
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   Future<void> _signOut() async {
@@ -244,20 +207,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         centerTitle: true,
         actions: [
+          // የሴቲንግ አዶ (Settings Icon) ከተጠየቀበት ቦታ ላይ
           IconButton(
-            icon: const Icon(Icons.edit_rounded, color: Colors.white70),
-            onPressed: _showEditProfileDialog,
-            tooltip: 'Edit Profile',
+            icon: const Icon(Icons.settings_rounded, color: Colors.white70),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Settings opened!'), backgroundColor: Colors.indigo),
+              );
+            },
+            tooltip: 'Settings',
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             const SizedBox(height: 10),
             
-            // የፕሮፋይል ፎቶ መቀየሪያ (ከካሜራ አዶ ጋር)
+            // የፕሮፋይል ፎቶ መቀየሪያ
             Stack(
               children: [
                 CircleAvatar(
@@ -293,40 +261,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 24),
             
-            // የተጠቃሚው ስም
-            Text(
-              _userName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            // የተጠቃሚው ስም (TextField - በቀጥታ የሚፃፍበት)
+            TextField(
+              controller: _nameController,
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                labelText: 'Full Name',
+                labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                filled: true,
+                fillColor: const Color(0xFF16161A),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 14),
 
-            // የተጠቃሚው ኢሜይል
-            Text(
-              _currentUser?.email ?? 'No Email',
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
+            // የተጠቃሚው ኢሜይል (TextField)
+            TextField(
+              controller: _emailController,
+              readOnly: true, // ኢሜይል በራሱ እንዲነበብ ብቻ
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                labelText: 'Email Address',
+                labelStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                filled: true,
+                fillColor: const Color(0xFF16161A),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 14),
 
-            // የተጠቃሚው ስልክ ቁጥር
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.phone, color: Colors.white54, size: 14),
-                const SizedBox(width: 6),
-                Text(
-                  _phoneNumber,
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
-                ),
-              ],
+            // የተጠቃሚው ስልክ ቁጥር (TextField)
+            TextField(
+              controller: _phoneController,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              keyboardType: TextInputType.phone,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                labelText: 'Phone Number',
+                labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                filled: true,
+                fillColor: const Color(0xFF16161A),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             
             // ስታቲስቲክስ (Posts, Likes, Followers)
             Container(
@@ -346,7 +332,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             
-            const Spacer(),
+            const SizedBox(height: 24),
+
+            // Save Changes አዝራር
+            ElevatedButton(
+              onPressed: _isSaving ? null : _saveProfileChanges,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2575FC),
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text(
+                      'Save Changes',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+            ),
+            const SizedBox(height: 12),
             
             // Log Out አዝራር
             Container(
