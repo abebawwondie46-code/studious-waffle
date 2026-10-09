@@ -259,7 +259,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 10),
             
-            // የፕሮፋይል ፎቶ መቀየሪያ (ካሜራ ወይም ጋለሪ ምርጫ ያለው)
+            // የፕሮፋይል ፎቶ መቀየሪያ
             Stack(
               children: [
                 CircleAvatar(
@@ -313,15 +313,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
 
-            // የተጠቃሚው ኢሜይል (TextField - ReadOnly ከግራ ጀምሮ)
+            // የተጠቃሚው ኢሜይል (TextField - ReadOnly ተወግዶ እንዲጻፍ / እንዲስተካከል ተደርጓል)
             TextField(
               controller: _emailController,
-              readOnly: true,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              readOnly: false,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
               textAlign: TextAlign.start,
+              keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'Email Address',
-                labelStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                 filled: true,
                 fillColor: const Color(0xFF16161A),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
