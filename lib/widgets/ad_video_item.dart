@@ -11,7 +11,7 @@ class AdVideoItem extends StatefulWidget {
   final String? videoId;
   final VoidCallback? onVideoDeleted;
   final String? userAvatar; // የፕሮፋይል ፎቶ ሊንክ
-  final String? userName;   // የተጠቃሚው ስም (ለምሳሌ አበበ በቀለ)
+  final String? userName;   // የተጠቃሚው ስም
 
   const AdVideoItem({
     super.key,
@@ -72,6 +72,31 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       }
     } catch (e) {
       debugPrint('Error fetching engagement data: $e');
+    }
+  }
+
+  // (+) ሲነካ ወደ ራይት (Check) የሚቀየርበት እና በዳታቤዝ followers ቴብል የሚመዘገብበት ሎጂክ
+  Future<void> _handleFollowPressed() async {
+    setState(() {
+      _isFollowing = !_isFollowing;
+    });
+
+    try {
+      final supabase = Supabase.instance.client;
+      if (_isFollowing) {
+        // ፎሎ ሲደረግ ወደ followers ቴብል መመዝገብ
+        await supabase.from('followers').insert({
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      } else {
+        // ፎሎው ሲነሳ ከ ቴብል መሰረዝ
+        final response = await supabase.from('followers').select('id').limit(1);
+        if (response.isNotEmpty) {
+          await supabase.from('followers').delete().eq('id', response[0]['id']);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error updating follow status: $e');
     }
   }
 
@@ -317,19 +342,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // የተጠቃሚው ስም ከካፕሽኑ በላይ ወይም ጋር እንዲታይ ከፈለጉ
-                  if (widget.userName != null && widget.userName!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6.0),
-                      child: Text(
-                        widget.userName!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
                   Text(
                     widget.caption,
                     style: const TextStyle(
@@ -342,20 +354,16 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች (ፕሮፋይል ፎቶ ከ (+) ምልክት ጋር፣ ላይክ፣ ኮሜንት፣ ሼር)
+          // የቀኝ በኩል አዝራሮች (ፕሮፋይል ፎቶ ከ (+) / ራይት ምልክት ጋር)
           Positioned(
             right: 12,
             bottom: 80,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // የፕሮፋይል ፎቶ ከ (+) አዶ ጋር (ከ Supabase profiles የሚመጣ)
+                // የፕሮፋይል ፎቶ ከ (+) አዶ ጋር (ሲነካ ወደ ራይት ይቀየራል)
                 GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isFollowing = !_isFollowing;
-                    });
-                  },
+                  onTap: _handleFollowPressed,
                   child: Stack(
                     alignment: Alignment.bottomCenter,
                     children: [
