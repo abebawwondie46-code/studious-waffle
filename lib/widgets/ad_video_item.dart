@@ -361,7 +361,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // የፕሮፋይል ፎቶ ከ (+) አዶ ጋር (ሲነካ ወደ ራይት ይቀየራል)
+                // የፕሮፋይል ፎቶ ከ (+) አዶ ጋር (ሲነካ ወደ ራይት ይቀየራል እና ዳታቤዝ ላይ ይመዘገባል)
                 GestureDetector(
                   onTap: _handleFollowPressed,
                   child: Stack(
