@@ -297,7 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
             
-            // የተጠቃሚው ስም (TextField - ከግራ በኩል ጀምሮ የሚፃፍ)
+            // የተጠቃሚው ስም (TextField - ከግራ ጀምሮ የሚፃፍ)
             TextField(
               controller: _nameController,
               style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
@@ -313,16 +313,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
 
-            // የተጠቃሚው ኢሜይል (TextField - ReadOnly ተወግዶ እንዲጻፍ / እንዲስተካከል ተደርጓል)
+            // የተጠቃሚው ኢሜይል (Secure/Obscured & ReadOnly - እንዲደበቅ እና ደህንነቱ የተጠበቀ እንዲሆን)
             TextField(
               controller: _emailController,
-              readOnly: false,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              readOnly: true,
+              obscureText: true, // ኢሜይሉ በነጥቦች/በኮከብ እንዲሸፈን
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
               textAlign: TextAlign.start,
-              keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
-                labelText: 'Email Address',
-                labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                labelText: 'Email Address (Secure)',
+                labelStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                 filled: true,
                 fillColor: const Color(0xFF16161A),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
