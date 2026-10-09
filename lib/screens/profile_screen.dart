@@ -178,28 +178,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final newEmail = _emailController.text.trim();
     final newPhone = _phoneController.text.trim();
 
-    // 1. መረጃዎቹ ሙሉ በሙሉ መሞላታቸውን ማረጋገጥ (ስም ከነአባት, ኢሜይል, ስልክ, እና ፎቶ)
+    // የኢሜይል ፎርማት ማረጋገጫ (Regex Validation)
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+    // 1. መረጃዎቹ ሙሉ በሙሉ መሞላታቸውን እና ትክክለኛ መሆናቸውን ማረጋገጥ
     if (newName.isEmpty || !newName.contains(' ')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎ ሙሉ ስም ከነአባትዎ ያስገቡ!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please enter your full name (including last name)!'), backgroundColor: Colors.red),
       );
       return;
     }
-    if (newEmail.isEmpty) {
+    if (newEmail.isEmpty || !emailRegex.hasMatch(newEmail)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎ ኢሜይል አድራሻዎን ያስገቡ!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please enter a valid email address!'), backgroundColor: Colors.red),
       );
       return;
     }
     if (newPhone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎ ስልክ ቁጥርዎን ያስገቡ!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please enter your phone number!'), backgroundColor: Colors.red),
       );
       return;
     }
     if (_profileImageUrl == null || _profileImageUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎ የፕሮፋይል ፎቶ ይምረጡ!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please select a profile picture!'), backgroundColor: Colors.red),
       );
       return;
     }
