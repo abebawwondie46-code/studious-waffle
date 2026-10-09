@@ -44,23 +44,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } catch (_) {}
 
       // 2. ከ profiles ቴብል የተጠቃሚውን ስም፣ ስልክ እና ፎቶ ማምጣት
-      if (user != null) {
-        try {
-          final profileData = await supabase
-              .from('profiles')
-              .select('full_name, phone_number, avatar_url')
-              .eq('id', user.id)
-              .maybeSingle();
+      try {
+        final profileData = await supabase
+            .from('profiles')
+            .select('full_name, phone_number, avatar_url')
+            .maybeSingle();
 
-          if (profileData != null) {
-            setState(() {
-              _userName = profileData['full_name'] ?? 'Community Creator';
-              _phoneNumber = profileData['phone_number'] ?? 'Not provided';
-              _profileImageUrl = profileData['avatar_url'];
-            });
-          }
-        } catch (_) {}
-      }
+        if (profileData != null) {
+          setState(() {
+            _userName = profileData['full_name'] ?? 'Community Creator';
+            _phoneNumber = profileData['phone_number'] ?? 'Not provided';
+            _profileImageUrl = profileData['avatar_url'];
+          });
+        }
+      } catch (_) {}
 
       // 3. Likes ቆጠራ
       int likesLen = 0;
@@ -100,11 +97,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
-      final userId = user?.id ?? 'default_user_id';
-
       final file = File(image.path);
-      final fileName = 'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final filePath = 'avatars/$fileName';
 
       await supabase.storage.from('videos').upload(
@@ -116,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
       await supabase.from('profiles').upsert({
-        'id': userId,
+        'id': 1, // ለአሁን በ int8 ቴብል መሰረት ቋሚ ቁጥር መጠቀም
         'avatar_url': imageUrl,
       });
 
@@ -184,17 +178,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2575FC)),
               onPressed: () async {
-                final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
-                // ሰርቨሩ ላይ ዩዘር ከሌለ በቁጥር ሊለይ የሚችል መለያ (Fallback ID) መጠቀም
-                final userId = user?.id ?? 'default_user_id';
-
                 final newName = nameController.text.trim();
                 final newPhone = phoneController.text.trim();
 
                 try {
-                  // መረጃውን ወደ Supabase profiles ቴብል መላክ
+                  // መረጃውን ወደ Supabase profiles ቴብል መላክ (id: 1 በመጠቀም)
                   await supabase.from('profiles').upsert({
-                    'id': userId,
+                    'id': 1,
                     'full_name': newName.isNotEmpty ? newName : 'Community Creator',
                     'phone_number': newPhone.isNotEmpty ? newPhone : 'Not provided',
                   });
