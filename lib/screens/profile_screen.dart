@@ -16,7 +16,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isUploadingImage = false;
   bool _isSaving = false;
-  bool _obscureEmail = true; // ኢሜይሉን ለመደበቅ ወይም ለማሳየት የሚያገለግል ተለዋዋጭ
+  bool _obscureEmail = true;
   
   int _postsCount = 0;
   int _likesCount = 0;
@@ -47,7 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         postsLen = (postsResponse as List).length;
       } catch (_) {}
 
-      // 2. ከ profiles ቴብል የተጠቃሚውን ስም፣ ስልክ እና ኢሜይል ማምጣት
+      // 2. ከ profiles ቴብል የተጠቃሚውን መረጃዎች ማምጣት
       try {
         final profileData = await supabase
             .from('profiles')
@@ -172,22 +172,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // መረጃዎችን (ስም፣ ኢሜይል፣ ስልክ) በቀጥታ ሴቭ ማድረግ
+  // መረጃዎችን ማረጋገጥ እና ሴቭ ማድረግ
   Future<void> _saveProfileChanges() async {
+    final newName = _nameController.text.trim();
+    final newEmail = _emailController.text.trim();
+    final newPhone = _phoneController.text.trim();
+
+    // 1. መረጃዎቹ ሙሉ በሙሉ መሞላታቸውን ማረጋገጥ (ስም ከነአባት, ኢሜይል, ስልክ, እና ፎቶ)
+    if (newName.isEmpty || !newName.contains(' ')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎ ሙሉ ስም ከነአባትዎ ያስገቡ!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    if (newEmail.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎ ኢሜይል አድራሻዎን ያስገቡ!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    if (newPhone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎ ስልክ ቁጥርዎን ያስገቡ!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    if (_profileImageUrl == null || _profileImageUrl!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('እባክዎ የፕሮፋይል ፎቶ ይምረጡ!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     setState(() {
       _isSaving = true;
     });
 
     try {
-      final newName = _nameController.text.trim();
-      final newEmail = _emailController.text.trim();
-      final newPhone = _phoneController.text.trim();
-
       await supabase.from('profiles').upsert({
         'id': 1,
-        'full_name': newName.isNotEmpty ? newName : 'Community Creator',
-        'email': newEmail.isNotEmpty ? newEmail : '',
-        'phone_number': newPhone.isNotEmpty ? newPhone : 'Not provided',
+        'full_name': newName,
+        'email': newEmail,
+        'phone_number': newPhone,
+        'avatar_url': _profileImageUrl,
       });
 
       setState(() {
@@ -300,7 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               textAlign: TextAlign.start,
               decoration: InputDecoration(
-                labelText: 'Full Name',
+                labelText: 'Full Name (ስም ከነአባት)',
                 labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                 filled: true,
                 fillColor: const Color(0xFF16161A),
@@ -310,11 +337,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
 
-            // የተጠቃሚው ኢሜይል (TextField - ከእይታ መቆጣጠሪያ አይን ምልክት ጋር)
+            // የተጠቃሚው ኢሜይል (TextField)
             TextField(
               controller: _emailController,
               readOnly: false,
-              obscureText: _obscureEmail, // በጠየቁት መሰረት በአይን ምልክት የሚቆጣጠር
+              obscureText: _obscureEmail,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               textAlign: TextAlign.start,
               keyboardType: TextInputType.emailAddress,
