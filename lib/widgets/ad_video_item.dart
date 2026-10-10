@@ -41,11 +41,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _shareCount = 112;
   bool _isFollowing = false;
   int _followersCount = 0;
+  bool _isFollowButtonHidden = false; // አዝራሩ ሙሉ በሙሉ እንዲጠፋ የሚረዳ
 
   // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
   Timer? _visibilityTimer;
-  bool _isUserInteracting = false; // ተጠቃሚው እየተጠቀመባቸው መሆኑን ለመቆጣጠር
+  bool _isUserInteracting = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -59,10 +60,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     )..repeat();
     _initializeVideo();
     _fetchEngagementData();
-    _startBlinkingTimer(); // የ 5 ሰከንድ ታይመርን ማስጀመር
+    _startBlinkingTimer();
   }
 
-  // አዝራሮቹ በየ 5 ሰከንዱ ብቅ እያሉ የሚጠፉበት ታይመር ሎጂክ
   void _startBlinkingTimer() {
     _visibilityTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted && !_isUserInteracting) {
@@ -90,6 +90,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _shareCount = response['shares_count'] ?? _shareCount;
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = response['is_following'] ?? false;
+          
+          // ቀደም ሲል ፎሎ ተደርጎ ከሆነ አዝራሩን መደበቅ
+          if (_isFollowing) {
+            _isFollowButtonHidden = true;
+          }
         });
       }
     } catch (e) {
@@ -106,6 +111,17 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _isFollowing = newFollowState;
       _followersCount = newFollowersCount;
     });
+
+    // ራይት ከሆነ ከ 2 ሰከንድ በኋላ አዝራሩን ሙሉ በሙሉ መደበቅ
+    if (newFollowState) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _isFollowButtonHidden = true;
+          });
+        }
+      });
+    }
 
     try {
       final query = Supabase.instance.client.from('videos');
@@ -168,13 +184,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // ተጠቃሚው አዝራሮቹን ሲነካ እንዲታዩ ማድረግ እና ስራውን እስኪጨርስ እንዳይጠፉ ማቆየት
   void _keepButtonsVisibleTemporarily() {
     setState(() {
       _isUserInteracting = true;
       _buttonsVisible = true;
     });
-    // ከጥቂት ሰከንዶች በኋላ ታይመሩ እንደገና እንዲቀጥል ማድረግ
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
         setState(() {
@@ -182,6 +196,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         });
       }
     });
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}k';
+    }
+    return count.toString();
   }
 
   void _initializeVideo() {
@@ -210,7 +231,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
   @override
   void dispose() {
-    _visibilityTimer?.cancel(); // ታይመሩን ማቆም
+    _visibilityTimer?.cancel();
     _discController.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
@@ -220,7 +241,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   void _openComments() {
     _keepButtonsVisibleTemporarily();
     setState(() {
-      _isUserInteracting = true; // ኮሜንት ክፍት እያለ አዝራሮቹ እንዳይጠፉ
+      _isUserInteracting = true;
     });
 
     showModalBottomSheet(
@@ -241,7 +262,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     ).whenComplete(() {
       if (mounted) {
         setState(() {
-          _isUserInteracting = false; // ኮሜንቱ ሲዘጋ ታይመሩ መደበኛ ስራውን ይቀጥላል
+          _isUserInteracting = false;
         });
       }
     });
@@ -337,7 +358,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               ? GestureDetector(
                   onTap: () {
                     _togglePlayPause();
-                    _keepButtonsVisibleTemporarily(); // ስክሪኑ ሲነካ አዝራሮቹ ብቅ እንዲሉ
+                    _keepButtonsVisibleTemporarily();
                   },
                   onLongPress: _showVideoOptionsBottomSheet,
                   child: Stack(
@@ -411,7 +432,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች (በየ 5 ሰከንዱ ብቅ እያሉ የሚጠፉ እና ተጠቃሚው ሲነካቸው ጸንተው የሚቆዩ)
+          // የቀኝ በኩል አዝራሮች (በየ 5 ሰከንዱ ብቅ እያሉ የሚጠፉ እና ፎሎ ሲደረግ ከ 2 ሰከንድ በኋላ የሚደበቁ)
           Positioned(
             right: 12,
             bottom: 80,
@@ -421,104 +442,94 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  GestureDetector(
-                    onTap: _handleFollowPressed,
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.grey,
-                            backgroundImage: (widget.userAvatar != null && widget.userAvatar!.isNotEmpty)
-                                ? NetworkImage(widget.userAvatar!)
-                                : null,
-                            child: (widget.userAvatar == null || widget.userAvatar!.isEmpty)
-                                ? const Icon(Icons.person, color: Colors.white, size: 26)
-                                : null,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 4,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
+                  // ፎሎው አዝራር (በ Offstage የታሸገ በመሆኑ ፎሎ ሲደረግ ከ 2 ሰከንድ በኋላ ይጠፋል)
+                  Offstage(
+                    offstage: _isFollowButtonHidden,
+                    child: GestureDetector(
+                      onTap: _handleFollowPressed,
+                      child: Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
-                              color: _isFollowing ? Colors.green : Colors.redAccent,
                               shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1.5),
                             ),
-                            child: Icon(
-                              _isFollowing ? Icons.check : Icons.add,
-                              color: Colors.white,
-                              size: 14,
+                            child: CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Colors.grey,
+                              backgroundImage: (widget.userAvatar != null && widget.userAvatar!.isNotEmpty)
+                                  ? NetworkImage(widget.userAvatar!)
+                                  : null,
+                              child: (widget.userAvatar == null || widget.userAvatar!.isEmpty)
+                                  ? const Icon(Icons.person, color: Colors.white, size: 26)
+                                  : null,
                             ),
                           ),
-                        ),
-                      ],
+                          Positioned(
+                            bottom: 4,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: _isFollowing ? Colors.green : Colors.redAccent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _isFollowing ? Icons.check : Icons.add,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 8),
 
-                  Column(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          _isLiked ? Icons.favorite : Icons.favorite_border,
-                          color: _isLiked ? Colors.redAccent : Colors.white,
-                          size: 32,
-                        ),
-                        onPressed: _handleLikePressed,
-                      ),
-                      Text(
-                        '$_likeCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  // ላይክ አዝራር
+                  IconButton(
+                    icon: Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? Colors.redAccent : Colors.white,
+                      size: 32,
+                    ),
+                    onPressed: _handleLikePressed,
                   ),
-                  const SizedBox(height: 10),
+                  Text(
+                    _formatCount(_likeCount),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
 
-                  Column(
-                    children: [
-                      IconButton(
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.chat_bubble,
-                            color: Colors.black,
-                            size: 20,
-                          ),
-                        ),
-                        onPressed: _openComments,
-                      ),
-                      Text(
-                        '$_commentCount',
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ],
+                  // ኮሜንት አዝራር
+                  IconButton(
+                    icon: const Icon(
+                      Icons.mode_comment_outlined,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                    onPressed: _openComments,
                   ),
-                  
-                  Column(
-                    children: [
-                      IconButton(
-                        icon: Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.rotationY(3.14159),
-                          child: const Icon(Icons.reply, color: Colors.white, size: 30),
-                        ),
-                        onPressed: _handleSharePressed,
-                      ),
-                      Text(
-                        '$_shareCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  const Text(
+                    'ኮሜንት',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ሼር አዝራር
+                  IconButton(
+                    icon: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.rotationY(3.14159),
+                      child: const Icon(Icons.share, color: Colors.white, size: 30),
+                    ),
+                    onPressed: _handleSharePressed,
+                  ),
+                  Text(
+                    _formatCount(_shareCount),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 14),
 
