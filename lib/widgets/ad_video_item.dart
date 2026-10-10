@@ -91,7 +91,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = response['is_following'] ?? false;
           
-          // ⚠️ እዚህ ላይ የፕሮፋይሉ ክብ እንዳጠፋ _isBadgeHidden ን እዚህ ጋር አናደርገውም
+          // ⚠️ አፑ ዘግቶ ሲከፈት ፎሎ ተደርጎ ከነበረ የ (+) / ራይት ምልክቷ እንዳይታይ ማድረግ
+          if (_isFollowing) {
+            _isBadgeHidden = true;
+          }
         });
       }
     } catch (e) {
@@ -109,7 +112,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // ተጠቃሚው ፎሎ ሲለዉ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ የ (+) ወይም ራይቷ ምልክት ብቻ ትጠፋለች (ፕሮፋይሉ ግን ይታያል)
+    // ተጠቃሚው ፎሎ ሲለዉ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ የ (+) ወይም ራይቷ ምልክት ብቻ ትጠፋለች
     if (newFollowState) {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
@@ -445,7 +448,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     child: Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
-                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል፣ ፈጽሞ አይጠፋም)
+                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -463,7 +466,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // 2. የ (+) ወይም የራይት አዶ ብቻ (ፎሎ ሲደረግ ከ 2 ሰከንድ በኋላ የሚጠፋው ይህ ብቻ ነው)
+                        // 2. የ (+) ወይም የራይት አዶ ብቻ
                         if (!_isBadgeHidden)
                           Positioned(
                             bottom: 4,
