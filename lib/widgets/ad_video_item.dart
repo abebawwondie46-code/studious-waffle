@@ -124,6 +124,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           setState(() {
             _hidePlusSignPermanently = true;
           });
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
         }
       });
     }
