@@ -23,7 +23,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _likesCount = 0;
   int _followersCount = 0;
   
-  // ለጽሁፍ መቀበያ መቆጣጠሪያዎች (Controllers)
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -41,10 +40,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
       
-      // 1. የ ፖስቶች ብዛት ማምጣት
+      // 1. የ ፖስቶች ብዛት ከ videos ቴብል ማምጣት
       int postsLen = 0;
       try {
-        final postsResponse = await supabase.from('posts').select('id');
+        final postsResponse = await supabase.from('videos').select('id');
         postsLen = (postsResponse as List).length;
       } catch (_) {}
 
@@ -63,25 +62,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 3. Likes ቆጠራ
-      int likesLen = 0;
+      // 3. የሁሉም ቪዲዮዎች የላይክ (likes_count) ድምርን ከ videos ቴብል ማስላት
+      int totalLikes = 0;
       try {
-        final likesResponse = await supabase.from('likes').select('id');
-        likesLen = (likesResponse as List).length;
+        final videosResponse = await supabase.from('videos').select('likes_count');
+        for (var video in (videosResponse as List)) {
+          totalLikes += (video['likes_count'] as num?)?.toInt() ?? 0;
+        }
       } catch (_) {}
 
-      // 4. Followers ቆጠራ
-      int followersLen = 0;
+      // 4. የሁሉም ቪዲዮዎች የፎሎወር (followers_count) ድምርን ወይም ትክክለኛውን ሁኔታ ከ videos ቴብል ማምጣት
+      int totalFollowers = 0;
       try {
-        final followersResponse = await supabase.from('followers').select('id');
-        followersLen = (followersResponse as List).length;
+        final videosResponse = await supabase.from('videos').select('followers_count, is_following');
+        for (var video in (videosResponse as List)) {
+          final count = (video['followers_count'] as num?)?.toInt() ?? 0;
+          if (count > totalFollowers) {
+            totalFollowers = count;
+          }
+        }
       } catch (_) {}
 
       setState(() {
         _currentUser = user;
         _postsCount = postsLen;
-        _likesCount = likesLen;
-        _followersCount = followersLen;
+        _likesCount = totalLikes;
+        _followersCount = totalFollowers;
         _isLoading = false;
       });
     } catch (e) {
@@ -91,7 +97,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ከጋለሪ ወይም ከካሜራ ፎቶ መምረጫ / ማንሻ ሜኑ
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
@@ -126,7 +131,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ፎቶን መርጦ ወይም አንስቶ ወደ Supabase Storage መጫን
   Future<void> _pickAndUploadProfileImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
     if (image == null) return;
@@ -148,7 +152,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
-      // ፎቶውን በቀጥታ በ profiles ቴብል እናዘምነዋለን (ለዋናው ገጽ እንዲሰራ)
       await supabase.from('profiles').upsert({
         'id': 1,
         'avatar_url': imageUrl,
@@ -174,7 +177,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // መረጃዎችን ማረጋገጥ እና ሴቭ ማድረግ
   Future<void> _saveProfileChanges() async {
     final newName = _nameController.text.trim();
     final newEmail = _emailController.text.trim();
@@ -183,28 +185,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     final phoneRegex = RegExp(r'^\+?[\d\s\-\(\)]{7,15}$');
 
-    // 1. የሙሉ ስም ማረጋገጫ
     if (newName.isEmpty || !newName.contains(' ')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your full name (including last name)!'), backgroundColor: Colors.red),
       );
       return;
     }
-    // 2. የኢሜይል ማረጋገጫ
     if (newEmail.isEmpty || !emailRegex.hasMatch(newEmail)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fix your email address!'), backgroundColor: Colors.red),
       );
       return;
     }
-    // 3. የስልክ ቁጥር ማረጋገጫ
     if (newPhone.isEmpty || !phoneRegex.hasMatch(newPhone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fix your phone number!'), backgroundColor: Colors.red),
       );
       return;
     }
-    // 4. የፕሮፋይል ፎቶ ማረጋገጫ
     if (_profileImageUrl == null || _profileImageUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a profile picture!'), backgroundColor: Colors.red),
@@ -217,7 +215,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      // መረጃዎችን ወደ Supabase profiles ቴብል መላክ (በዋናው ገጽ እንዲነበብ)
       await supabase.from('profiles').upsert({
         'id': 1,
         'full_name': newName,
@@ -314,7 +311,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 10),
             
-            // የፕሮፋይል ፎቶ መቀየሪያ
             Stack(
               children: [
                 CircleAvatar(
