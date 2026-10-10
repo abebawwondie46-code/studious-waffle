@@ -42,13 +42,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   bool _isFollowing = false;
   int _followersCount = 0;
 
-  // 🛑 የ (+) ወይም የራይት አዶውን እስከመጨረሻው ለመደብቅ የሚረዳ ቬርያብል
+  // 🛑 ፕላሷን በቋሚነት ለመቆጣጠር (ከጅምሩ true እንዲሆን ማድረግ ይቻላል ወይም በድብቅ)
   bool _hidePlusSignPermanently = false;
 
   // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
   Timer? _visibilityTimer;
-  bool _isUserInteracting = false; // ተጠቃሚው እየተጠቀመባቸው መሆኑን ለመቆጣጠር
+  bool _isUserInteracting = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -62,10 +62,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     )..repeat();
     _initializeVideo();
     _fetchEngagementData();
-    _startBlinkingTimer(); // የ 5 ሰከንድ ታይመርን ማስጀመር
+    _startBlinkingTimer();
   }
 
-  // አዝራሮቹ በየ 5 ሰከንዱ ብቅ እያሉ የሚጠፉበት ታይመር ሎጂክ
   void _startBlinkingTimer() {
     _visibilityTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted && !_isUserInteracting) {
@@ -96,7 +95,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = serverIsFollowing;
 
-          // 🛑 አፑ ሲከፈት ሰርቨር ላይ ፎሎ ተደርጎ ከነበረ ፕላሷ ፈጽሞ እንዳይታይ ይደረጋል
+          // 🛑 ሰርቨር ላይ ፎሎ የተደረገ ከሆነ አዶው ከጅምሩ እንዲጠፋ ማድረግ
           if (serverIsFollowing) {
             _hidePlusSignPermanently = true;
           }
@@ -117,15 +116,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // 🛑 ፎሎ ሲደረግ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ የ (+) ወይም የራይት አዶው በቋሚነት ይጠፋል
+    // 🛑 ፎሎ ሲደረግ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ ፕላሷ በቋሚነት ትጠፋለች
     if (newFollowState) {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
             _hidePlusSignPermanently = true;
           });
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
         }
       });
     }
@@ -191,13 +188,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // ተጠቃሚው አዝራሮቹን ሲነካ እንዲታዩ ማድረግ እና ስራውን እስኪጨርስ እንዳይጠፉ ማቆየት
   void _keepButtonsVisibleTemporarily() {
     setState(() {
       _isUserInteracting = true;
       _buttonsVisible = true;
     });
-    // ከጥቂት ሰከንዶች በኋላ ታይመሩ እንደገና እንዲቀጥል ማድረግ
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
         setState(() {
@@ -233,7 +228,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
   @override
   void dispose() {
-    _visibilityTimer?.cancel(); // ታይመሩን ማቆም
+    _visibilityTimer?.cancel();
     _discController.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
@@ -243,7 +238,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   void _openComments() {
     _keepButtonsVisibleTemporarily();
     setState(() {
-      _isUserInteracting = true; // ኮሜንት ክፍት እያለ አዝራሮቹ እንዳይጠፉ
+      _isUserInteracting = true;
     });
 
     showModalBottomSheet(
@@ -264,7 +259,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     ).whenComplete(() {
       if (mounted) {
         setState(() {
-          _isUserInteracting = false; // ኮሜንቱ ሲዘጋ ታይመሩ መደበኛ ስራውን ይቀጥላል
+          _isUserInteracting = false;
         });
       }
     });
@@ -360,7 +355,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               ? GestureDetector(
                   onTap: () {
                     _togglePlayPause();
-                    _keepButtonsVisibleTemporarily(); // ስክሪኑ ሲነካ አዝራሮቹ ብቅ እንዲሉ
+                    _keepButtonsVisibleTemporarily();
                   },
                   onLongPress: _showVideoOptionsBottomSheet,
                   child: Stack(
@@ -434,7 +429,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች (በየ 5 ሰከንዱ ብቅ እያሉ የሚጠፉ እና ተጠቃሚው ሲነካቸው ጸንተው የሚቆዩ)
+          // የቀኝ በኩል አዝራሮች
           Positioned(
             right: 12,
             bottom: 80,
@@ -467,7 +462,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // ፕላሷ ወይም ራይቷ (_hidePlusSignPermanently 'true' ከሆነ እስከመጨረሻው ትጠፋለች)
+                        // ፕላሷ ወይም ራይቷ (_hidePlusSignPermanently 'true' ከሆነ በጭራሽ አትታይም)
                         if (!_hidePlusSignPermanently)
                           Positioned(
                             bottom: 4,
