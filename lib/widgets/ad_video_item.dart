@@ -43,6 +43,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   bool _isFollowing = false;
   int _followersCount = 0;
   
+  // እያንዳንዱ ቪዲዮ የራሱ የሆነ የ (+) ምልክት መደበቂያ ቬርያብል እንዲኖረው ማድረግ
   bool _hidePlusSignPermanently = false;
 
   bool _buttonsVisible = true;
@@ -60,22 +61,37 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       vsync: this,
     )..repeat();
     _initializeVideo();
-    _checkLocalFollowStatus(); 
-    _fetchEngagementData();
+    _loadVideoSpecificData();
     _startBlinkingTimer();
   }
 
-  Future<void> _checkLocalFollowStatus() async {
+  @override
+  void didUpdateWidget(covariant AdVideoItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoId != widget.videoId || oldWidget.videoUrl != widget.videoUrl) {
+      _loadVideoSpecificData();
+    }
+  }
+
+  // የዚህን ቪዲዮ ብቻ ሎካል እና ሰርቨር መረጃዎች ለይቶ ማንበብ
+  Future<void> _loadVideoSpecificData() async {
+    setState(() {
+      _isFollowing = false;
+      _hidePlusSignPermanently = false;
+    });
+
     final prefs = await SharedPreferences.getInstance();
-    final key = 'followed_${widget.videoId ?? widget.videoUrl}';
-    final isLocallyFollowed = prefs.getBool(key) ?? false;
+    final uniqueKey = 'followed_${widget.videoId ?? widget.videoUrl}';
+    final isLocallyFollowed = prefs.getBool(uniqueKey) ?? false;
 
     if (isLocallyFollowed && mounted) {
       setState(() {
         _isFollowing = true;
-        _hidePlusSignPermanently = true; 
+        _hidePlusSignPermanently = true;
       });
     }
+
+    await _fetchEngagementData();
   }
 
   void _startBlinkingTimer() {
@@ -115,7 +131,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
         if (serverIsFollowing) {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
+          final uniqueKey = 'followed_${widget.videoId ?? widget.videoUrl}';
+          await prefs.setBool(uniqueKey, true);
         }
       }
     } catch (e) {
@@ -140,7 +157,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             _hidePlusSignPermanently = true;
           });
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
+          final uniqueKey = 'followed_${widget.videoId ?? widget.videoUrl}';
+          await prefs.setBool(uniqueKey, true);
         }
       });
     }
@@ -454,7 +472,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች
           Positioned(
             right: 12,
             bottom: 80,
@@ -464,7 +481,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ፕሮፋይል እና የ (+) / ራይት አዶ
                   GestureDetector(
                     onTap: _handleFollowPressed,
                     child: Stack(
@@ -508,7 +524,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 8),
 
-                  // ላይክ አዝራር
                   IconButton(
                     icon: Icon(
                       _isLiked ? Icons.favorite : Icons.favorite_border,
@@ -523,7 +538,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 16),
 
-                  // 🌟 አዲሱ ማራኪ እና የተለየ የኮሜንት (የመልእክት) አዶ ዲዛይን
                   GestureDetector(
                     onTap: _openComments,
                     child: Column(
@@ -561,7 +575,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 16),
 
-                  // ሼር አዝራር
                   IconButton(
                     icon: Transform(
                       alignment: Alignment.center,
