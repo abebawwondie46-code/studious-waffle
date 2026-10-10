@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 🛑 ሎካል ሜሞሪ ለማስቀመጥ
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -42,7 +43,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   bool _isFollowing = false;
   int _followersCount = 0;
   
-  // 🛑 ፕላሷን በቋሚነት ለመደበቅ የሚረዳ አዲስ የማስተካከያ ቬርያብል
+  // 🛑 ፕላሷን በቋሚነት ለመቆጣጠር
   bool _hidePlusSignPermanently = false;
 
   bool _buttonsVisible = true;
@@ -60,8 +61,23 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       vsync: this,
     )..repeat();
     _initializeVideo();
+    _checkLocalFollowStatus(); // 🛑 መጀመሪያ ሎካል ሜሞሪ ማረጋገጥ
     _fetchEngagementData();
     _startBlinkingTimer();
+  }
+
+  // 🛑 1. ስልኩ ላይ ፎሎ ተደርጎ እንደነበር ከ SharedPreferences ማረጋገጥ
+  Future<void> _checkLocalFollowStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'followed_${widget.videoId ?? widget.videoUrl}';
+    final isLocallyFollowed = prefs.getBool(key) ?? false;
+
+    if (isLocallyFollowed && mounted) {
+      setState(() {
+        _isFollowing = true;
+        _hidePlusSignPermanently = true; // ፕላሷን ወዲያውኑ መደበቅ
+      });
+    }
   }
 
   void _startBlinkingTimer() {
@@ -94,11 +110,16 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = serverIsFollowing;
           
-          // 🛑 ሰርቨር ላይ ፎሎ የተደረገ ከሆነ አፑ ሲከፈት ፕላሷን በቋሚነት መደበቅ
           if (serverIsFollowing) {
             _hidePlusSignPermanently = true;
           }
         });
+
+        // ሰርቨር ላይ true ሆኖ ከተገኘ ሎካል ሜሞሪ ላይም ማስቀመጥ
+        if (serverIsFollowing) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
+        }
       }
     } catch (e) {
       debugPrint('Error fetching engagement data: $e');
@@ -115,13 +136,15 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // 🛑 ተጠቃሚው ፎሎ ሲለዉ ወዲያውኑ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ ፕላሷ/ራይቷ በቋሚነት ትጠፋለች
+    // 🛑 ፎሎ ሲደረግ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ ፕላሷ ጠፍቶ በስልኩ ሜሞሪ ውስጥ ይመዝገባል
     if (newFollowState) {
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 2), () async {
         if (mounted) {
           setState(() {
             _hidePlusSignPermanently = true;
           });
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
         }
       });
     }
