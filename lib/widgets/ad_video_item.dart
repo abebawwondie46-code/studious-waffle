@@ -41,7 +41,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _shareCount = 112;
   bool _isFollowing = false;
   int _followersCount = 0;
-  bool _isFollowButtonHidden = false; // አዝራሩ ሙሉ በሙሉ እንዲጠፋ የሚረዳ
+  bool _isBadgeHidden = false; // የ (+) ወይም የራይት ምልክቷ ብቻ እንዲጠፋ የሚረዳ
 
   // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
@@ -91,9 +91,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = response['is_following'] ?? false;
           
-          // ቀደም ሲል ፎሎ ተደርጎ ከሆነ አዝራሩን መደበቅ
+          // ቀደም ሲል ፎሎ ተደርጎ ከሆነ የ (+) ምልክቷን ብቻ መደበቅ
           if (_isFollowing) {
-            _isFollowButtonHidden = true;
+            _isBadgeHidden = true;
           }
         });
       }
@@ -112,12 +112,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // ራይት ከሆነ ከ 2 ሰከንድ በኋላ አዝራሩን ሙሉ በሙሉ መደበቅ
+    // ራይት ከሆኑ በኋላ ከ 2 ሰከንድ በኋላ የ (+) / ራይት ምልክቷን ብቻ መደበቅ (ፕሮፋይሉ ግን ይቀጥላል)
     if (newFollowState) {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
-            _isFollowButtonHidden = true;
+            _isBadgeHidden = true;
           });
         }
       });
@@ -432,7 +432,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች (በየ 5 ሰከንዱ ብቅ እያሉ የሚጠፉ እና ፎሎ ሲደረግ ከ 2 ሰከንድ በኋላ የሚደበቁ)
+          // የቀኝ በኩል አዝራሮች
           Positioned(
             right: 12,
             bottom: 80,
@@ -442,32 +442,34 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ፎሎው አዝራር (በ Offstage የታሸገ በመሆኑ ፎሎ ሲደረግ ከ 2 ሰከንድ በኋላ ይጠፋል)
-                  Offstage(
-                    offstage: _isFollowButtonHidden,
-                    child: GestureDetector(
-                      onTap: _handleFollowPressed,
-                      child: Stack(
-                        alignment: Alignment.bottomCenter,
-                        children: [
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 1.5),
-                            ),
-                            child: CircleAvatar(
-                              radius: 22,
-                              backgroundColor: Colors.grey,
-                              backgroundImage: (widget.userAvatar != null && widget.userAvatar!.isNotEmpty)
-                                  ? NetworkImage(widget.userAvatar!)
-                                  : null,
-                              child: (widget.userAvatar == null || widget.userAvatar!.isEmpty)
-                                  ? const Icon(Icons.person, color: Colors.white, size: 26)
-                                  : null,
-                            ),
+                  // ፕሮፋይል እና የ (+) / ራይት አዶ
+                  GestureDetector(
+                    onTap: _handleFollowPressed,
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        // የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
                           ),
-                          Positioned(
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Colors.grey,
+                            backgroundImage: (widget.userAvatar != null && widget.userAvatar!.isNotEmpty)
+                                ? NetworkImage(widget.userAvatar!)
+                                : null,
+                            child: (widget.userAvatar == null || widget.userAvatar!.isEmpty)
+                                ? const Icon(Icons.person, color: Colors.white, size: 26)
+                                : null,
+                          ),
+                        ),
+                        // የ (+) ወይም የራይት አዶ ብቻ (ከ 2 ሰከንድ በኋላ ወይም ፎሎ ሲደረግ ይጠፋል)
+                        Offstage(
+                          offstage: _isBadgeHidden,
+                          child: Positioned(
                             bottom: 4,
                             child: Container(
                               padding: const EdgeInsets.all(2),
@@ -482,8 +484,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                               ),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
