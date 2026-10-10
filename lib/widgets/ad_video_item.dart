@@ -43,7 +43,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   bool _isFollowing = false;
   int _followersCount = 0;
   
-  // 🛑 ፕላሷን በቋሚነት ለመቆጣጠር
   bool _hidePlusSignPermanently = false;
 
   bool _buttonsVisible = true;
@@ -455,7 +454,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች (ልክ እንደ ሞባይሉ ትክክለኛ አቀማመጥ የተስተካከሉ)
+          // የቀኝ በኩል አዝራሮች
           Positioned(
             right: 12,
             bottom: 80,
@@ -524,18 +523,41 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 16),
 
-                  // ኮሜንት አዝራር (አዶ እና ቁጥሩ ከታች እንዲሆን ተስተካክሏል)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.chat_bubble,
-                      color: Colors.white,
-                      size: 30,
+                  // 🌟 አዲሱ ማራኪ እና የተለየ የኮሜንት (የመልእክት) አዶ ዲዛይን
+                  GestureDetector(
+                    onTap: _openComments,
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Colors.pinkAccent, Colors.purpleAccent],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.purple.withOpacity(0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.forum_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCount(_commentCount),
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                    onPressed: _openComments,
-                  ),
-                  Text(
-                    _formatCount(_commentCount),
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
 
