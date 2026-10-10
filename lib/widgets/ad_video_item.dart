@@ -41,7 +41,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _shareCount = 112;
   bool _isFollowing = false;
   int _followersCount = 0;
-  bool _isBadgeHidden = false; // የ (+) ወይም የራይት አዶውን እስከመጨረሻው ለመደብቅ
+  bool _isBadgeHidden = false; // የ (+) ወይም የራይት አዶን እስከመጨረሻው ለመደብቅ
 
   // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
@@ -65,7 +65,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
   void _startBlinkingTimer() {
     _visibilityTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (mounted && !_isUserInteracting) {
+      if (mounted && (!_isUserInteracting)) {
         setState(() {
           _buttonsVisible = !_buttonsVisible;
         });
@@ -91,7 +91,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = response['is_following'] ?? false;
           
-          // ⚠️ ቪዲዮው ከዚህ ቀደም ፎሎ ተደርጎ ከሆነ አፑ ሲከፈት የ (+) ምልክቱ እስከመጨረሻው ተደብቆ እንዲቀር ማድረግ
+          // ከሰርቨር/ኢንተርኔት ሲነበብ is_following ፕላሱ true ከሆነ ፕላሷ እስከመጨረሻው እንድትጠፋ ማድረግ
           if (_isFollowing) {
             _isBadgeHidden = true;
           }
@@ -110,18 +110,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     setState(() {
       _isFollowing = newFollowState;
       _followersCount = newFollowersCount;
+      if (newFollowState) {
+        _isBadgeHidden = true; // ሲነካ ፕላሷ ወዲያውኑ እንድትጠፋ
+      }
     });
-
-    // ፎሎ ሲደረግ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ የ (+) / ራይት ምልክቷ እስከመጨረሻው ትጠፋለች
-    if (newFollowState) {
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() {
-            _isBadgeHidden = true;
-          });
-        }
-      });
-    }
 
     try {
       final query = Supabase.instance.client.from('videos');
@@ -448,7 +440,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     child: Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
-                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)
+                        // 1. የፕሮፋይል ክብ (ሁልጊዜ ይታያል)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -466,7 +458,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // 2. የ (+) ወይም የራይት አዶ (አፑ ተዘግቶ ሲከፈትም ሆነ ፎሎ ሲደረግ እስከመጨረሻው ተደብቆ እንዲቀር የሚደረግበት)
+                        // 2. የ (+) ወይም የራይት አዶ (is_following true ከሆነ ወይም ከማጥፋቱ በፊት ተደብቆ እስከመጨረሻው ይቆያል)
                         if (!_isBadgeHidden)
                           Positioned(
                             bottom: 4,
