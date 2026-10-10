@@ -41,7 +41,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _shareCount = 112;
   bool _isFollowing = false;
   int _followersCount = 0;
-  bool _isBadgeHidden = false; // የ (+) ወይም የራይት አዶን ብቻ ለመቆጣጠር
+  bool _isBadgeHidden = false; // የ (+) ወይም የራይት አዶውን እስከመጨረሻው ለመደብቅ
 
   // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
@@ -91,7 +91,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = response['is_following'] ?? false;
           
-          // ⚠️ አፑ ዘግቶ ሲከፈት ፎሎ ተደርጎ ከነበረ የ (+) / ራይት ምልክቷ እንዳይታይ ማድረግ
+          // ⚠️ ቪዲዮው ከዚህ ቀደም ፎሎ ተደርጎ ከሆነ አፑ ሲከፈት የ (+) ምልክቱ እስከመጨረሻው ተደብቆ እንዲቀር ማድረግ
           if (_isFollowing) {
             _isBadgeHidden = true;
           }
@@ -112,7 +112,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // ተጠቃሚው ፎሎ ሲለዉ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ የ (+) ወይም ራይቷ ምልክት ብቻ ትጠፋለች
+    // ፎሎ ሲደረግ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ የ (+) / ራይት ምልክቷ እስከመጨረሻው ትጠፋለች
     if (newFollowState) {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
@@ -466,7 +466,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // 2. የ (+) ወይም የራይት አዶ ብቻ
+                        // 2. የ (+) ወይም የራይት አዶ (አፑ ተዘግቶ ሲከፈትም ሆነ ፎሎ ሲደረግ እስከመጨረሻው ተደብቆ እንዲቀር የሚደረግበት)
                         if (!_isBadgeHidden)
                           Positioned(
                             bottom: 4,
