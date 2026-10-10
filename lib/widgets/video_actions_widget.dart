@@ -8,6 +8,7 @@ class VideoActionsWidget extends StatefulWidget {
   final int shareCount;
   final int initialFollowersCount;
   final bool initialIsFollowing;
+  final String? userAvatar;
   final VoidCallback onCommentPressed;
   final VoidCallback onSharePressed;
 
@@ -19,6 +20,7 @@ class VideoActionsWidget extends StatefulWidget {
     required this.shareCount,
     required this.initialFollowersCount,
     required this.initialIsFollowing,
+    this.userAvatar,
     required this.onCommentPressed,
     required this.onSharePressed,
   });
@@ -115,10 +117,15 @@ class _VideoActionsWidgetState extends State<VideoActionsWidget> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 22,
                   backgroundColor: Colors.grey,
-                  child: Icon(Icons.person, color: Colors.white, size: 26),
+                  backgroundImage: (widget.userAvatar != null && widget.userAvatar!.isNotEmpty)
+                      ? NetworkImage(widget.userAvatar!)
+                      : null,
+                  child: (widget.userAvatar == null || widget.userAvatar!.isEmpty)
+                      ? const Icon(Icons.person, color: Colors.white, size: 26)
+                      : null,
                 ),
               ),
               Positioned(
@@ -141,7 +148,7 @@ class _VideoActionsWidgetState extends State<VideoActionsWidget> {
         ),
         const SizedBox(height: 8),
 
-        // ላይክ (Like) አዝራር
+        // ላይክ አዝራር
         IconButton(
           icon: Icon(
             _isLiked ? Icons.favorite : Icons.favorite_border,
@@ -156,7 +163,7 @@ class _VideoActionsWidgetState extends State<VideoActionsWidget> {
         ),
         const SizedBox(height: 16),
 
-        // ኮሜንት (Comment) ማሳያ አዝራር
+        // ኮሜንት አዝራር
         IconButton(
           icon: const Icon(
             Icons.mode_comment_outlined,
@@ -171,7 +178,7 @@ class _VideoActionsWidgetState extends State<VideoActionsWidget> {
         ),
         const SizedBox(height: 16),
 
-        // ሼር (Share) አዝራር
+        // ሼር አዝራር
         IconButton(
           icon: Transform(
             alignment: Alignment.center,
