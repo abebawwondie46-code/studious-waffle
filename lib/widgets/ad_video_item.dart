@@ -42,10 +42,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   bool _isFollowing = false;
   int _followersCount = 0;
   
-  // 🛑 አዲሱ ሲስተም፡ ፕላሷን እስከመጨረሻው ለመቆጣጠር የሚያስችል ጥብቅ ቬርያብል
-  bool _permanentlyHideBadge = false;
+  // 🛑 ፕላሷን በቋሚነት ለመደበቅ የሚረዳ አዲስ የማስተካከያ ቬርያብል
+  bool _hidePlusSignPermanently = false;
 
-  // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
   Timer? _visibilityTimer;
   bool _isUserInteracting = false;
@@ -95,9 +94,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = serverIsFollowing;
           
-          // 🛑 ሰርቨር ላይ is_following 'true' ሆኖ ከተገኘ አፑ ሲከፈት ፕላሷ ፈጽሞ እንዳይታይ ይደረጋል
+          // 🛑 ሰርቨር ላይ ፎሎ የተደረገ ከሆነ አፑ ሲከፈት ፕላሷን በቋሚነት መደበቅ
           if (serverIsFollowing) {
-            _permanentlyHideBadge = true;
+            _hidePlusSignPermanently = true;
           }
         });
       }
@@ -116,12 +115,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // 🛑 ተጠቃሚው ፎሎ ሲለዉ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ አዶው እስከመጨረሻው ይጠፋል
+    // 🛑 ተጠቃሚው ፎሎ ሲለዉ ወዲያውኑ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ ፕላሷ/ራይቷ በቋሚነት ትጠፋለች
     if (newFollowState) {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
-            _permanentlyHideBadge = true;
+            _hidePlusSignPermanently = true;
           });
         }
       });
@@ -452,7 +451,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     child: Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
-                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)[cite: 8]
+                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -470,8 +469,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // 2. ፕላሷ ወይም ራይቷ (_permanentlyHideBadge 'true' ከሆነ ፈጽሞ አትታይም)
-                        if (!_permanentlyHideBadge)
+                        // 2. ፕላሷ ወይም ራይቷ (_hidePlusSignPermanently 'true' ከሆነ ፈጽሞ አትታይም)
+                        if (!_hidePlusSignPermanently)
                           Positioned(
                             bottom: 4,
                             child: Container(
