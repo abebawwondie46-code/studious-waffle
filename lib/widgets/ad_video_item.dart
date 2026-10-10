@@ -95,7 +95,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   }
 
   void _startBlinkingTimer() {
-    _visibilityTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _visibilityTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
       if (mounted && !_isUserInteracting) {
         setState(() {
           _buttonsVisible = !_buttonsVisible;
