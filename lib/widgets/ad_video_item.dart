@@ -41,7 +41,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _shareCount = 112;
   bool _isFollowing = false;
   int _followersCount = 0;
-  bool _isBadgeHidden = false; // የ (+) ወይም የራይት ምልክቷ ብቻ እንዲጠፋ የሚረዳ
+  bool _isBadgeHidden = false; // የ (+) ወይም የራይት አዶን ብቻ ለመቆጣጠር
 
   // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
@@ -91,10 +91,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = response['is_following'] ?? false;
           
-          // ቀደም ሲል ፎሎ ተደርጎ ከሆነ የ (+) ምልክቷን ብቻ መደበቅ
-          if (_isFollowing) {
-            _isBadgeHidden = true;
-          }
+          // ⚠️ እዚህ ላይ የፕሮፋይሉ ክብ እንዳጠፋ _isBadgeHidden ን እዚህ ጋር አናደርገውም
         });
       }
     } catch (e) {
@@ -112,7 +109,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // ራይት ከሆኑ በኋላ ከ 2 ሰከንድ በኋላ የ (+) / ራይት ምልክቷን ብቻ መደበቅ (ፕሮፋይሉ ግን ይቀጥላል)
+    // ተጠቃሚው ፎሎ ሲለዉ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ የ (+) ወይም ራይቷ ምልክት ብቻ ትጠፋለች (ፕሮፋይሉ ግን ይታያል)
     if (newFollowState) {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
@@ -448,7 +445,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     child: Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
-                        // የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)
+                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል፣ ፈጽሞ አይጠፋም)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -466,10 +463,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // የ (+) ወይም የራይት አዶ ብቻ (ከ 2 ሰከንድ በኋላ ወይም ፎሎ ሲደረግ ይጠፋል)
-                        Offstage(
-                          offstage: _isBadgeHidden,
-                          child: Positioned(
+                        // 2. የ (+) ወይም የራይት አዶ ብቻ (ፎሎ ሲደረግ ከ 2 ሰከንድ በኋላ የሚጠፋው ይህ ብቻ ነው)
+                        if (!_isBadgeHidden)
+                          Positioned(
                             bottom: 4,
                             child: Container(
                               padding: const EdgeInsets.all(2),
@@ -484,7 +480,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                               ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
