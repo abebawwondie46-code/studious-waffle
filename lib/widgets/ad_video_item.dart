@@ -42,10 +42,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   bool _isFollowing = false;
   int _followersCount = 0;
 
-  // አዝራሮቹ በየ 5 ሰከንዱ እንዲጠፉና እንዲታዩ የሚረዳ ታይመር
+  // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
   Timer? _visibilityTimer;
-  bool _isUserInteracting = false;
+  bool _isUserInteracting = false; // ተጠቃሚው እየተጠቀመባቸው መሆኑን ለመቆጣጠር
 
   @override
   bool get wantKeepAlive => true;
@@ -59,9 +59,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     )..repeat();
     _initializeVideo();
     _fetchEngagementData();
-    _startBlinkingTimer();
+    _startBlinkingTimer(); // የ 5 ሰከንድ ታይመርን ማስጀመር
   }
 
+  // አዝራሮቹ በየ 5 ሰከንዱ ብቅ እያሉ የሚጠፉበት ታይመር ሎጂክ
   void _startBlinkingTimer() {
     _visibilityTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted && !_isUserInteracting) {
@@ -72,7 +73,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     });
   }
 
-  // ከዳታቤዝ መረጃዎችን ሲጭን is_following ን በአግባቡ ማንበብ
   Future<void> _fetchEngagementData() async {
     try {
       final query = Supabase.instance.client
@@ -97,7 +97,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // ፎሎ ሲደረግ (+) ጠፍቶ ራይት (Check) እንዲሆን እና ሰርቨር ላይ እንዲመዘገብ
   Future<void> _handleFollowPressed() async {
     _keepButtonsVisibleTemporarily();
     final newFollowState = !_isFollowing;
@@ -122,7 +121,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         }).eq('video_url', widget.videoUrl);
       }
     } catch (e) {
-      debugPrint('Failed to update follow status: $e');
+      debugPrint('Failed to update follow status on server: $e');
     }
   }
 
@@ -144,7 +143,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         await query.update({'likes_count': newLikeCount}).eq('video_url', widget.videoUrl);
       }
     } catch (e) {
-      debugPrint('Failed to update like: $e');
+      debugPrint('Failed to update like on server: $e');
     }
   }
 
@@ -169,11 +168,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
+  // ተጠቃሚው አዝራሮቹን ሲነካ እንዲታዩ ማድረግ እና ስራውን እስኪጨርስ እንዳይጠፉ ማቆየት
   void _keepButtonsVisibleTemporarily() {
     setState(() {
       _isUserInteracting = true;
       _buttonsVisible = true;
     });
+    // ከጥቂት ሰከንዶች በኋላ ታይመሩ እንደገና እንዲቀጥል ማድረግ
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
         setState(() {
@@ -181,13 +182,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         });
       }
     });
-  }
-
-  String _formatCount(int count) {
-    if (count >= 1000) {
-      return '${(count / 1000).toStringAsFixed(1)}k';
-    }
-    return count.toString();
   }
 
   void _initializeVideo() {
@@ -216,7 +210,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
   @override
   void dispose() {
-    _visibilityTimer?.cancel();
+    _visibilityTimer?.cancel(); // ታይመሩን ማቆም
     _discController.dispose();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
@@ -226,7 +220,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   void _openComments() {
     _keepButtonsVisibleTemporarily();
     setState(() {
-      _isUserInteracting = true;
+      _isUserInteracting = true; // ኮሜንት ክፍት እያለ አዝራሮቹ እንዳይጠፉ
     });
 
     showModalBottomSheet(
@@ -247,10 +241,66 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     ).whenComplete(() {
       if (mounted) {
         setState(() {
-          _isUserInteracting = false;
+          _isUserInteracting = false; // ኮሜንቱ ሲዘጋ ታይመሩ መደበኛ ስራውን ይቀጥላል
         });
       }
     });
+  }
+
+  Future<void> _deleteVideoFromServer() async {
+    try {
+      final query = Supabase.instance.client.from('videos');
+      if (widget.videoId != null) {
+        await query.delete().eq('id', widget.videoId!);
+      } else {
+        await query.delete().eq('video_url', widget.videoUrl);
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Video deleted successfully')),
+        );
+
+        if (widget.onVideoDeleted != null) {
+          widget.onVideoDeleted!();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting video: $e');
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete video.')),
+        );
+      }
+    }
+  }
+
+  void _showVideoOptionsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.redAccent),
+                title: const Text('Delete Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                subtitle: const Text('Remove this video from your feed', style: TextStyle(color: Colors.grey)),
+                onTap: () {
+                  _deleteVideoFromServer();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _togglePlayPause() {
@@ -287,8 +337,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               ? GestureDetector(
                   onTap: () {
                     _togglePlayPause();
-                    _keepButtonsVisibleTemporarily();
+                    _keepButtonsVisibleTemporarily(); // ስክሪኑ ሲነካ አዝራሮቹ ብቅ እንዲሉ
                   },
+                  onLongPress: _showVideoOptionsBottomSheet,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -360,7 +411,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // አዝራሮቹ በየ 5 ሰከንዱ እየጠፉና እየታዩ ሲሰሩ
+          // የቀኝ በኩል አዝራሮች (በየ 5 ሰከንዱ ብቅ እያሉ የሚጠፉ እና ተጠቃሚው ሲነካቸው ጸንተው የሚቆዩ)
           Positioned(
             right: 12,
             bottom: 80,
@@ -370,7 +421,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ፎሎው አዝራር
                   GestureDetector(
                     onTap: _handleFollowPressed,
                     child: Stack(
@@ -411,50 +461,64 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
 
-                  // ላይክ አዝራር
-                  IconButton(
-                    icon: Icon(
-                      _isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: _isLiked ? Colors.redAccent : Colors.white,
-                      size: 32,
-                    ),
-                    onPressed: _handleLikePressed,
+                  Column(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          _isLiked ? Icons.favorite : Icons.favorite_border,
+                          color: _isLiked ? Colors.redAccent : Colors.white,
+                          size: 32,
+                        ),
+                        onPressed: _handleLikePressed,
+                      ),
+                      Text(
+                        '$_likeCount',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                  Text(
-                    _formatCount(_likeCount),
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
 
-                  // ኮሜንት አዝራር
-                  IconButton(
-                    icon: const Icon(
-                      Icons.mode_comment_outlined,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                    onPressed: _openComments,
+                  Column(
+                    children: [
+                      IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.chat_bubble,
+                            color: Colors.black,
+                            size: 20,
+                          ),
+                        ),
+                        onPressed: _openComments,
+                      ),
+                      Text(
+                        '$_commentCount',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ],
                   ),
-                  const Text(
-                    'ኮሜንት',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ሼር አዝራር
-                  IconButton(
-                    icon: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.rotationY(3.14159),
-                      child: const Icon(Icons.share, color: Colors.white, size: 30),
-                    ),
-                    onPressed: _handleSharePressed,
-                  ),
-                  Text(
-                    _formatCount(_shareCount),
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  
+                  Column(
+                    children: [
+                      IconButton(
+                        icon: Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.rotationY(3.14159),
+                          child: const Icon(Icons.reply, color: Colors.white, size: 30),
+                        ),
+                        onPressed: _handleSharePressed,
+                      ),
+                      Text(
+                        '$_shareCount',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 14),
 
