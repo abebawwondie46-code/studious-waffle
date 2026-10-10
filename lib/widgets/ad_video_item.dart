@@ -41,7 +41,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _shareCount = 112;
   bool _isFollowing = false;
   int _followersCount = 0;
-  bool _isBadgeHidden = false; // የ (+) ወይም የራይት አዶውን እስከመጨረሻው ለመደብቅ
+  
+  // 🛑 አዲሱ ሲስተም፡ ፕላሷን እስከመጨረሻው ለመቆጣጠር የሚያስችል ጥብቅ ቬርያብል
+  bool _permanentlyHideBadge = false;
 
   // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
@@ -93,9 +95,9 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = serverIsFollowing;
           
-          // 🛑 ከኢንተርኔት/ከሰርቨር ሲነበብ true ሆኖ ከመጣ ፕላሷ እስከመጨረሻው ትደበቃለች
+          // 🛑 ሰርቨር ላይ is_following 'true' ሆኖ ከተገኘ አፑ ሲከፈት ፕላሷ ፈጽሞ እንዳይታይ ይደረጋል
           if (serverIsFollowing) {
-            _isBadgeHidden = true;
+            _permanentlyHideBadge = true;
           }
         });
       }
@@ -114,12 +116,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // ራይት ከሆኑ በኋላ ከ 2 ሰከንድ በኋላ የ (+) ወይም ራይት ምልክቷ እስከመጨረሻው ትጠፋለች
+    // 🛑 ተጠቃሚው ፎሎ ሲለዉ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ አዶው እስከመጨረሻው ይጠፋል
     if (newFollowState) {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
-            _isBadgeHidden = true;
+            _permanentlyHideBadge = true;
           });
         }
       });
@@ -450,7 +452,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     child: Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
-                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)
+                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)[cite: 8]
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -468,8 +470,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // 2. የ (+) ወይም የራይት አዶ (is_following true ከሆነ ፈጽሞ አይታይም)
-                        if (!_isBadgeHidden)
+                        // 2. ፕላሷ ወይም ራይቷ (_permanentlyHideBadge 'true' ከሆነ ፈጽሞ አትታይም)
+                        if (!_permanentlyHideBadge)
                           Positioned(
                             bottom: 4,
                             child: Container(
