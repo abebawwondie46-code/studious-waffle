@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 🛑 ሎካል ሜሞሪ ለማስቀመጥ
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -41,11 +42,10 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   int _shareCount = 112;
   bool _isFollowing = false;
   int _followersCount = 0;
-
-  // 🛑 ፕላሷን በቋሚነት ለመቆጣጠር (ከጅምሩ true እንዲሆን ማድረግ ይቻላል ወይም በድብቅ)
+  
+  // 🛑 ፕላሷን በቋሚነት ለመቆጣጠር
   bool _hidePlusSignPermanently = false;
 
-  // አዝራሮቹን በየ 5 ሰከንዱ ለመደብቅ እና ለማሳየት የሚያገለግሉ ተለዋዋጮች
   bool _buttonsVisible = true;
   Timer? _visibilityTimer;
   bool _isUserInteracting = false;
@@ -61,8 +61,23 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       vsync: this,
     )..repeat();
     _initializeVideo();
+    _checkLocalFollowStatus(); // 🛑 መጀመሪያ ሎካል ሜሞሪ ማረጋገጥ
     _fetchEngagementData();
     _startBlinkingTimer();
+  }
+
+  // 🛑 1. ስልኩ ላይ ፎሎ ተደርጎ እንደነበር ከ SharedPreferences ማረጋገጥ
+  Future<void> _checkLocalFollowStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'followed_${widget.videoId ?? widget.videoUrl}';
+    final isLocallyFollowed = prefs.getBool(key) ?? false;
+
+    if (isLocallyFollowed && mounted) {
+      setState(() {
+        _isFollowing = true;
+        _hidePlusSignPermanently = true; // ፕላሷን ወዲያውኑ መደበቅ
+      });
+    }
   }
 
   void _startBlinkingTimer() {
@@ -87,19 +102,24 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
 
       if (response != null && mounted) {
         final bool serverIsFollowing = response['is_following'] ?? false;
-
+        
         setState(() {
           _likeCount = response['likes_count'] ?? _likeCount;
           _commentCount = response['comments_count'] ?? _commentCount;
           _shareCount = response['shares_count'] ?? _shareCount;
           _followersCount = response['followers_count'] ?? 0;
           _isFollowing = serverIsFollowing;
-
-          // 🛑 ሰርቨር ላይ ፎሎ የተደረገ ከሆነ አዶው ከጅምሩ እንዲጠፋ ማድረግ
+          
           if (serverIsFollowing) {
             _hidePlusSignPermanently = true;
           }
         });
+
+        // ሰርቨር ላይ true ሆኖ ከተገኘ ሎካል ሜሞሪ ላይም ማስቀመጥ
+        if (serverIsFollowing) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
+        }
       }
     } catch (e) {
       debugPrint('Error fetching engagement data: $e');
@@ -116,13 +136,15 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // 🛑 ፎሎ ሲደረግ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ ፕላሷ በቋሚነት ትጠፋለች
+    // 🛑 ፎሎ ሲደረግ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ ፕላሷ ጠፍቶ በስልኩ ሜሞሪ ውስጥ ይመዝገባል
     if (newFollowState) {
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 2), () async {
         if (mounted) {
           setState(() {
             _hidePlusSignPermanently = true;
           });
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
         }
       });
     }
@@ -200,6 +222,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         });
       }
     });
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}k';
+    }
+    return count.toString();
   }
 
   void _initializeVideo() {
@@ -439,12 +468,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // ፕሮፋይል እና የ (+) / ራይት አዶ
                   GestureDetector(
                     onTap: _handleFollowPressed,
                     child: Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
-                        // የፕሮፋይል ክብ (ሁልጊዜ ይታያል)
+                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -462,7 +492,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // ፕላሷ ወይም ራይቷ (_hidePlusSignPermanently 'true' ከሆነ በጭራሽ አትታይም)
+                        // 2. ፕላሷ ወይም ራይቷ (_hidePlusSignPermanently 'true' ከሆነ ፈጽሞ አትታይም)
                         if (!_hidePlusSignPermanently)
                           Positioned(
                             bottom: 4,
@@ -482,64 +512,50 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                       ],
                     ),
                   ),
+                  const SizedBox(height: 8),
 
-                  Column(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          _isLiked ? Icons.favorite : Icons.favorite_border,
-                          color: _isLiked ? Colors.redAccent : Colors.white,
-                          size: 32,
-                        ),
-                        onPressed: _handleLikePressed,
-                      ),
-                      Text(
-                        '$_likeCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  // ላይክ አዝራር
+                  IconButton(
+                    icon: Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? Colors.redAccent : Colors.white,
+                      size: 32,
+                    ),
+                    onPressed: _handleLikePressed,
                   ),
-                  const SizedBox(height: 10),
+                  Text(
+                    _formatCount(_likeCount),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
 
-                  Column(
-                    children: [
-                      IconButton(
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.chat_bubble,
-                            color: Colors.black,
-                            size: 20,
-                          ),
-                        ),
-                        onPressed: _openComments,
-                      ),
-                      Text(
-                        '$_commentCount',
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ],
+                  // ኮሜንት አዝራር
+                  IconButton(
+                    icon: const Icon(
+                      Icons.mode_comment_outlined,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                    onPressed: _openComments,
                   ),
-                  
-                  Column(
-                    children: [
-                      IconButton(
-                        icon: Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.rotationY(3.14159),
-                          child: const Icon(Icons.reply, color: Colors.white, size: 30),
-                        ),
-                        onPressed: _handleSharePressed,
-                      ),
-                      Text(
-                        '$_shareCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  const Text(
+                    'ኮሜንት',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ሼር አዝራር
+                  IconButton(
+                    icon: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.rotationY(3.14159),
+                      child: const Icon(Icons.share, color: Colors.white, size: 30),
+                    ),
+                    onPressed: _handleSharePressed,
+                  ),
+                  Text(
+                    _formatCount(_shareCount),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 14),
 
