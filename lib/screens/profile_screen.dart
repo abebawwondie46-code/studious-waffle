@@ -71,15 +71,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 4. የሁሉም ቪዲዮዎች የፎሎወር (followers_count) ድምርን ወይም ትክክለኛውን ሁኔታ ከ videos ቴብል ማምጣት
-      int totalFollowers = 0;
+      // 4. የፎሎወር (followers_count) ትክክለኛ ቁጥር ከ ቪዲዮዎች ማምጣት (የመጀመሪያውን ቪዲዮ ቁጥር ወይም ትክክለኛውን ቫልዩ መውሰድ)
+      int exactFollowers = 0;
       try {
-        final videosResponse = await supabase.from('videos').select('followers_count, is_following');
-        for (var video in (videosResponse as List)) {
-          final count = (video['followers_count'] as num?)?.toInt() ?? 0;
-          if (count > totalFollowers) {
-            totalFollowers = count;
-          }
+        final videosResponse = await supabase.from('videos').select('followers_count').limit(1);
+        if ((videosResponse as List).isNotEmpty) {
+          exactFollowers = (videosResponse[0]['followers_count'] as num?)?.toInt() ?? 0;
         }
       } catch (_) {}
 
@@ -87,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _currentUser = user;
         _postsCount = postsLen;
         _likesCount = totalLikes;
-        _followersCount = totalFollowers;
+        _followersCount = exactFollowers;
         _isLoading = false;
       });
     } catch (e) {
