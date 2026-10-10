@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // 🛑 ሎካል ሜሞሪ ለማስቀመጥ
+import 'package:shared_preferences/shared_preferences.dart';
 import 'comments_bottom_sheet.dart';
 
 class AdVideoItem extends StatefulWidget {
@@ -61,12 +61,11 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       vsync: this,
     )..repeat();
     _initializeVideo();
-    _checkLocalFollowStatus(); // 🛑 መጀመሪያ ሎካል ሜሞሪ ማረጋገጥ
+    _checkLocalFollowStatus(); 
     _fetchEngagementData();
     _startBlinkingTimer();
   }
 
-  // 🛑 1. ስልኩ ላይ ፎሎ ተደርጎ እንደነበር ከ SharedPreferences ማረጋገጥ
   Future<void> _checkLocalFollowStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final key = 'followed_${widget.videoId ?? widget.videoUrl}';
@@ -75,7 +74,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     if (isLocallyFollowed && mounted) {
       setState(() {
         _isFollowing = true;
-        _hidePlusSignPermanently = true; // ፕላሷን ወዲያውኑ መደበቅ
+        _hidePlusSignPermanently = true; 
       });
     }
   }
@@ -115,7 +114,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           }
         });
 
-        // ሰርቨር ላይ true ሆኖ ከተገኘ ሎካል ሜሞሪ ላይም ማስቀመጥ
         if (serverIsFollowing) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('followed_${widget.videoId ?? widget.videoUrl}', true);
@@ -136,7 +134,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _followersCount = newFollowersCount;
     });
 
-    // 🛑 ፎሎ ሲደረግ ራይት ይሆናል፣ ከ 2 ሰከንድ በኋላ ፕላሷ ጠፍቶ በስልኩ ሜሞሪ ውስጥ ይመዝገባል
     if (newFollowState) {
       Future.delayed(const Duration(seconds: 2), () async {
         if (mounted) {
@@ -458,7 +455,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // የቀኝ በኩል አዝራሮች
+          // የቀኝ በኩል አዝራሮች (ልክ እንደ ሞባይሉ ትክክለኛ አቀማመጥ የተስተካከሉ)
           Positioned(
             right: 12,
             bottom: 80,
@@ -474,7 +471,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     child: Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
-                        // 1. የፕሮፋይል ክብ (ይህ ሁልጊዜ ይታያል)
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -492,7 +488,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                                 : null,
                           ),
                         ),
-                        // 2. ፕላሷ ወይም ራይቷ (_hidePlusSignPermanently 'true' ከሆነ ፈጽሞ አትታይም)
                         if (!_hidePlusSignPermanently)
                           Positioned(
                             bottom: 4,
@@ -529,18 +524,18 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 16),
 
-                  // ኮሜንት አዝራር
+                  // ኮሜንት አዝራር (አዶ እና ቁጥሩ ከታች እንዲሆን ተስተካክሏል)
                   IconButton(
                     icon: const Icon(
-                      Icons.mode_comment_outlined,
+                      Icons.chat_bubble,
                       color: Colors.white,
                       size: 30,
                     ),
                     onPressed: _openComments,
                   ),
-                  const Text(
-                    'ኮሜንት',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  Text(
+                    _formatCount(_commentCount),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
 
@@ -549,7 +544,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     icon: Transform(
                       alignment: Alignment.center,
                       transform: Matrix4.rotationY(3.14159),
-                      child: const Icon(Icons.share, color: Colors.white, size: 30),
+                      child: const Icon(Icons.reply, color: Colors.white, size: 30),
                     ),
                     onPressed: _handleSharePressed,
                   ),
