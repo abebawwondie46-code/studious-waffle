@@ -62,7 +62,55 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     )..repeat();
     _initializeVideo();
     _loadVideoSpecificData();
-    _startBlinkingTimer();
+    _startSmartTimer(); // 🛑 አዲሱ የ 5 ሰከንድ እይታ እና የ 19 ሰከንድ መደበቂያ ዑደት
+  }
+
+  // 🛑 አዲሱ ታይመር ሎጂክ፡ 5 ሰከንድ ታይቶ ሲጠፋ ለ 19 ሰከንድ ተደብቆ ይቆያል
+  void _startSmartTimer() {
+    _visibilityTimer?.cancel();
+    
+    // መጀመሪያ ለ 5 ሰከንድ እንዲታዩ ማድረግ
+    _visibilityTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted && !_isUserInteracting) {
+        setState(() {
+          _buttonsVisible = false;
+        });
+        _startHiddenTimer();
+      }
+    });
+  }
+
+  void _startHiddenTimer() {
+    _visibilityTimer?.cancel();
+    
+    // ከጠፉ በኋላ ለ 19 ሰከንድ ተደብቀው እንዲቆዩ ማድረግ
+    _visibilityTimer = Timer(const Duration(seconds: 19), () {
+      if (mounted && !_isUserInteracting) {
+        setState(() {
+          _buttonsVisible = true;
+        });
+        _startSmartTimer(); // ዑደቱን እንደገና መቀጠል
+      }
+    });
+  }
+
+  // 🛑 ተጠቃሚው ስክሪኑን ወይም አዝራሮቹን ሲነካ ወዲያውኑ አክቲቭ ሆኖ ብቅ እንዲሉ
+  void _keepButtonsVisibleTemporarily() {
+    _visibilityTimer?.cancel();
+    setState(() {
+      _isUserInteracting = true;
+      _buttonsVisible = true;
+    });
+
+    // ተጠቃሚው ስራውን ጨርሶ ካቆመ በኋላ ለ 5 ሰከንድ ቆይቶ ወደ መደበኛው ዑደት ይመለሳል
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _isUserInteracting = false;
+        });
+        _startSmartTimer();
+      }
+    });
   }
 
   @override
@@ -92,16 +140,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
 
     await _fetchEngagementData();
-  }
-
-  void _startBlinkingTimer() {
-    _visibilityTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
-      if (mounted && !_isUserInteracting) {
-        setState(() {
-          _buttonsVisible = !_buttonsVisible;
-        });
-      }
-    });
   }
 
   Future<void> _fetchEngagementData() async {
@@ -224,20 +262,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  void _keepButtonsVisibleTemporarily() {
-    setState(() {
-      _isUserInteracting = true;
-      _buttonsVisible = true;
-    });
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted) {
-        setState(() {
-          _isUserInteracting = false;
-        });
-      }
-    });
-  }
-
   String _formatCount(int count) {
     if (count >= 1000) {
       return '${(count / 1000).toStringAsFixed(1)}k';
@@ -303,6 +327,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       if (mounted) {
         setState(() {
           _isUserInteracting = false;
+          _startSmartTimer();
         });
       }
     });
