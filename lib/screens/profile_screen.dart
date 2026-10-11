@@ -33,21 +33,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _checkInternetAndLoadData();
-  }
-
-  // Check internet connection and load profile data
-  Future<void> _checkInternetAndLoadData() async {
-    final connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No internet connection! Please check your network.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
     _loadUserProfileAndStats();
   }
 
@@ -143,15 +128,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Pick and upload profile image to Supabase Storage
   Future<void> _pickAndUploadProfileImage(ImageSource source) async {
-    final connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No internet connection!'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
     if (image == null) return;
 
@@ -192,22 +168,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload image: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Network error or failed to upload image: $e'), backgroundColor: Colors.red),
       );
     }
   }
 
   // Validate and save profile changes
   Future<void> _saveProfileChanges() async {
-    final connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No internet connection!'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
     final newName = _nameController.text.trim();
     final newEmail = _emailController.text.trim();
     final newPhone = _phoneController.text.trim();
@@ -268,7 +235,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Network error! Failed to update.'), backgroundColor: Colors.red),
       );
     }
   }
