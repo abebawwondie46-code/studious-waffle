@@ -37,6 +37,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserProfileAndStats();
   }
 
+  // Helper method to show network alert Toast
+  void _showNoInternetToast() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, color: Colors.white),
+            SizedBox(width: 10),
+            Text('No internet connection! Please check your network.'),
+          ],
+        ),
+        backgroundColor: Colors.redAccent,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _loadUserProfileAndStats() async {
     try {
       // 1. Fetch posts count from 'posts' table
@@ -90,6 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      _showNoInternetToast();
       setState(() {
         _isLoading = false;
       });
@@ -171,10 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isUploadingImage = false;
       });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload image: $e'), backgroundColor: Colors.red),
-      );
+      _showNoInternetToast();
     }
   }
 
@@ -238,10 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isSaving = false;
       });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update profile.'), backgroundColor: Colors.red),
-      );
+      _showNoInternetToast();
     }
   }
 
