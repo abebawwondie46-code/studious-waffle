@@ -460,9 +460,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _ProfileStatItem(title: 'Posts', count: _postsCount.toString()),
-                  _ProfileStatItem(title: 'Likes', count: _likesCount.toString()),
-                  _ProfileStatItem(title: 'Followers', count: _followersCount.toString()),
+                  // Posts ሲጫኑ
+                  GestureDetector(
+                    onTap: () {
+                      // ወደ ፖስቶች ማሳያ ገጽ ለመሄድ (ለምሳሌ: Navigator.pushNamed(context, '/posts');)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Opening Posts...'), backgroundColor: Colors.blue),
+                      );
+                    },
+                    child: _ProfileStatItem(title: 'Posts', count: _postsCount.toString()),
+                  ),
+                  // Likes ሲጫኑ
+                  GestureDetector(
+                    onTap: () {
+                      // ወደ ላይክ ዝርዝር ገጽ ለመሄድ
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Opening Likes...'), backgroundColor: Colors.blue),
+                      );
+                    },
+                    child: _ProfileStatItem(title: 'Likes', count: _likesCount.toString()),
+                  ),
+                  // Followers ሲጫኑ
+                  GestureDetector(
+                    onTap: () {
+                      // ወደ ፎሎወሮች ዝርዝር ገጽ ለመሄድ
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Opening Followers...'), backgroundColor: Colors.blue),
+                      );
+                    },
+                    child: _ProfileStatItem(title: 'Followers', count: _followersCount.toString()),
+                  ),
                 ],
               ),
             ),
