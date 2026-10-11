@@ -61,16 +61,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 3. Calculate total likes count from 'videos' table
+      // 3. Calculate total likes count from 'videos' table safely
       int totalLikes = 0;
       try {
         final videosResponse = await supabase.from('videos').select('likes_count');
         for (var video in (videosResponse as List)) {
-          totalLikes += max(0, (video['likes_count'] as num?)?.toInt() ?? 0);
+          int count = (video['likes_count'] as num?)?.toInt() ?? 0;
+          totalLikes += max(0, count);
         }
       } catch (_) {}
 
-      // 4. Calculate total followers count from 'videos' table (Prevent negative numbers)
+      // 4. Calculate total followers count from 'videos' table safely
       int totalFollowers = 0;
       try {
         final videosResponse = await supabase.from('videos').select('followers_count');
@@ -257,12 +258,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
-      // Safe deletion from profiles table
       try {
         await supabase.from('profiles').delete().match({'id': 1});
       } catch (_) {}
 
-      // Safe Auth SignOut
       try {
         await supabase.auth.signOut();
       } catch (_) {}
@@ -786,7 +785,8 @@ class UserLikesScreen extends StatelessWidget {
               final video = videos[index];
               final caption = video['caption'] ?? video['title'] ?? 'No Description';
               final videoUrl = video['video_url'] ?? video['media_url'] ?? '';
-              final likesCount = max(0, video['likes_count'] ?? 0);
+              int rawLikes = (video['likes_count'] as num?)?.toInt() ?? 0;
+              final likesCount = max(0, rawLikes);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
@@ -865,7 +865,10 @@ class UserFollowersScreen extends StatelessWidget {
             return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
           }
           final items = snapshot.data ?? [];
-          final filteredItems = items.where((i) => ((i['followers_count'] ?? 0) as int) > 0).toList();
+          final filteredItems = items.where((i) {
+            int count = (i['followers_count'] as num?)?.toInt() ?? 0;
+            return count > 0;
+          }).toList();
 
           if (filteredItems.isEmpty) {
             return const Center(child: Text('No followers found.', style: TextStyle(color: Colors.white54)));
@@ -876,7 +879,8 @@ class UserFollowersScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             itemBuilder: (context, index) {
               final item = filteredItems[index];
-              final followersCount = max(0, item['followers_count'] ?? 0);
+              int rawFollowers = (item['followers_count'] as num?)?.toInt() ?? 0;
+              final followersCount = max(0, rawFollowers);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
