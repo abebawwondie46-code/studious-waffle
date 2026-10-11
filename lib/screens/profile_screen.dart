@@ -12,7 +12,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
-  User? _currentUser;
   bool _isLoading = true;
   bool _isUploadingImage = false;
   bool _isSaving = false;
@@ -39,8 +38,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserProfileAndStats() async {
     try {
-      final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
-      
       // 1. የ ፖስቶች ብዛት ከ 'posts' ቴብል ማምጣት
       int postsLen = 0;
       try {
@@ -82,7 +79,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } catch (_) {}
 
       setState(() {
-        _currentUser = user;
         _postsCount = postsLen;
         _likesCount = totalLikes;
         _followersCount = totalFollowers;
@@ -250,7 +246,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ሎግ አውት ሲደረግ መረጃዎችን አጽድቶ ወደ መጀመሪያው የምዝገባ ገጽ መውሰድ (Null check errorን በተጠበቀ ሁኔታ በመያዝ)
+  // ሎግ አውት ሲደረግ መረጃዎችን ሙሉ በሙሉ አጽድቶ ወደ መግቢያ/ምዝገባ ገጽ መውሰድ (Null check errorን ሙሉ በሙሉ ያስወግዳል)
   Future<void> _signOut() async {
     try {
       // 1. የፕሮፋይል መረጃዎችን ከ profiles ቴብል ማጥፋት (ስም፣ ስልክ እና ፎቶ እንዲጠፉ)
@@ -258,17 +254,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await supabase.from('profiles').delete().match({'id': 1});
       } catch (_) {}
 
-      // 2. ከሰርቨር ሎግ አውት ማድረግ
-      await supabase.auth.signOut();
+      // 2. ከሰርቨር ደህንነቱ በተጠበቀ ሁኔታ ሎግ አውት ማድረግ
+      if (supabase.auth.currentSession != null) {
+        await supabase.auth.signOut();
+      }
 
       if (!mounted) return;
       // 3. ወደ መግቢያ/ምዝገባ ገጽ መመለስ
       Navigator.of(context).pushReplacementNamed('/login');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to sign out: $e'), backgroundColor: Colors.red),
-      );
+      // ስህተት ካጋጠመ በቀጥታ ወደ ሎጊን ገጽ እንዲያልፍ ይደረጋል
+      Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
