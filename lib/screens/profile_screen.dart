@@ -460,12 +460,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Posts ሲጫኑ
+                  // Posts ሲጫኑ ወደ ፖስቶች ማሳያ ገጽ ይወስዳል
                   GestureDetector(
                     onTap: () {
-                      // ወደ ፖስቶች ማሳያ ገጽ ለመሄድ (ለምሳሌ: Navigator.pushNamed(context, '/posts');)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Opening Posts...'), backgroundColor: Colors.blue),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const UserPostsScreen()),
                       );
                     },
                     child: _ProfileStatItem(title: 'Posts', count: _postsCount.toString()),
@@ -473,7 +473,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Likes ሲጫኑ
                   GestureDetector(
                     onTap: () {
-                      // ወደ ላይክ ዝርዝር ገጽ ለመሄድ
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Opening Likes...'), backgroundColor: Colors.blue),
                       );
@@ -483,7 +482,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Followers ሲጫኑ
                   GestureDetector(
                     onTap: () {
-                      // ወደ ፎሎወሮች ዝርዝር ገጽ ለመሄድ
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Opening Followers...'), backgroundColor: Colors.blue),
                       );
@@ -549,6 +547,91 @@ class _ProfileStatItem extends StatelessWidget {
           style: const TextStyle(color: Colors.white38, fontSize: 14),
         ),
       ],
+    );
+  }
+}
+
+// የ ተጠቃሚውን ፖስቶች በቀጥታ ከ 'posts' ቴብል አምጥቶ የሚያሳይ ገጽ
+class UserPostsScreen extends StatelessWidget {
+  const UserPostsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final SupabaseClient supabase = Supabase.instance.client;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0C),
+      appBar: AppBar(
+        title: const Text('My Posts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF0A0A0C),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: supabase.from('posts').select().order('created_at', ascending: false),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
+          }
+          final posts = snapshot.data ?? [];
+          if (posts.isEmpty) {
+            return const Center(child: Text('No posts found.', style: TextStyle(color: Colors.white54)));
+          }
+
+          return ListView.builder(
+            itemCount: posts.length,
+            padding: const EdgeInsets.all(12),
+            itemBuilder: (context, index) {
+              final post = posts[index];
+              final caption = post['caption'] ?? post['title'] ?? 'No Description';
+              final mediaUrl = post['media_url'] ?? post['video_url'] ?? '';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16161A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10, width: 0.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Color(0xFF2575FC),
+                        child: Icon(Icons.person, color: Colors.white),
+                      ),
+                      title: const Text('Community Creator', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      subtitle: Text(post['created_at']?.toString().substring(0, 10) ?? '', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    ),
+                    if (mediaUrl.isNotEmpty)
+                      Image.network(
+                        mediaUrl,
+                        width: double.infinity,
+                        height: 250,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 200,
+                          color: Colors.black26,
+                          child: const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 50)),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        caption,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
