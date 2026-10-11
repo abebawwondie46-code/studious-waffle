@@ -15,6 +15,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
 
+  // Profile data variables
+  String _userName = 'Community Creator';
+  String? _userAvatarUrl;
+
   final TextEditingController _postCaptionController = TextEditingController();
   File? _selectedImageFile;
   final ImagePicker _picker = ImagePicker();
@@ -49,11 +53,28 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchPosts();
+    _fetchUserProfileAndPosts();
   }
 
-  Future<void> _fetchPosts() async {
+  // Fetch user profile data and posts simultaneously
+  Future<void> _fetchUserProfileAndPosts() async {
     try {
+      // 1. Fetch user profile
+      try {
+        final profileData = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .maybeSingle();
+
+        if (profileData != null) {
+          setState(() {
+            _userName = profileData['full_name'] ?? 'Community Creator';
+            _userAvatarUrl = profileData['avatar_url'];
+          });
+        }
+      } catch (_) {}
+
+      // 2. Fetch posts
       final response = await supabase
           .from('posts')
           .select()
@@ -158,7 +179,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       });
 
       Navigator.pop(context);
-      _fetchPosts();
+      _fetchUserProfileAndPosts();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -396,7 +417,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)))
           : RefreshIndicator(
-              onRefresh: _fetchPosts,
+              onRefresh: _fetchUserProfileAndPosts,
               color: const Color(0xFF2575FC),
               backgroundColor: const Color(0xFF1F1F23),
               child: _posts.isEmpty
@@ -448,17 +469,22 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Row(
+                                    Row(
                                       children: [
                                         CircleAvatar(
                                           radius: 18,
-                                          backgroundColor: Color(0xFF2575FC),
-                                          child: Icon(Icons.person, color: Colors.white, size: 20),
+                                          backgroundColor: const Color(0xFF2575FC),
+                                          backgroundImage: (_userAvatarUrl != null && _userAvatarUrl!.isNotEmpty)
+                                              ? NetworkImage(_userAvatarUrl!)
+                                              : null,
+                                          child: (_userAvatarUrl == null || _userAvatarUrl!.isEmpty)
+                                              ? const Icon(Icons.person, color: Colors.white, size: 20)
+                                              : null,
                                         ),
-                                        SizedBox(width: 10),
+                                        const SizedBox(width: 10),
                                         Text(
-                                          'Community Creator',
-                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                          _userName,
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       ],
                                     ),
