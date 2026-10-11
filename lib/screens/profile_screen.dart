@@ -250,12 +250,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ሎግ አውት ሲደረግ መረጃዎችን አጽድቶ ወደ መጀመሪያው የምዝገባ/ሎጊን ገጽ መውሰድ
+  // ሎግ አውት ሲደረግ መረጃዎችን አጽድቶ ወደ መጀመሪያው የምዝገባ ገጽ መውሰድ (Null check errorን በተጠበቀ ሁኔታ በመያዝ)
   Future<void> _signOut() async {
     try {
       // 1. የፕሮፋይል መረጃዎችን ከ profiles ቴብል ማጥፋት (ስም፣ ስልክ እና ፎቶ እንዲጠፉ)
       try {
-        await supabase.from('profiles').delete().eq('id', 1);
+        await supabase.from('profiles').delete().match({'id': 1});
       } catch (_) {}
 
       // 2. ከሰርቨር ሎግ አውት ማድረግ
