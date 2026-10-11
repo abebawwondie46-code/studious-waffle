@@ -434,57 +434,79 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     )
                   : ListView.builder(
                       itemCount: _posts.length,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
                       itemBuilder: (context, index) {
                         final post = _posts[index];
                         final postId = post['id']?.toString() ?? '';
                         final caption = post['caption'] ?? '';
                         final mediaUrl = post['media_url'] ?? '';
+                        final isImagePost = mediaUrl.isNotEmpty;
                         
-                        Color postBgColor = const Color(0xFF16161A);
-                        if (post['bg_color'] != null) {
+                        // 🛑 ፎቶ ካለው ጽዱ የሆነ ጥቁር ባክግራውንድ፣ ጽሁፍ ብቻ ከሆነ ደግሞ የተመረጠውን ከለር ይጠቀማል
+                        Color postBgColor = isImagePost ? const Color(0xFF16161A) : const Color(0xFF1A1A2E);
+                        if (!isImagePost && post['bg_color'] != null) {
                           try {
                             postBgColor = Color(int.parse(post['bg_color'], radix: 16));
                           } catch (_) {}
                         }
 
                         return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
                             color: postBgColor,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: Colors.white10, width: 0.5),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isImagePost ? Colors.white12 : Colors.white24,
+                              width: 0.5,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // User Header
                               Padding(
-                                padding: const EdgeInsets.all(12.0),
+                                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
                                         CircleAvatar(
-                                          radius: 18,
+                                          radius: 20,
                                           backgroundColor: const Color(0xFF2575FC),
                                           backgroundImage: (_userAvatarUrl != null && _userAvatarUrl!.isNotEmpty)
                                               ? NetworkImage(_userAvatarUrl!)
                                               : null,
                                           child: (_userAvatarUrl == null || _userAvatarUrl!.isEmpty)
-                                              ? const Icon(Icons.person, color: Colors.white, size: 20)
+                                              ? const Icon(Icons.person, color: Colors.white, size: 22)
                                               : null,
                                         ),
-                                        const SizedBox(width: 10),
-                                        Text(
-                                          _userName,
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                        const SizedBox(width: 12),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _userName,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            if (post['created_at'] != null)
+                                              Text(
+                                                post['created_at'].toString().substring(0, 10),
+                                                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                              ),
+                                          ],
                                         ),
                                       ],
                                     ),
@@ -513,25 +535,47 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   ],
                                 ),
                               ),
-                              if (mediaUrl.isNotEmpty)
-                                Container(
-                                  height: 320,
+
+                              // Image display without fixed black spaces
+                              if (isImagePost)
+                                Image.network(
+                                  mediaUrl,
                                   width: double.infinity,
-                                  color: Colors.black,
-                                  child: Image.network(
-                                    mediaUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => const Center(
-                                      child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      height: 220,
+                                      color: const Color(0xFF1A1A20),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF2575FC),
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    height: 180,
+                                    color: const Color(0xFF1F1F23),
+                                    child: const Center(
+                                      child: Icon(Icons.broken_image, color: Colors.white38, size: 40),
                                     ),
                                   ),
                                 ),
+
+                              // Post Caption
                               if (caption.isNotEmpty)
                                 Padding(
-                                  padding: const EdgeInsets.all(16.0),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                   child: Text(
                                     caption,
-                                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.92),
+                                      fontSize: isImagePost ? 14 : 16,
+                                      height: 1.4,
+                                      fontWeight: isImagePost ? FontWeight.normal : FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                             ],
