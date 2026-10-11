@@ -275,31 +275,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0C),
       appBar: AppBar(
-        title: const Text('Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            // 1. የእርሳስ ምልክቱ (Edit / Save አዝራር)
+            IconButton(
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Icon(_isEditing ? Icons.check_rounded : Icons.edit_rounded, color: Colors.white70),
+              onPressed: _isSaving
+                  ? null
+                  : () {
+                      if (_isEditing) {
+                        _saveProfileChanges();
+                      } else {
+                        setState(() {
+                          _isEditing = true;
+                        });
+                      }
+                    },
+              tooltip: _isEditing ? 'Save Changes' : 'Edit Profile',
+            ),
+            // 2. የሰርች ቁልፍ በእርሳስ ምልክቱ እና በ "Profile" ጽሁፍ መካከል
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white70),
+              onPressed: () {
+                showSearch(
+                  context: context,
+                  delegate: GlobalSearchDelegate(),
+                );
+              },
+              tooltip: 'Search Posts, Likes & Followers',
+            ),
+            const Spacer(),
+            // 3. የ "Profile" ጽሁፍ መሃል ላይ እንዲሆን
+            const Text('Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            const Spacer(),
+            const SizedBox(width: 48), // ሚዛኑን (Balance) ለመጠበቅ
+          ],
+        ),
         backgroundColor: const Color(0xFF0A0A0C),
         elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                )
-              : Icon(_isEditing ? Icons.check_rounded : Icons.edit_rounded, color: Colors.white70),
-          onPressed: _isSaving
-              ? null
-              : () {
-                  if (_isEditing) {
-                    _saveProfileChanges();
-                  } else {
-                    setState(() {
-                      _isEditing = true;
-                    });
-                  }
-                },
-          tooltip: _isEditing ? 'Save Changes' : 'Edit Profile',
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_rounded, color: Colors.white70),
@@ -549,6 +569,92 @@ class _ProfileStatItem extends StatelessWidget {
           style: const TextStyle(color: Colors.white38, fontSize: 14),
         ),
       ],
+    );
+  }
+}
+
+// ለ 3ቱም (Posts, Likes, Followers) የሰርች አገልግሎት የሚሰጥ Delegate
+class GlobalSearchDelegate extends SearchDelegate {
+  final SupabaseClient supabase = Supabase.instance.client;
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    return ThemeData(
+      scaffoldBackgroundColor: const Color(0xFF0A0A0C),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF16161A),
+        iconTheme: IconThemeData(color: Colors.white),
+        titleTextStyle: TextStyle(color: Colors.white, fontSize: 18),
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        hintStyle: TextStyle(color: Colors.white54),
+        border: InputBorder.none,
+      ),
+      textTheme: const TextTheme(
+        titleLarge: TextStyle(color: Colors.white, fontSize: 18),
+      ),
+    );
+  }
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          icon: const Icon(Icons.clear, color: Colors.white),
+          onPressed: () => query = '',
+        ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back, color: Colors.white),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  Widget _buildSearchResults() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: supabase.from('posts').select(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
+        }
+        final posts = snapshot.data ?? [];
+        final filtered = posts.where((p) {
+          final caption = (p['caption'] ?? p['title'] ?? '').toString().toLowerCase();
+          return caption.contains(query.toLowerCase());
+        }).toList();
+
+        if (filtered.isEmpty) {
+          return const Center(child: Text('No results found.', style: TextStyle(color: Colors.white54)));
+        }
+
+        return ListView.builder(
+          itemCount: filtered.length,
+          padding: const EdgeInsets.all(12),
+          itemBuilder: (context, index) {
+            final item = filtered[index];
+            final caption = item['caption'] ?? item['title'] ?? 'No Description';
+            return ListTile(
+              title: Text(caption, style: const TextStyle(color: Colors.white)),
+              subtitle: Text(item['created_at']?.toString().substring(0, 10) ?? '', style: const TextStyle(color: Colors.white54)),
+            );
+          },
+        );
+      },
     );
   }
 }
