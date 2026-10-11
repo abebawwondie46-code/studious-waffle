@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
       
-      // 1. የ ፖስቶች ብዛት ከ 'posts' ቴብል በትክክል ማምጣት (7 እንዲሆን)
+      // 1. የ ፖስቶች ብዛት ከ 'posts' ቴብል ማምጣት
       int postsLen = 0;
       try {
         final postsResponse = await supabase.from('posts').select('id');
@@ -460,7 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Posts ሲጫኑ ወደ ፖስቶች ማሳያ ገጽ ይወስዳል
+                  // Posts ሲጫኑ
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -473,8 +473,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Likes ሲጫኑ
                   GestureDetector(
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Opening Likes...'), backgroundColor: Colors.blue),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const UserLikesScreen()),
                       );
                     },
                     child: _ProfileStatItem(title: 'Likes', count: _likesCount.toString()),
@@ -482,8 +483,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Followers ሲጫኑ
                   GestureDetector(
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Opening Followers...'), backgroundColor: Colors.blue),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const UserFollowersScreen()),
                       );
                     },
                     child: _ProfileStatItem(title: 'Followers', count: _followersCount.toString()),
@@ -551,7 +553,7 @@ class _ProfileStatItem extends StatelessWidget {
   }
 }
 
-// የ ተጠቃሚውን ፖስቶች በቀጥታ ከ 'posts' ቴብል አምጥቶ የሚያሳይ ገጽ
+// 1. የ ተጠቃሚውን ፖስቶች የሚያሳይ ገጽ
 class UserPostsScreen extends StatelessWidget {
   const UserPostsScreen({super.key});
 
@@ -626,6 +628,157 @@ class UserPostsScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// 2. የ ላይክ (Likes) ዝርዝር ቪዲዮዎችን የሚያሳይ ገጽ
+class UserLikesScreen extends StatelessWidget {
+  const UserLikesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final SupabaseClient supabase = Supabase.instance.client;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0C),
+      appBar: AppBar(
+        title: const Text('Liked Videos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF0A0A0C),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: supabase.from('videos').select().order('likes_count', ascending: false),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
+          }
+          final videos = snapshot.data ?? [];
+          if (videos.isEmpty) {
+            return const Center(child: Text('No liked videos found.', style: TextStyle(color: Colors.white54)));
+          }
+
+          return ListView.builder(
+            itemCount: videos.length,
+            padding: const EdgeInsets.all(12),
+            itemBuilder: (context, index) {
+              final video = videos[index];
+              final caption = video['caption'] ?? video['title'] ?? 'No Description';
+              final videoUrl = video['video_url'] ?? video['media_url'] ?? '';
+              final likesCount = video['likes_count'] ?? 0;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16161A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10, width: 0.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Color(0xFF2575FC),
+                        child: Icon(Icons.favorite, color: Colors.white),
+                      ),
+                      title: const Text('Liked Content', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.favorite, color: Colors.pink, size: 18),
+                          const SizedBox(width: 6),
+                          Text('$likesCount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    if (videoUrl.isNotEmpty)
+                      Container(
+                        height: 220,
+                        width: double.infinity,
+                        color: Colors.black,
+                        child: const Center(
+                          child: Icon(Icons.play_circle_fill, color: Colors.white, size: 60),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        caption,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// 3. የ ፎሎወርስ (Followers) ዝርዝር የሚያሳይ ገጽ
+class UserFollowersScreen extends StatelessWidget {
+  const UserFollowersScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final SupabaseClient supabase = Supabase.instance.client;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0C),
+      appBar: AppBar(
+        title: const Text('Followers List', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF0A0A0C),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: supabase.from('videos').select().order('followers_count', ascending: false),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
+          }
+          final items = snapshot.data ?? [];
+          if (items.isEmpty) {
+            return const Center(child: Text('No followers found.', style: TextStyle(color: Colors.white54)));
+          }
+
+          return ListView.builder(
+            itemCount: items.length,
+            padding: const EdgeInsets.all(12),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final followersCount = item['followers_count'] ?? 0;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16161A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10, width: 0.5),
+                ),
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFF2575FC),
+                    child: Icon(Icons.person_add, color: Colors.white),
+                  ),
+                  title: Text('Follower Group #${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: Text('Active Followers: $followersCount', style: const TextStyle(color: Colors.white54)),
+                  trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
                 ),
               );
             },
