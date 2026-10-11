@@ -250,10 +250,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // ሎግ አውት ሲደረግ መረጃዎችን አጽድቶ ወደ መጀመሪያው የምዝገባ/ሎጊን ገጽ መውሰድ
   Future<void> _signOut() async {
     try {
+      // 1. የፕሮፋይል መረጃዎችን ከ profiles ቴብል ማጥፋት (ስም፣ ስልክ እና ፎቶ እንዲጠፉ)
+      try {
+        await supabase.from('profiles').delete().eq('id', 1);
+      } catch (_) {}
+
+      // 2. ከሰርቨር ሎግ አውት ማድረግ
       await supabase.auth.signOut();
+
       if (!mounted) return;
+      // 3. ወደ መግቢያ/ምዝገባ ገጽ መመለስ
       Navigator.of(context).pushReplacementNamed('/login');
     } catch (e) {
       if (!mounted) return;
