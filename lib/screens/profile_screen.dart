@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -65,23 +66,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
       try {
         final videosResponse = await supabase.from('videos').select('likes_count');
         for (var video in (videosResponse as List)) {
-          totalLikes += (video['likes_count'] as num?)?.toInt() ?? 0;
+          totalLikes += max(0, (video['likes_count'] as num?)?.toInt() ?? 0);
         }
       } catch (_) {}
 
-      // 4. Calculate total followers count from 'videos' table
+      // 4. Calculate total followers count from 'videos' table (Prevent negative numbers)
       int totalFollowers = 0;
       try {
         final videosResponse = await supabase.from('videos').select('followers_count');
         for (var video in (videosResponse as List)) {
-          totalFollowers += (video['followers_count'] as num?)?.toInt() ?? 0;
+          int count = (video['followers_count'] as num?)?.toInt() ?? 0;
+          if (count > 0) {
+            totalFollowers += count;
+          }
         }
       } catch (_) {}
 
       setState(() {
         _postsCount = postsLen;
-        _likesCount = totalLikes;
-        _followersCount = totalFollowers;
+        _likesCount = max(0, totalLikes);
+        _followersCount = max(0, totalFollowers);
         _isLoading = false;
       });
     } catch (e) {
@@ -168,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error or failed to upload image: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Failed to upload image: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -235,37 +239,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error! Failed to update.'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Failed to update profile.'), backgroundColor: Colors.red),
       );
     }
   }
 
-  // Logout action with success toast message and clearing profile details
+  // Safe Logout action with clear toast and smooth navigation
   Future<void> _signOut() async {
     try {
-      // Show logging out toast notification
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Successfully logged out!'),
-          backgroundColor: Colors.blueAccent,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Successfully logged out!'),
+            backgroundColor: Colors.blueAccent,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
 
-      // Clear profile details from profiles table
+      // Safe deletion from profiles table
       try {
         await supabase.from('profiles').delete().match({'id': 1});
       } catch (_) {}
 
-      if (supabase.auth.currentSession != null) {
+      // Safe Auth SignOut
+      try {
         await supabase.auth.signOut();
-      }
+      } catch (_) {}
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/login');
-    } catch (e) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    } catch (_) {
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/login');
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 
@@ -341,7 +347,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 10),
             
-            // Profile Image Picker
+            // Profile Image
             Stack(
               children: [
                 CircleAvatar(
@@ -780,7 +786,7 @@ class UserLikesScreen extends StatelessWidget {
               final video = videos[index];
               final caption = video['caption'] ?? video['title'] ?? 'No Description';
               final videoUrl = video['video_url'] ?? video['media_url'] ?? '';
-              final likesCount = video['likes_count'] ?? 0;
+              final likesCount = max(0, video['likes_count'] ?? 0);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
@@ -859,16 +865,18 @@ class UserFollowersScreen extends StatelessWidget {
             return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
           }
           final items = snapshot.data ?? [];
-          if (items.isEmpty) {
+          final filteredItems = items.where((i) => ((i['followers_count'] ?? 0) as int) > 0).toList();
+
+          if (filteredItems.isEmpty) {
             return const Center(child: Text('No followers found.', style: TextStyle(color: Colors.white54)));
           }
 
           return ListView.builder(
-            itemCount: items.length,
+            itemCount: filteredItems.length,
             padding: const EdgeInsets.all(12),
             itemBuilder: (context, index) {
-              final item = items[index];
-              final followersCount = item['followers_count'] ?? 0;
+              final item = filteredItems[index];
+              final followersCount = max(0, item['followers_count'] ?? 0);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
