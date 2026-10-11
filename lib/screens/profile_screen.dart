@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
       
-      // 1. የ ፖስቶች ብዛት ከ videos ቴብል ማምጣት
+      // 1. የ ፖስቶች ብዛት ማምጣት
       int postsLen = 0;
       try {
         final postsResponse = await supabase.from('videos').select('id');
@@ -63,29 +63,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 3. የሁሉም ቪዲዮዎች የላይክ (likes_count) ድምርን ከ videos ቴብል ማስላት
+      // 3. የላይክ (likes_count) ትክክለኛ ቆጠራ ከ videos ቴብል ማምጣት
       int totalLikes = 0;
       try {
-        final videosResponse = await supabase.from('videos').select('likes_count');
-        for (var video in (videosResponse as List)) {
-          totalLikes += (video['likes_count'] as num?)?.toInt() ?? 0;
+        final likesResponse = await supabase.from('videos').select('likes_count');
+        for (var row in (likesResponse as List)) {
+          totalLikes += (row['likes_count'] as num?)?.toInt() ?? 0;
         }
       } catch (_) {}
 
-      // 4. የፎሎወር (followers_count) ትክክለኛ ቁጥር ከ videos ቴብል ማምጣት
-      int exactFollowers = 0;
+      // 4. Followers ቆጠራ
+      int followersLen = 0;
       try {
-        final videosResponse = await supabase.from('videos').select('followers_count').limit(1);
-        if ((videosResponse as List).isNotEmpty) {
-          exactFollowers = (videosResponse[0]['followers_count'] as num?)?.toInt() ?? 0;
-        }
+        final followersResponse = await supabase.from('followers').select('id');
+        followersLen = (followersResponse as List).length;
       } catch (_) {}
 
       setState(() {
         _currentUser = user;
         _postsCount = postsLen;
         _likesCount = totalLikes;
-        _followersCount = exactFollowers;
+        _followersCount = followersLen;
         _isLoading = false;
       });
     } catch (e) {
