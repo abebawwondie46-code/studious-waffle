@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
       
-      // 1. የ ፖስቶች ብዛት ማምጣት
+      // 1. የ ፖስቶች ብዛት ከ 'videos' ቴብል በትክክል ማምጣት (7 እንዲሆን)
       int postsLen = 0;
       try {
         final postsResponse = await supabase.from('videos').select('id');
@@ -63,27 +63,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 3. የላይክ (likes_count) ትክክለኛ ቆጠራ ከ videos ቴብል ማምጣት
+      // 3. የሁሉም ቪዲዮዎች የላይክ (likes_count) ድምርን ከ 'videos' ቴብል ማስላት (882 እንዲሆን)
       int totalLikes = 0;
       try {
-        final likesResponse = await supabase.from('videos').select('likes_count');
-        for (var row in (likesResponse as List)) {
-          totalLikes += (row['likes_count'] as num?)?.toInt() ?? 0;
+        final videosResponse = await supabase.from('videos').select('likes_count');
+        for (var video in (videosResponse as List)) {
+          totalLikes += (video['likes_count'] as num?)?.toInt() ?? 0;
         }
       } catch (_) {}
 
-      // 4. Followers ቆጠራ
-      int followersLen = 0;
+      // 4. የፎሎወር (followers_count) ትክክለኛ ቁጥር ከ 'videos' ቴብል ማምጣት (2 እንዲሆን)
+      int totalFollowers = 0;
       try {
-        final followersResponse = await supabase.from('followers').select('id');
-        followersLen = (followersResponse as List).length;
+        final videosResponse = await supabase.from('videos').select('followers_count');
+        for (var video in (videosResponse as List)) {
+          final count = (video['followers_count'] as num?)?.toInt() ?? 0;
+          if (count > totalFollowers) {
+            totalFollowers = count;
+          }
+        }
       } catch (_) {}
 
       setState(() {
         _currentUser = user;
         _postsCount = postsLen;
         _likesCount = totalLikes;
-        _followersCount = followersLen;
+        _followersCount = totalFollowers;
         _isLoading = false;
       });
     } catch (e) {
