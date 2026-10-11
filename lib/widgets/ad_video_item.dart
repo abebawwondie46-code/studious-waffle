@@ -13,7 +13,7 @@ class AdVideoItem extends StatefulWidget {
   final String? videoId;
   final VoidCallback? onVideoDeleted;
   final String? userAvatar; 
-  final String? userName;   
+  final String? userName;    
 
   const AdVideoItem({
     super.key,
@@ -43,7 +43,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   bool _isFollowing = false;
   int _followersCount = 0;
   
-  // እያንዳንዱ ቪዲዮ የራሱ የሆነ የ (+) ምልክት መደበቂያ ቬርያብል እንዲኖረው ማድረግ
   bool _hidePlusSignPermanently = false;
 
   bool _buttonsVisible = true;
@@ -62,14 +61,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     )..repeat();
     _initializeVideo();
     _loadVideoSpecificData();
-    _startSmartTimer(); // 🛑 አዲሱ የ 5 ሰከንድ እይታ እና የ 19 ሰከንድ መደበቂያ ዑደት
+    _startSmartTimer();
   }
 
-  // 🛑 አዲሱ ታይመር ሎጂክ፡ 5 ሰከንድ ታይቶ ሲጠፋ ለ 19 ሰከንድ ተደብቆ ይቆያል
   void _startSmartTimer() {
     _visibilityTimer?.cancel();
     
-    // መጀመሪያ ለ 5 ሰከንድ እንዲታዩ ማድረግ
     _visibilityTimer = Timer(const Duration(seconds: 5), () {
       if (mounted && !_isUserInteracting) {
         setState(() {
@@ -83,18 +80,16 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   void _startHiddenTimer() {
     _visibilityTimer?.cancel();
     
-    // ከጠፉ በኋላ ለ 19 ሰከንድ ተደብቀው እንዲቆዩ ማድረግ
     _visibilityTimer = Timer(const Duration(seconds: 19), () {
       if (mounted && !_isUserInteracting) {
         setState(() {
           _buttonsVisible = true;
         });
-        _startSmartTimer(); // ዑደቱን እንደገና መቀጠል
+        _startSmartTimer();
       }
     });
   }
 
-  // 🛑 ተጠቃሚው ስክሪኑን ወይም አዝራሮቹን ሲነካ ወዲያውኑ አክቲቭ ሆኖ ብቅ እንዲሉ
   void _keepButtonsVisibleTemporarily() {
     _visibilityTimer?.cancel();
     setState(() {
@@ -102,7 +97,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       _buttonsVisible = true;
     });
 
-    // ተጠቃሚው ስራውን ጨርሶ ካቆመ በኋላ ለ 5 ሰከንድ ቆይቶ ወደ መደበኛው ዑደት ይመለሳል
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
@@ -121,7 +115,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
-  // የዚህን ቪዲዮ ብቻ ሎካል እና ሰርቨር መረጃዎች ለይቶ ማንበብ
   Future<void> _loadVideoSpecificData() async {
     setState(() {
       _isFollowing = false;
@@ -414,6 +407,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     super.build(context);
     
+    // 🛑 ቪዲዮው ሙሉ በሙሉ ተጭኖ መጫወት ሲጀምር ብቻ አዝራሮቹ እንዲታዩ የሚደረግበት ሁኔታ
+    final bool isVideoReadyAndPlaying = _isInitialized && 
+        _videoController != null && 
+        _videoController!.value.isInitialized && 
+        _videoController!.value.isPlaying;
+    
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -497,142 +496,144 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          Positioned(
-            right: 12,
-            bottom: 80,
-            child: AnimatedOpacity(
-              opacity: _buttonsVisible ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 600),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: _handleFollowPressed,
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.grey,
-                            backgroundImage: (widget.userAvatar != null && widget.userAvatar!.isNotEmpty)
-                                ? NetworkImage(widget.userAvatar!)
-                                : null,
-                            child: (widget.userAvatar == null || widget.userAvatar!.isEmpty)
-                                ? const Icon(Icons.person, color: Colors.white, size: 26)
-                                : null,
-                          ),
-                        ),
-                        if (!_hidePlusSignPermanently)
-                          Positioned(
-                            bottom: 4,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: _isFollowing ? Colors.green : Colors.redAccent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                _isFollowing ? Icons.check : Icons.add,
-                                color: Colors.white,
-                                size: 14,
-                              ),
+          // 🛑 ቪዲዮው መጫወት ሲጀምር ብቻ ላይክ፣ ኮሜንት፣ ሼር እና ሌሎች አዝራሮች እንዲታዩ ይደረጋል
+          if (isVideoReadyAndPlaying)
+            Positioned(
+              right: 12,
+              bottom: 80,
+              child: AnimatedOpacity(
+                opacity: _buttonsVisible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 600),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: _handleFollowPressed,
+                      child: Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Colors.grey,
+                              backgroundImage: (widget.userAvatar != null && widget.userAvatar!.isNotEmpty)
+                                  ? NetworkImage(widget.userAvatar!)
+                                  : null,
+                              child: (widget.userAvatar == null || widget.userAvatar!.isEmpty)
+                                  ? const Icon(Icons.person, color: Colors.white, size: 26)
+                                  : null,
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  IconButton(
-                    icon: Icon(
-                      _isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: _isLiked ? Colors.redAccent : Colors.white,
-                      size: 32,
-                    ),
-                    onPressed: _handleLikePressed,
-                  ),
-                  Text(
-                    _formatCount(_likeCount),
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-
-                  GestureDetector(
-                    onTap: _openComments,
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(9),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Colors.pinkAccent, Colors.purpleAccent],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.purple.withOpacity(0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
+                          if (!_hidePlusSignPermanently)
+                            Positioned(
+                              bottom: 4,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: _isFollowing ? Colors.green : Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _isFollowing ? Icons.check : Icons.add,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
                               ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.forum_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _formatCount(_commentCount),
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  IconButton(
-                    icon: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.rotationY(3.14159),
-                      child: const Icon(Icons.reply, color: Colors.white, size: 30),
-                    ),
-                    onPressed: _handleSharePressed,
-                  ),
-                  Text(
-                    _formatCount(_shareCount),
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 14),
-
-                  RotationTransition(
-                    turns: _discController,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.black87,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey, width: 6),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.music_note, color: Colors.white, size: 14),
+                            ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+
+                    IconButton(
+                      icon: Icon(
+                        _isLiked ? Icons.favorite : Icons.favorite_border,
+                        color: _isLiked ? Colors.redAccent : Colors.white,
+                        size: 32,
+                      ),
+                      onPressed: _handleLikePressed,
+                    ),
+                    Text(
+                      _formatCount(_likeCount),
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+
+                    GestureDetector(
+                      onTap: _openComments,
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Colors.pinkAccent, Colors.purpleAccent],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.purple.withOpacity(0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.forum_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatCount(_commentCount),
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    IconButton(
+                      icon: Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.rotationY(3.14159),
+                        child: const Icon(Icons.reply, color: Colors.white, size: 30),
+                      ),
+                      onPressed: _handleSharePressed,
+                    ),
+                    Text(
+                      _formatCount(_shareCount),
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 14),
+
+                    RotationTransition(
+                      turns: _discController,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey, width: 6),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.music_note, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
