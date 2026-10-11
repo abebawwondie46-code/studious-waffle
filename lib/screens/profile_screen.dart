@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,7 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _likesCount = 0;
   int _followersCount = 0;
   
-  // ለጽሁፍ መቀበያ መቆጣጠሪያዎች (Controllers)
+  // Controllers for text fields
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -33,19 +34,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _checkInternetAndLoadData();
+  }
+
+  // Check internet connection and load profile data
+  Future<void> _checkInternetAndLoadData() async {
+    final connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No internet connection! Please check your network.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
     _loadUserProfileAndStats();
   }
 
   Future<void> _loadUserProfileAndStats() async {
     try {
-      // 1. የ ፖስቶች ብዛት ከ 'posts' ቴብል ማምጣት
+      // 1. Fetch posts count from 'posts' table
       int postsLen = 0;
       try {
         final postsResponse = await supabase.from('posts').select('id');
         postsLen = (postsResponse as List).length;
       } catch (_) {}
 
-      // 2. ከ profiles ቴብል የተጠቃሚውን መረጃዎች ማምጣት
+      // 2. Fetch user profile data from 'profiles' table
       try {
         final profileData = await supabase
             .from('profiles')
@@ -60,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 3. የሁሉም ቪዲዮዎች የላይክ (likes_count) ድምርን ከ 'videos' ቴብል ማስላት
+      // 3. Calculate total likes count from 'videos' table
       int totalLikes = 0;
       try {
         final videosResponse = await supabase.from('videos').select('likes_count');
@@ -69,7 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 4. የፎሎወር (followers_count) ድምርን ከ 'videos' ቴብል ማምጣት
+      // 4. Calculate total followers count from 'videos' table
       int totalFollowers = 0;
       try {
         final videosResponse = await supabase.from('videos').select('followers_count');
@@ -91,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ከጋለሪ ወይም ከካሜራ ፎቶ መምረጫ / ማንሻ ሜኑ
+  // Image source picker dialog (Gallery / Camera)
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
@@ -126,8 +142,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ፎቶን መርጦ ወይም አንስቶ ወደ Supabase Storage መጫን
+  // Pick and upload profile image to Supabase Storage
   Future<void> _pickAndUploadProfileImage(ImageSource source) async {
+    final connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No internet connection!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
     if (image == null) return;
 
@@ -148,7 +173,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final imageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
 
-      // ፎቶውን በቀጥታ በ profiles ቴብል እናዘምነዋለን (ለዋናው ገጽ እንዲሰራ)
       await supabase.from('profiles').upsert({
         'id': 1,
         'avatar_url': imageUrl,
@@ -174,8 +198,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // መረጃዎችን ማረጋገጥ እና ሴቭ ማድረግ
+  // Validate and save profile changes
   Future<void> _saveProfileChanges() async {
+    final connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No internet connection!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     final newName = _nameController.text.trim();
     final newEmail = _emailController.text.trim();
     final newPhone = _phoneController.text.trim();
@@ -183,28 +216,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     final phoneRegex = RegExp(r'^\+?[\d\s\-\(\)]{7,15}$');
 
-    // 1. የሙሉ ስም ማረጋገጫ
     if (newName.isEmpty || !newName.contains(' ')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your full name (including last name)!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Please enter your full name!'), backgroundColor: Colors.red),
       );
       return;
     }
-    // 2. የኢሜይል ማረጋገጫ
     if (newEmail.isEmpty || !emailRegex.hasMatch(newEmail)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fix your email address!'), backgroundColor: Colors.red),
       );
       return;
     }
-    // 3. የስልክ ቁጥር ማረጋገጫ
     if (newPhone.isEmpty || !phoneRegex.hasMatch(newPhone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fix your phone number!'), backgroundColor: Colors.red),
       );
       return;
     }
-    // 4. የፕሮፋይል ፎቶ ማረጋገጫ
     if (_profileImageUrl == null || _profileImageUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a profile picture!'), backgroundColor: Colors.red),
@@ -217,7 +246,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      // መረጃዎችን ወደ Supabase profiles ቴብል መላክ (በዋናው ገጽ እንዲነበብ)
       await supabase.from('profiles').upsert({
         'id': 1,
         'full_name': newName,
@@ -246,25 +274,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ሎግ አውት ሲደረግ መረጃዎችን ሙሉ በሙሉ አጽድቶ ወደ መግቢያ/ምዝገባ ገጽ መውሰድ (Null check errorን ሙሉ በሙሉ ያስወግዳል)
+  // Logout action with success toast message and clearing profile details
   Future<void> _signOut() async {
     try {
-      // 1. የፕሮፋይል መረጃዎችን ከ profiles ቴብል ማጥፋት (ስም፣ ስልክ እና ፎቶ እንዲጠፉ)
+      // Show logging out toast notification
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Successfully logged out!'),
+          backgroundColor: Colors.blueAccent,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Clear profile details from profiles table
       try {
         await supabase.from('profiles').delete().match({'id': 1});
       } catch (_) {}
 
-      // 2. ከሰርቨር ደህንነቱ በተጠበቀ ሁኔታ ሎግ አውት ማድረግ
       if (supabase.auth.currentSession != null) {
         await supabase.auth.signOut();
       }
 
       if (!mounted) return;
-      // 3. ወደ መግቢያ/ምዝገባ ገጽ መመለስ
       Navigator.of(context).pushReplacementNamed('/login');
     } catch (e) {
       if (!mounted) return;
-      // ስህተት ካጋጠመ በቀጥታ ወደ ሎጊን ገጽ እንዲያልፍ ይደረጋል
       Navigator.of(context).pushReplacementNamed('/login');
     }
   }
@@ -284,7 +318,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         titleSpacing: 0,
         title: Row(
           children: [
-            // 1. የእርሳስ ምልክቱ (Edit / Save አዝራር)
             IconButton(
               icon: _isSaving
                   ? const SizedBox(
@@ -306,7 +339,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
               tooltip: _isEditing ? 'Save Changes' : 'Edit Profile',
             ),
-            // 2. የሰርች ቁልፍ በእርሳስ ምልክቱ እና በ "Profile" ጽሁፍ መካከል
             IconButton(
               icon: const Icon(Icons.search, color: Colors.white70),
               onPressed: () {
@@ -318,10 +350,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               tooltip: 'Search Posts, Likes & Followers',
             ),
             const Spacer(),
-            // 3. የ "Profile" ጽሁፍ መሃል ላይ እንዲሆን
             const Text('Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
             const Spacer(),
-            const SizedBox(width: 48), // ሚዛኑን (Balance) ለመጠበቅ
+            const SizedBox(width: 48),
           ],
         ),
         backgroundColor: const Color(0xFF0A0A0C),
@@ -344,7 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 10),
             
-            // የፕሮፋይል ፎቶ መቀየሪያ
+            // Profile Image Picker
             Stack(
               children: [
                 CircleAvatar(
@@ -391,7 +422,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.start,
                         decoration: InputDecoration(
-                          labelText: 'Full Name (ስም ከነአባት)',
+                          labelText: 'Full Name',
                           labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                           filled: true,
                           fillColor: const Color(0xFF16161A),
@@ -409,7 +440,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         textAlign: TextAlign.start,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          labelText: 'Email Address (Secure)',
+                          labelText: 'Email Address',
                           labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                           filled: true,
                           fillColor: const Color(0xFF16161A),
@@ -486,7 +517,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Posts ሲጫኑ
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -496,7 +526,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                     child: _ProfileStatItem(title: 'Posts', count: _postsCount.toString()),
                   ),
-                  // Likes ሲጫኑ
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -506,7 +535,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                     child: _ProfileStatItem(title: 'Likes', count: _likesCount.toString()),
                   ),
-                  // Followers ሲጫኑ
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -579,7 +607,7 @@ class _ProfileStatItem extends StatelessWidget {
   }
 }
 
-// ለ 3ቱም (Posts, Likes, Followers) የሰርች አገልግሎት የሚሰጥ Delegate
+// Global Search Delegate
 class GlobalSearchDelegate extends SearchDelegate {
   final SupabaseClient supabase = Supabase.instance.client;
 
@@ -665,7 +693,7 @@ class GlobalSearchDelegate extends SearchDelegate {
   }
 }
 
-// 1. የ ተጠቃሚውን ፖስቶች የሚያሳይ ገጽ
+// User Posts Screen
 class UserPostsScreen extends StatelessWidget {
   const UserPostsScreen({super.key});
 
@@ -750,7 +778,7 @@ class UserPostsScreen extends StatelessWidget {
   }
 }
 
-// 2. የ ላይክ (Likes) ዝርዝር ቪዲዮዎችን የሚያሳይ ገጽ
+// User Likes Screen
 class UserLikesScreen extends StatelessWidget {
   const UserLikesScreen({super.key});
 
@@ -840,7 +868,7 @@ class UserLikesScreen extends StatelessWidget {
   }
 }
 
-// 3. የ ፎሎወርስ (Followers) ዝርዝር የሚያሳይ ገጽ
+// User Followers Screen
 class UserFollowersScreen extends StatelessWidget {
   const UserFollowersScreen({super.key});
 
