@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = supabase.auth.currentUser ?? supabase.auth.currentSession?.user;
       
-      // 1. የ ፖስቶች ብዛት ከ 'videos' ቴብል በትክክል ቆጥሮ ማምጣት (7 እንዲሆን)
+      // 1. የ ፖስቶች ብዛት ከ 'videos' ቴብል ርዝመት (Length) በትክክል ማምጣት (7 እንዲሆን)
       int postsLen = 0;
       try {
         final postsResponse = await supabase.from('videos').select('id');
@@ -72,7 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 4. የፎሎወር (followers_count) ድምርን ወይም ትክክለኛውን ቁጥር ከ 'videos' ቴብል ማምጣት
+      // 4. የፎሎወር (followers_count) ድምርን ከ 'videos' ቴብል ማምጣት
       int totalFollowers = 0;
       try {
         final videosResponse = await supabase.from('videos').select('followers_count');
