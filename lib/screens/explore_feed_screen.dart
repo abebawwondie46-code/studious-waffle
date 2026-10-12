@@ -55,6 +55,18 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     _fetchUserProfileAndPosts();
   }
 
+  void _showNoInternetToast() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No internet connection! Please check your network.'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _fetchUserProfileAndPosts() async {
     try {
       try {
@@ -84,6 +96,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       setState(() {
         _isLoading = false;
       });
+      _showNoInternetToast();
     }
   }
 
@@ -103,13 +116,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to delete post! Check connection.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showNoInternetToast();
     }
   }
 
@@ -177,14 +184,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       Navigator.pop(context);
       _fetchUserProfileAndPosts();
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No internet connection! Please check your network.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showNoInternetToast();
     } finally {
       if (mounted) {
         setState(() {
@@ -397,7 +397,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     );
   }
 
-  // 🔍 ፎቶውን ጠቅ ሲያደርጉት ብድግ ብሎ ቀረብ ብሎ የሚያሳይ Full Screen Popup (Hero Animation)
   void _openZoomableImage(String imageUrl, String tag) {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -442,7 +441,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 💡 ፖስቶቹን በተጠቃሚ (user_id / profile) በቡድን ማቀናጀት (Group posts by author/user)
+    // Group posts by author/user ID
     final Map<String, List<Map<String, dynamic>>> groupedPosts = {};
     for (var post in _posts) {
       final userId = post['user_id']?.toString() ?? 'default_user';
@@ -488,7 +487,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                         final userId = userKeys[userIndex];
                         final userPosts = groupedPosts[userId]!;
 
-                        // 🖼️ የዚህ ተጠቃሚ ፎቶዎች (Images) እና ጽሁፎች (Captions)
                         final List<Map<String, String>> allImages = [];
                         final List<String> allCaptions = [];
 
@@ -509,7 +507,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 1. User Header (የተጠቃሚው ፕሮፋይልና ስም)
+                              // 1. User Header
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                                 child: Row(
@@ -560,7 +558,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Multi-Image Layout (ልክ እንደ ፌስቡክ 2 ወይም ከዚያ በላይ ፎቶዎች ጎን ለጎን ተደራርበው እንዲቀመጡ)
+                              // 2. Multi-Image Layout (Facebook style grid for multiple photos per profile)
                               if (allImages.isNotEmpty) ...[
                                 if (allImages.length == 1)
                                   GestureDetector(
@@ -576,7 +574,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                     ),
                                   )
                                 else
-                                  // ከ 1 በላይ ፎቶ ሲኖር ጎን ለጎን (Grid/Row) መልክ ይቀመጣሉ
                                   SizedBox(
                                     height: 320,
                                     child: Row(
@@ -605,7 +602,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   ),
                               ],
 
-                              // 3. Captions (የዚህ ተጠቃሚ ጽሁፎች)
+                              // 3. Captions
                               if (allCaptions.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
