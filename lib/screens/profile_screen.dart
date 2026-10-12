@@ -23,12 +23,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _likesCount = 0;
   int _followersCount = 0;
   
-  // Controllers for text fields
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   
   String? _profileImageUrl;
+  String _currentFullName = 'Community Creator';
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -37,7 +37,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserProfileAndStats();
   }
 
-  // Helper method to show network alert Toast
   void _showNoInternetToast() {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -57,14 +56,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserProfileAndStats() async {
     try {
-      // 1. Fetch posts count from 'posts' table
       int postsLen = 0;
       try {
         final postsResponse = await supabase.from('posts').select('id');
         postsLen = (postsResponse as List).length;
       } catch (_) {}
 
-      // 2. Fetch user profile data from 'profiles' table
       try {
         final profileData = await supabase
             .from('profiles')
@@ -72,14 +69,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .maybeSingle();
 
         if (profileData != null) {
-          _nameController.text = profileData['full_name'] ?? '';
-          _phoneController.text = profileData['phone_number'] ?? '';
-          _emailController.text = profileData['email'] ?? '';
-          _profileImageUrl = profileData['avatar_url'];
+          setState(() {
+            _nameController.text = profileData['full_name'] ?? '';
+            _currentFullName = profileData['full_name'] ?? 'Community Creator';
+            _phoneController.text = profileData['phone_number'] ?? '';
+            _emailController.text = profileData['email'] ?? '';
+            _profileImageUrl = profileData['avatar_url'];
+          });
         }
       } catch (_) {}
 
-      // 3. Calculate total likes count from 'videos' table safely
       int totalLikes = 0;
       try {
         final videosResponse = await supabase.from('videos').select('likes_count');
@@ -89,7 +88,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
 
-      // 4. Calculate total followers count from 'videos' table safely
       int totalFollowers = 0;
       try {
         final videosResponse = await supabase.from('videos').select('followers_count');
@@ -115,7 +113,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Image source picker dialog (Gallery / Camera)
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
@@ -150,7 +147,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Pick and upload profile image to Supabase Storage
   Future<void> _pickAndUploadProfileImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
     if (image == null) return;
@@ -194,7 +190,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Validate and save profile changes
   Future<void> _saveProfileChanges() async {
     final newName = _nameController.text.trim();
     final newEmail = _emailController.text.trim();
@@ -242,6 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       setState(() {
+        _currentFullName = newName;
         _isSaving = false;
         _isEditing = false;
       });
@@ -258,7 +254,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Safe Logout action with clear toast and smooth navigation
   Future<void> _signOut() async {
     try {
       if (mounted) {
@@ -359,7 +354,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 10),
             
-            // Profile Image
             Stack(
               children: [
                 CircleAvatar(
@@ -505,7 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const UserPostsScreen()),
+                        MaterialPageRoute(builder: (context) => UserPostsScreen(userName: _currentFullName, avatarUrl: _profileImageUrl)),
                       );
                     },
                     child: _ProfileStatItem(title: 'Posts', count: _postsCount.toString()),
@@ -677,9 +671,12 @@ class GlobalSearchDelegate extends SearchDelegate {
   }
 }
 
-// User Posts Screen
+// User Posts Screen (Updated to accept profile name and avatar)
 class UserPostsScreen extends StatelessWidget {
-  const UserPostsScreen({super.key});
+  final String userName;
+  final String? avatarUrl;
+
+  const UserPostsScreen({super.key, required this.userName, this.avatarUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -725,11 +722,16 @@ class UserPostsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFF2575FC),
-                        child: Icon(Icons.person, color: Colors.white),
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF2575FC),
+                        backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
+                            ? NetworkImage(avatarUrl!)
+                            : null,
+                        child: (avatarUrl == null || avatarUrl!.isEmpty)
+                            ? const Icon(Icons.person, color: Colors.white)
+                            : null,
                       ),
-                      title: const Text('Community Creator', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      title: Text(userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       subtitle: Text(post['created_at']?.toString().substring(0, 10) ?? '', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                     ),
                     if (mediaUrl.isNotEmpty)
@@ -877,23 +879,17 @@ class UserFollowersScreen extends StatelessWidget {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
           }
-          final items = snapshot.data ?? [];
-          final filteredItems = items.where((i) {
-            int count = (i['followers_count'] as num?)?.toInt() ?? 0;
-            return count > 0;
-          }).toList();
-
-          if (filteredItems.isEmpty) {
+          final followers = snapshot.data ?? [];
+          if (followers.isEmpty) {
             return const Center(child: Text('No followers found.', style: TextStyle(color: Colors.white54)));
           }
 
           return ListView.builder(
-            itemCount: filteredItems.length,
+            itemCount: followers.length,
             padding: const EdgeInsets.all(12),
             itemBuilder: (context, index) {
-              final item = filteredItems[index];
-              int rawFollowers = (item['followers_count'] as num?)?.toInt() ?? 0;
-              final followersCount = max(0, rawFollowers);
+              final follower = followers[index];
+              final title = follower['caption'] ?? follower['title'] ?? 'Community Follower';
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -905,11 +901,10 @@ class UserFollowersScreen extends StatelessWidget {
                 child: ListTile(
                   leading: const CircleAvatar(
                     backgroundColor: Color(0xFF2575FC),
-                    child: Icon(Icons.person_add, color: Colors.white),
+                    child: Icon(Icons.person, color: Colors.white),
                   ),
-                  title: Text('Follower Group #${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: Text('Active Followers: $followersCount', style: const TextStyle(color: Colors.white54)),
-                  trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+                  title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: Text('Joined: ${follower['created_at']?.toString().substring(0, 10) ?? ''}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 ),
               );
             },
