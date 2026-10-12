@@ -542,8 +542,8 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Image with Overlay Caption or Text Poster Card
-                              if (mediaUrl.isNotEmpty)
+                              // 2. Clean Image View with Proper Aspect Ratio or Text Poster
+                              if (mediaUrl.isNotEmpty) ...[
                                 GestureDetector(
                                   onTap: () => _openZoomableImage(mediaUrl, heroTag),
                                   child: Hero(
@@ -554,55 +554,33 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                         maxHeight: 480,
                                       ),
                                       color: Colors.black,
-                                      child: Stack(
-                                        alignment: Alignment.bottomLeft,
-                                        children: [
-                                          // Image
-                                          Image.network(
-                                            mediaUrl,
-                                            width: double.infinity,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (context, error, stackTrace) => const SizedBox(
-                                              height: 200,
-                                              child: Center(
-                                                child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
-                                              ),
-                                            ),
+                                      child: Image.network(
+                                        mediaUrl,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                          height: 200,
+                                          child: Center(
+                                            child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
                                           ),
-                                          // Overlay Caption (ልክ እንደ ሙሽሮቹ ፎቶ ላይ ከታች በኩል በቀጥታ እንዲፃፍ)
-                                          if (caption.isNotEmpty)
-                                            Container(
-                                              width: double.infinity,
-                                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
-                                                  begin: Alignment.bottomCenter,
-                                                  end: Alignment.topCenter,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                caption,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w500,
-                                                  shadows: [
-                                                    Shadow(
-                                                      offset: Offset(0, 1),
-                                                      blurRadius: 3.0,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                        ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                )
-                              else
+                                ),
+                                // Caption Below Image (Clean, perfectly aligned and readable)
+                                if (caption.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(16.0, 10.0, 16.0, 4.0),
+                                    child: Text(
+                                      caption,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                              ] else
                                 // Text Poster Card
                                 Container(
                                   width: double.infinity,
