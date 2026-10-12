@@ -542,8 +542,22 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Clean Image View or Text Poster
-                              if (mediaUrl.isNotEmpty) ...[
+                              // 2. Caption Above Image (ጽሁፉ ከፎቶው በላይ እንዲሆን ተደርጓል)
+                              if (caption.isNotEmpty && mediaUrl.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                  child: Text(
+                                    caption,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+
+                              // 3. Clean Image View or Text Poster
+                              if (mediaUrl.isNotEmpty)
                                 GestureDetector(
                                   onTap: () => _openZoomableImage(mediaUrl, heroTag),
                                   child: Hero(
@@ -566,21 +580,8 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                       ),
                                     ),
                                   ),
-                                ),
-                                // Caption Below Image (Clean, perfectly aligned with proper margin so it doesn't overflow)
-                                if (caption.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                                    child: Text(
-                                      caption,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ),
-                              ] else
+                                )
+                              else
                                 // Text Poster Card
                                 Container(
                                   width: double.infinity,
