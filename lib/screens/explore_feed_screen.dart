@@ -15,7 +15,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
 
-  // Local profile fallback variables
   String _userName = 'Community Creator';
   String? _userAvatarUrl;
 
@@ -58,7 +57,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
 
   Future<void> _fetchData() async {
     try {
-      // 1. Fetch current user profile details as fallback
       try {
         final profileData = await supabase
             .from('profiles')
@@ -73,7 +71,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
         }
       } catch (_) {}
 
-      // 2. Fetch posts safely
       final response = await supabase
           .from('posts')
           .select()
@@ -433,7 +430,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     )
                   : ListView.builder(
                       itemCount: _posts.length,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       itemBuilder: (context, index) {
                         final post = _posts[index];
                         final postId = post['id']?.toString() ?? '';
@@ -448,12 +445,12 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                           } catch (_) {}
                         }
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 24.0),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 28),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 1. Clean Header (ክቡ ፕሮፋይልና ስም ብቻ - ምንም ሳጥን የለውም)
+                              // 1. Clean Profile Header
                               Padding(
                                 padding: const EdgeInsets.only(left: 4, right: 4, bottom: 10),
                                 child: Row(
@@ -518,8 +515,8 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Post Content (Image or Text Poster)
-                              if (isImagePost)
+                              // 2. Content: Image Post (Image + Caption separated cleanly) OR Text Poster
+                              if (isImagePost) ...[
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(18),
                                   child: Image.network(
@@ -547,8 +544,20 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                       ),
                                     ),
                                   ),
-                                )
-                              else
+                                ),
+                                if (caption.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 10, left: 4, right: 4),
+                                    child: Text(
+                                      caption,
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.92),
+                                        fontSize: 14.5,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                              ] else ...[
                                 Container(
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(20),
@@ -566,20 +575,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                     ),
                                   ),
                                 ),
-
-                              // 3. Caption below image (if image post has caption)
-                              if (isImagePost && caption.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 6, right: 6, top: 10),
-                                  child: Text(
-                                    caption,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 14,
-                                      height: 1.35,
-                                    ),
-                                  ),
-                                ),
+                              ],
                             ],
                           ),
                         );
