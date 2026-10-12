@@ -15,10 +15,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
 
-  // Profile data variables
-  String _userName = 'Community Creator';
-  String? _userAvatarUrl;
-
   final TextEditingController _postCaptionController = TextEditingController();
   File? _selectedImageFile;
   final ImagePicker _picker = ImagePicker();
@@ -53,31 +49,15 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUserProfileAndPosts();
+    _fetchPosts();
   }
 
-  // Fetch user profile data and posts simultaneously
-  Future<void> _fetchUserProfileAndPosts() async {
+  // Fetch posts along with the creator's profile data using Supabase relation
+  Future<void> _fetchPosts() async {
     try {
-      // 1. Fetch user profile
-      try {
-        final profileData = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .maybeSingle();
-
-        if (profileData != null) {
-          setState(() {
-            _userName = profileData['full_name'] ?? 'Community Creator';
-            _userAvatarUrl = profileData['avatar_url'];
-          });
-        }
-      } catch (_) {}
-
-      // 2. Fetch posts
       final response = await supabase
           .from('posts')
-          .select()
+          .select('id, caption, media_url, bg_color, created_at, user_id, profiles(full_name, avatar_url)')
           .order('created_at', ascending: false);
 
       setState(() {
@@ -153,8 +133,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       }
 
       final colorValue = _selectedBackgroundColor.value.toRadixString(16);
+      final currentUser = supabase.auth.currentUser;
 
       await supabase.from('posts').insert({
+        'user_id': currentUser?.id,
         'caption': _postCaptionController.text.trim(),
         'media_url': imageUrl,
         'bg_color': colorValue,
@@ -179,7 +161,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       });
 
       Navigator.pop(context);
-      _fetchUserProfileAndPosts();
+      _fetchPosts();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -417,7 +399,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)))
           : RefreshIndicator(
-              onRefresh: _fetchUserProfileAndPosts,
+              onRefresh: _fetchPosts,
               color: const Color(0xFF2575FC),
               backgroundColor: const Color(0xFF1F1F23),
               child: _posts.isEmpty
@@ -441,8 +423,12 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                         final caption = post['caption'] ?? '';
                         final mediaUrl = post['media_url'] ?? '';
                         final isImagePost = mediaUrl.isNotEmpty;
+
+                        // 🛑 እያንዳንዱ ፖስት የራሱን ትክክለኛ የፕሮፋይል ስም እና ፎቶ ከ profiles ቴብል ይወስዳል
+                        final profile = post['profiles'] is Map ? post['profiles'] as Map<String, dynamic> : null;
+                        final authorName = profile?['full_name'] ?? 'Community Creator';
+                        final authorAvatar = profile?['avatar_url'] as String?;
                         
-                        // 🛑 ፎቶ ካለው ጽዱ የሆነ ጥቁር ባክግራውንድ፣ ጽሁፍ ብቻ ከሆነ ደግሞ የተመረጠውን ከለር ይጠቀማል
                         Color postBgColor = isImagePost ? const Color(0xFF16161A) : const Color(0xFF1A1A2E);
                         if (!isImagePost && post['bg_color'] != null) {
                           try {
@@ -482,10 +468,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                         CircleAvatar(
                                           radius: 20,
                                           backgroundColor: const Color(0xFF2575FC),
-                                          backgroundImage: (_userAvatarUrl != null && _userAvatarUrl!.isNotEmpty)
-                                              ? NetworkImage(_userAvatarUrl!)
+                                          backgroundImage: (authorAvatar != null && authorAvatar.isNotEmpty)
+                                              ? NetworkImage(authorAvatar)
                                               : null,
-                                          child: (_userAvatarUrl == null || _userAvatarUrl!.isEmpty)
+                                          child: (authorAvatar == null || authorAvatar.isEmpty)
                                               ? const Icon(Icons.person, color: Colors.white, size: 22)
                                               : null,
                                         ),
@@ -494,7 +480,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              _userName,
+                                              authorName,
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.bold,
@@ -536,7 +522,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // Image display without fixed black spaces
+                              // Image display
                               if (isImagePost)
                                 Image.network(
                                   mediaUrl,
