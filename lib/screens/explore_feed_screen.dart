@@ -397,7 +397,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     );
   }
 
-  // 🔍 ፎቶውን ጠቅ ሲያደርጉት ብድግ ብሎ ቀረብ ብሎ የሚያሳይ Full Screen Popup
+  // 🔍 ፎቶውን ጠቅ ሲያደርጉት ብድግ ብሎ ቀረብ ብሎ የሚያሳይ Full Screen Popup (Hero Animation)
   void _openZoomableImage(String imageUrl, String tag) {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -442,6 +442,17 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 ፖስቶቹን በተጠቃሚ (user_id / profile) በቡድን ማቀናጀት (Group posts by author/user)
+    final Map<String, List<Map<String, dynamic>>> groupedPosts = {};
+    for (var post in _posts) {
+      final userId = post['user_id']?.toString() ?? 'default_user';
+      if (!groupedPosts.containsKey(userId)) {
+        groupedPosts[userId] = [];
+      }
+      groupedPosts[userId]!.add(post);
+    }
+    final userKeys = groupedPosts.keys.toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0C),
       appBar: AppBar(
@@ -472,19 +483,25 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                       ],
                     )
                   : ListView.builder(
-                      itemCount: _posts.length,
-                      itemBuilder: (context, index) {
-                        final post = _posts[index];
-                        final postId = post['id']?.toString() ?? '';
-                        final caption = post['caption'] ?? '';
-                        final mediaUrl = post['media_url'] ?? '';
-                        final heroTag = 'post_image_$postId\_$index';
-                        
-                        Color postBgColor = const Color(0xFF1A1A2E);
-                        if (post['bg_color'] != null) {
-                          try {
-                            postBgColor = Color(int.parse(post['bg_color'], radix: 16));
-                          } catch (_) {}
+                      itemCount: userKeys.length,
+                      itemBuilder: (context, userIndex) {
+                        final userId = userKeys[userIndex];
+                        final userPosts = groupedPosts[userId]!;
+
+                        // 🖼️ የዚህ ተጠቃሚ ፎቶዎች (Images) እና ጽሁፎች (Captions)
+                        final List<Map<String, String>> allImages = [];
+                        final List<String> allCaptions = [];
+
+                        for (var p in userPosts) {
+                          final mediaUrl = p['media_url'] ?? '';
+                          final caption = p['caption'] ?? '';
+                          final postId = p['id']?.toString() ?? '';
+                          if (mediaUrl.isNotEmpty) {
+                            allImages.add({'url': mediaUrl, 'id': postId});
+                          }
+                          if (caption.isNotEmpty) {
+                            allCaptions.add(caption);
+                          }
                         }
 
                         return Padding(
@@ -492,7 +509,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 1. User Header
+                              // 1. User Header (የተጠቃሚው ፕሮፋይልና ስም)
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                                 child: Row(
@@ -522,8 +539,8 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                       color: const Color(0xFF1F1F23),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       onSelected: (value) {
-                                        if (value == 'delete' && postId.isNotEmpty) {
-                                          _deletePost(postId);
+                                        if (value == 'delete' && userPosts.isNotEmpty) {
+                                          _deletePost(userPosts.first['id'].toString());
                                         }
                                       },
                                       itemBuilder: (context) => [
@@ -543,48 +560,64 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Media Content (ቲክ/Tap ሲያደርጉት ብድግ ብሎ ይቀረባል)
-                              if (mediaUrl.isNotEmpty)
-                                GestureDetector(
-                                  onTap: () => _openZoomableImage(mediaUrl, heroTag),
-                                  child: Hero(
-                                    tag: heroTag,
-                                    child: Container(
-                                      height: 340,
-                                      width: double.infinity,
-                                      color: Colors.black,
-                                      child: Image.network(
-                                        mediaUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => const Center(
-                                          child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
-                                        ),
+                              // 2. Multi-Image Layout (ልክ እንደ ፌስቡክ 2 ወይም ከዚያ በላይ ፎቶዎች ጎን ለጎን ተደራርበው እንዲቀመጡ)
+                              if (allImages.isNotEmpty) ...[
+                                if (allImages.length == 1)
+                                  GestureDetector(
+                                    onTap: () => _openZoomableImage(allImages[0]['url']!, 'hero_${allImages[0]['id']}'),
+                                    child: Hero(
+                                      tag: 'hero_${allImages[0]['id']}',
+                                      child: Container(
+                                        height: 340,
+                                        width: double.infinity,
+                                        color: Colors.black,
+                                        child: Image.network(allImages[0]['url']!, fit: BoxFit.cover),
                                       ),
                                     ),
+                                  )
+                                else
+                                  // ከ 1 በላይ ፎቶ ሲኖር ጎን ለጎን (Grid/Row) መልክ ይቀመጣሉ
+                                  SizedBox(
+                                    height: 320,
+                                    child: Row(
+                                      children: allImages.take(2).map((imgData) {
+                                        final imgUrl = imgData['url']!;
+                                        final imgId = imgData['id']!;
+                                        final heroTag = 'hero_$imgId';
+                                        return Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                            child: GestureDetector(
+                                              onTap: () => _openZoomableImage(imgUrl, heroTag),
+                                              child: Hero(
+                                                tag: heroTag,
+                                                child: Container(
+                                                  height: 320,
+                                                  color: Colors.black,
+                                                  child: Image.network(imgUrl, fit: BoxFit.cover),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
                                   ),
-                                )
-                              else
-                                Container(
-                                  width: double.infinity,
-                                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: postBgColor,
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Text(
-                                    caption,
-                                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                                  ),
-                                ),
+                              ],
 
-                              // 3. Caption Below Image
-                              if (mediaUrl.isNotEmpty && caption.isNotEmpty)
+                              // 3. Captions (የዚህ ተጠቃሚ ጽሁፎች)
+                              if (allCaptions.isNotEmpty)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                  child: Text(
-                                    caption,
-                                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: allCaptions.map((cap) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 4.0),
+                                      child: Text(
+                                        cap,
+                                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                                      ),
+                                    )).toList(),
                                   ),
                                 ),
                             ],
