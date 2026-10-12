@@ -441,17 +441,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Group posts by author/user ID
-    final Map<String, List<Map<String, dynamic>>> groupedPosts = {};
-    for (var post in _posts) {
-      final userId = post['user_id']?.toString() ?? 'default_user';
-      if (!groupedPosts.containsKey(userId)) {
-        groupedPosts[userId] = [];
-      }
-      groupedPosts[userId]!.add(post);
-    }
-    final userKeys = groupedPosts.keys.toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0C),
       appBar: AppBar(
@@ -482,32 +471,27 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                       ],
                     )
                   : ListView.builder(
-                      itemCount: userKeys.length,
-                      itemBuilder: (context, userIndex) {
-                        final userId = userKeys[userIndex];
-                        final userPosts = groupedPosts[userId]!;
-
-                        final List<Map<String, String>> allImages = [];
-                        final List<String> allCaptions = [];
-
-                        for (var p in userPosts) {
-                          final mediaUrl = p['media_url'] ?? '';
-                          final caption = p['caption'] ?? '';
-                          final postId = p['id']?.toString() ?? '';
-                          if (mediaUrl.isNotEmpty) {
-                            allImages.add({'url': mediaUrl, 'id': postId});
-                          }
-                          if (caption.isNotEmpty) {
-                            allCaptions.add(caption);
-                          }
+                      itemCount: _posts.length,
+                      itemBuilder: (context, index) {
+                        final post = _posts[index];
+                        final postId = post['id']?.toString() ?? '';
+                        final caption = post['caption'] ?? '';
+                        final mediaUrl = post['media_url'] ?? '';
+                        final heroTag = 'post_image_${postId}_$index';
+                        
+                        Color postBgColor = const Color(0xFF1A1A2E);
+                        if (post['bg_color'] != null) {
+                          try {
+                            postBgColor = Color(int.parse(post['bg_color'], radix: 16));
+                          } catch (_) {}
                         }
 
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 24.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 1. User Header
+                              // 1. User Profile Header
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                                 child: Row(
@@ -528,7 +512,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                         const SizedBox(width: 10),
                                         Text(
                                           _userName,
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                                         ),
                                       ],
                                     ),
@@ -537,8 +521,8 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                       color: const Color(0xFF1F1F23),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       onSelected: (value) {
-                                        if (value == 'delete' && userPosts.isNotEmpty) {
-                                          _deletePost(userPosts.first['id'].toString());
+                                        if (value == 'delete' && postId.isNotEmpty) {
+                                          _deletePost(postId);
                                         }
                                       },
                                       itemBuilder: (context) => [
@@ -558,63 +542,54 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Multi-Image Layout (Facebook style grid for multiple photos per profile)
-                              if (allImages.isNotEmpty) ...[
-                                if (allImages.length == 1)
-                                  GestureDetector(
-                                    onTap: () => _openZoomableImage(allImages[0]['url']!, 'hero_${allImages[0]['id']}'),
-                                    child: Hero(
-                                      tag: 'hero_${allImages[0]['id']}',
-                                      child: Container(
-                                        height: 340,
-                                        width: double.infinity,
-                                        color: Colors.black,
-                                        child: Image.network(allImages[0]['url']!, fit: BoxFit.cover),
+                              // 2. Caption Above Photo (If present)
+                              if (caption.isNotEmpty && mediaUrl.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                                  child: Text(
+                                    caption,
+                                    style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.3),
+                                  ),
+                                ),
+
+                              // 3. Clean Single Image/Poster View
+                              if (mediaUrl.isNotEmpty)
+                                GestureDetector(
+                                  onTap: () => _openZoomableImage(mediaUrl, heroTag),
+                                  child: Hero(
+                                    tag: heroTag,
+                                    child: Container(
+                                      width: double.infinity,
+                                      constraints: const BoxConstraints(
+                                        maxHeight: 480,
                                       ),
-                                    ),
-                                  )
-                                else
-                                  SizedBox(
-                                    height: 320,
-                                    child: Row(
-                                      children: allImages.take(2).map((imgData) {
-                                        final imgUrl = imgData['url']!;
-                                        final imgId = imgData['id']!;
-                                        final heroTag = 'hero_$imgId';
-                                        return Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                                            child: GestureDetector(
-                                              onTap: () => _openZoomableImage(imgUrl, heroTag),
-                                              child: Hero(
-                                                tag: heroTag,
-                                                child: Container(
-                                                  height: 320,
-                                                  color: Colors.black,
-                                                  child: Image.network(imgUrl, fit: BoxFit.cover),
-                                                ),
-                                              ),
-                                            ),
+                                      color: Colors.black,
+                                      child: Image.network(
+                                        mediaUrl,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                          height: 200,
+                                          child: Center(
+                                            child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
                                           ),
-                                        );
-                                      }).toList(),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                              ],
-
-                              // 3. Captions
-                              if (allCaptions.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: allCaptions.map((cap) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 4.0),
-                                      child: Text(
-                                        cap,
-                                        style: const TextStyle(color: Colors.white, fontSize: 15),
-                                      ),
-                                    )).toList(),
+                                )
+                              else
+                                // Text Poster Card
+                                Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: postBgColor,
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Text(
+                                    caption,
+                                    style: const TextStyle(color: Colors.white, fontSize: 16, height: 1.4, fontWeight: FontWeight.w500),
                                   ),
                                 ),
                             ],
