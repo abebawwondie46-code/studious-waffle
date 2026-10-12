@@ -764,7 +764,7 @@ class UserPostsScreen extends StatelessWidget {
   }
 }
 
-// User Likes Screen (Updated with correct creator profile)
+// User Likes Screen
 class UserLikesScreen extends StatelessWidget {
   const UserLikesScreen({super.key});
 
@@ -862,7 +862,7 @@ class UserLikesScreen extends StatelessWidget {
   }
 }
 
-// User Followers Screen (Updated to fetch names and avatars from profiles)
+// User Followers Screen (Fixed missing created_at column error)
 class UserFollowersScreen extends StatelessWidget {
   const UserFollowersScreen({super.key});
 
@@ -878,7 +878,7 @@ class UserFollowersScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: supabase.from('profiles').select().order('created_at', ascending: false),
+        future: supabase.from('profiles').select(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
@@ -898,7 +898,6 @@ class UserFollowersScreen extends StatelessWidget {
               final follower = followers[index];
               final name = follower['full_name'] ?? 'Community Member';
               final avatar = follower['avatar_url'];
-              final joinedDate = follower['created_at']?.toString().substring(0, 10) ?? '';
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -918,7 +917,7 @@ class UserFollowersScreen extends StatelessWidget {
                         : null,
                   ),
                   title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: Text('Joined: $joinedDate', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  subtitle: const Text('Community Member', style: TextStyle(color: Colors.white54, fontSize: 12)),
                 ),
               );
             },
