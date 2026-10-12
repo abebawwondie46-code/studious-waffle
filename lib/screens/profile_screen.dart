@@ -671,7 +671,7 @@ class GlobalSearchDelegate extends SearchDelegate {
   }
 }
 
-// User Posts Screen (Updated to accept profile name and avatar)
+// User Posts Screen
 class UserPostsScreen extends StatelessWidget {
   final String userName;
   final String? avatarUrl;
@@ -764,7 +764,7 @@ class UserPostsScreen extends StatelessWidget {
   }
 }
 
-// User Likes Screen
+// User Likes Screen (Updated with correct creator profile)
 class UserLikesScreen extends StatelessWidget {
   const UserLikesScreen({super.key});
 
@@ -800,6 +800,8 @@ class UserLikesScreen extends StatelessWidget {
               final video = videos[index];
               final caption = video['caption'] ?? video['title'] ?? 'No Description';
               final videoUrl = video['video_url'] ?? video['media_url'] ?? '';
+              final uploaderName = video['user_name'] ?? 'Video Creator';
+              final uploaderAvatar = video['user_avatar'];
               int rawLikes = (video['likes_count'] as num?)?.toInt() ?? 0;
               final likesCount = max(0, rawLikes);
 
@@ -814,11 +816,16 @@ class UserLikesScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFF2575FC),
-                        child: Icon(Icons.favorite, color: Colors.white),
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF2575FC),
+                        backgroundImage: (uploaderAvatar != null && uploaderAvatar.isNotEmpty)
+                            ? NetworkImage(uploaderAvatar)
+                            : null,
+                        child: (uploaderAvatar == null || uploaderAvatar.isEmpty)
+                            ? const Icon(Icons.person, color: Colors.white)
+                            : null,
                       ),
-                      title: const Text('Liked Content', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      title: Text(uploaderName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -855,7 +862,7 @@ class UserLikesScreen extends StatelessWidget {
   }
 }
 
-// User Followers Screen
+// User Followers Screen (Updated to fetch names and avatars from profiles)
 class UserFollowersScreen extends StatelessWidget {
   const UserFollowersScreen({super.key});
 
@@ -871,7 +878,7 @@ class UserFollowersScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: supabase.from('videos').select().order('followers_count', ascending: false),
+        future: supabase.from('profiles').select().order('created_at', ascending: false),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
@@ -889,7 +896,9 @@ class UserFollowersScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             itemBuilder: (context, index) {
               final follower = followers[index];
-              final title = follower['caption'] ?? follower['title'] ?? 'Community Follower';
+              final name = follower['full_name'] ?? 'Community Member';
+              final avatar = follower['avatar_url'];
+              final joinedDate = follower['created_at']?.toString().substring(0, 10) ?? '';
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -899,12 +908,17 @@ class UserFollowersScreen extends StatelessWidget {
                   border: Border.all(color: Colors.white10, width: 0.5),
                 ),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFF2575FC),
-                    child: Icon(Icons.person, color: Colors.white),
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFF2575FC),
+                    backgroundImage: (avatar != null && avatar.isNotEmpty)
+                        ? NetworkImage(avatar)
+                        : null,
+                    child: (avatar == null || avatar.isEmpty)
+                        ? const Icon(Icons.person, color: Colors.white)
+                        : null,
                   ),
-                  title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: Text('Joined: ${follower['created_at']?.toString().substring(0, 10) ?? ''}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: Text('Joined: $joinedDate', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 ),
               );
             },
