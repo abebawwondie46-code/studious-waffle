@@ -479,7 +479,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                         final mediaUrl = post['media_url'] ?? '';
                         final heroTag = 'post_image_${postId}_$index';
                         
-                        Color postBgColor = const Color(0xFF1A1A2E);
+                        Color postBgColor = const Color(0xFF0A0A0C);
                         if (post['bg_color'] != null) {
                           try {
                             postBgColor = Color(int.parse(post['bg_color'], radix: 16));
@@ -542,7 +542,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Clean Image View with Proper Aspect Ratio or Text Poster
+                              // 2. Clean Image View or Text Poster
                               if (mediaUrl.isNotEmpty) ...[
                                 GestureDetector(
                                   onTap: () => _openZoomableImage(mediaUrl, heroTag),
@@ -567,10 +567,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                     ),
                                   ),
                                 ),
-                                // Caption Below Image (Clean, perfectly aligned and readable)
+                                // Caption Below Image (Clean, perfectly aligned with proper margin so it doesn't overflow)
                                 if (caption.isNotEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.fromLTRB(16.0, 10.0, 16.0, 4.0),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                                     child: Text(
                                       caption,
                                       style: const TextStyle(
