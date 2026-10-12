@@ -90,13 +90,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       int totalFollowers = 0;
       try {
-        final videosResponse = await supabase.from('videos').select('followers_count');
-        for (var video in (videosResponse as List)) {
-          int count = (video['followers_count'] as num?)?.toInt() ?? 0;
-          if (count > 0) {
-            totalFollowers += count;
-          }
-        }
+        final profilesResponse = await supabase.from('profiles').select('id');
+        totalFollowers = (profilesResponse as List).length;
       } catch (_) {}
 
       setState(() {
@@ -862,7 +857,7 @@ class UserLikesScreen extends StatelessWidget {
   }
 }
 
-// User Followers Screen (Fixed missing created_at column error)
+// User Followers Screen
 class UserFollowersScreen extends StatelessWidget {
   const UserFollowersScreen({super.key});
 
