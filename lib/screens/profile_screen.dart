@@ -503,7 +503,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const UserLikesScreen()),
+                        MaterialPageRoute(builder: (context) => UserLikesScreen(userName: _currentFullName, avatarUrl: _profileImageUrl)),
                       );
                     },
                     child: _ProfileStatItem(title: 'Likes', count: _likesCount.toString()),
@@ -759,9 +759,12 @@ class UserPostsScreen extends StatelessWidget {
   }
 }
 
-// User Likes Screen
+// User Likes Screen (Updated to use correct user name and avatar)
 class UserLikesScreen extends StatelessWidget {
-  const UserLikesScreen({super.key});
+  final String userName;
+  final String? avatarUrl;
+
+  const UserLikesScreen({super.key, required this.userName, this.avatarUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -795,8 +798,6 @@ class UserLikesScreen extends StatelessWidget {
               final video = videos[index];
               final caption = video['caption'] ?? video['title'] ?? 'No Description';
               final videoUrl = video['video_url'] ?? video['media_url'] ?? '';
-              final uploaderName = video['user_name'] ?? 'Video Creator';
-              final uploaderAvatar = video['user_avatar'];
               int rawLikes = (video['likes_count'] as num?)?.toInt() ?? 0;
               final likesCount = max(0, rawLikes);
 
@@ -813,14 +814,14 @@ class UserLikesScreen extends StatelessWidget {
                     ListTile(
                       leading: CircleAvatar(
                         backgroundColor: const Color(0xFF2575FC),
-                        backgroundImage: (uploaderAvatar != null && uploaderAvatar.isNotEmpty)
-                            ? NetworkImage(uploaderAvatar)
+                        backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
+                            ? NetworkImage(avatarUrl!)
                             : null,
-                        child: (uploaderAvatar == null || uploaderAvatar.isEmpty)
+                        child: (avatarUrl == null || avatarUrl!.isEmpty)
                             ? const Icon(Icons.person, color: Colors.white)
                             : null,
                       ),
-                      title: Text(uploaderName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      title: Text(userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
