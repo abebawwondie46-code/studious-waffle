@@ -542,17 +542,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Caption Above Photo (If present)
-                              if (caption.isNotEmpty && mediaUrl.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-                                  child: Text(
-                                    caption,
-                                    style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.3),
-                                  ),
-                                ),
-
-                              // 3. Clean Single Image/Poster View
+                              // 2. Image with Overlay Caption or Text Poster Card
                               if (mediaUrl.isNotEmpty)
                                 GestureDetector(
                                   onTap: () => _openZoomableImage(mediaUrl, heroTag),
@@ -564,15 +554,50 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                         maxHeight: 480,
                                       ),
                                       color: Colors.black,
-                                      child: Image.network(
-                                        mediaUrl,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (context, error, stackTrace) => const SizedBox(
-                                          height: 200,
-                                          child: Center(
-                                            child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                      child: Stack(
+                                        alignment: Alignment.bottomLeft,
+                                        children: [
+                                          // Image
+                                          Image.network(
+                                            mediaUrl,
+                                            width: double.infinity,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                              height: 200,
+                                              child: Center(
+                                                child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                          // Overlay Caption (ልክ እንደ ሙሽሮቹ ፎቶ ላይ ከታች በኩል በቀጥታ እንዲፃፍ)
+                                          if (caption.isNotEmpty)
+                                            Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                                                  begin: Alignment.bottomCenter,
+                                                  end: Alignment.topCenter,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                caption,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500,
+                                                  shadows: [
+                                                    Shadow(
+                                                      offset: Offset(0, 1),
+                                                      blurRadius: 3.0,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -581,7 +606,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 // Text Poster Card
                                 Container(
                                   width: double.infinity,
-                                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                                  margin: const EdgeInsets.symmetric(horizontal: 16),
                                   padding: const EdgeInsets.all(20),
                                   decoration: BoxDecoration(
                                     color: postBgColor,
@@ -589,7 +614,12 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   ),
                                   child: Text(
                                     caption,
-                                    style: const TextStyle(color: Colors.white, fontSize: 16, height: 1.4, fontWeight: FontWeight.w500),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                             ],
