@@ -52,10 +52,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    _fetchUserProfileAndPosts();
   }
 
-  Future<void> _fetchData() async {
+  Future<void> _fetchUserProfileAndPosts() async {
     try {
       try {
         final profileData = await supabase
@@ -175,7 +175,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       });
 
       Navigator.pop(context);
-      _fetchData();
+      _fetchUserProfileAndPosts();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -397,6 +397,39 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     );
   }
 
+  // 🔍 ፎቶውን ሙሉ ስክሪን (Full-Screen Preview) የሚያሳይ ተግባር
+  void _showFullScreenImage(String imageUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Center(
+                child: Image.network(imageUrl, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -413,7 +446,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)))
           : RefreshIndicator(
-              onRefresh: _fetchData,
+              onRefresh: _fetchUserProfileAndPosts,
               color: const Color(0xFF2575FC),
               backgroundColor: const Color(0xFF1F1F23),
               child: _posts.isEmpty
@@ -430,62 +463,46 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     )
                   : ListView.builder(
                       itemCount: _posts.length,
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       itemBuilder: (context, index) {
                         final post = _posts[index];
                         final postId = post['id']?.toString() ?? '';
                         final caption = post['caption'] ?? '';
                         final mediaUrl = post['media_url'] ?? '';
-                        final isImagePost = mediaUrl.isNotEmpty;
                         
                         Color postBgColor = const Color(0xFF1A1A2E);
-                        if (!isImagePost && post['bg_color'] != null) {
+                        if (post['bg_color'] != null) {
                           try {
                             postBgColor = Color(int.parse(post['bg_color'], radix: 16));
                           } catch (_) {}
                         }
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 28),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 1. Clean Profile Header
+                              // 1. User Header (ክቡ ፕሮፋይልና ስም - ምንም የዳር ሳጥን የለውም)
                               Padding(
-                                padding: const EdgeInsets.only(left: 4, right: 4, bottom: 10),
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
                                         CircleAvatar(
-                                          radius: 20,
+                                          radius: 18,
                                           backgroundColor: const Color(0xFF2575FC),
                                           backgroundImage: (_userAvatarUrl != null && _userAvatarUrl!.isNotEmpty)
                                               ? NetworkImage(_userAvatarUrl!)
                                               : null,
                                           child: (_userAvatarUrl == null || _userAvatarUrl!.isEmpty)
-                                              ? const Icon(Icons.person, color: Colors.white, size: 22)
+                                              ? const Icon(Icons.person, color: Colors.white, size: 20)
                                               : null,
                                         ),
-                                        const SizedBox(width: 12),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              _userName,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                            if (post['created_at'] != null)
-                                              Text(
-                                                post['created_at'].toString().substring(0, 10),
-                                                style: const TextStyle(color: Colors.white38, fontSize: 11),
-                                              ),
-                                          ],
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          _userName,
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       ],
                                     ),
@@ -515,51 +532,27 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Content: Image Post (Image + Caption separated cleanly) OR Text Poster
-                              if (isImagePost) ...[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: Image.network(
-                                    mediaUrl,
+                              // 2. Media or Text Content (ማዕክሉን ጫን ሲሉት (Long Press) ፎቶው ሙሉ ስክሪን ይከፈታል)
+                              if (mediaUrl.isNotEmpty)
+                                GestureDetector(
+                                  onLongPress: () => _showFullScreenImage(mediaUrl),
+                                  child: Container(
+                                    height: 320,
                                     width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Container(
-                                        height: 250,
-                                        color: const Color(0xFF16161A),
-                                        child: const Center(
-                                          child: CircularProgressIndicator(
-                                            color: Color(0xFF2575FC),
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    errorBuilder: (context, error, stackTrace) => Container(
-                                      height: 180,
-                                      color: const Color(0xFF1F1F23),
-                                      child: const Center(
-                                        child: Icon(Icons.broken_image, color: Colors.white38, size: 40),
+                                    color: Colors.black,
+                                    child: Image.network(
+                                      mediaUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => const Center(
+                                        child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
                                       ),
                                     ),
                                   ),
-                                ),
-                                if (caption.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 10, left: 4, right: 4),
-                                    child: Text(
-                                      caption,
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.92),
-                                        fontSize: 14.5,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ),
-                              ] else ...[
+                                )
+                              else
                                 Container(
                                   width: double.infinity,
+                                  margin: const EdgeInsets.symmetric(horizontal: 12),
                                   padding: const EdgeInsets.all(20),
                                   decoration: BoxDecoration(
                                     color: postBgColor,
@@ -567,15 +560,19 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                   ),
                                   child: Text(
                                     caption,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      height: 1.4,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: const TextStyle(color: Colors.white, fontSize: 16),
                                   ),
                                 ),
-                              ],
+
+                              // 3. Caption Below Image
+                              if (mediaUrl.isNotEmpty && caption.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                  child: Text(
+                                    caption,
+                                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                                  ),
+                                ),
                             ],
                           ),
                         );
