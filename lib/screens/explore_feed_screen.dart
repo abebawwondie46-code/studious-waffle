@@ -397,35 +397,45 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
     );
   }
 
-  // 🔍 ፎቶውን ሙሉ ስክሪን (Full-Screen Preview) የሚያሳይ ተግባር
-  void _showFullScreenImage(String imageUrl) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.9),
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.zero,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            InteractiveViewer(
-              panEnabled: true,
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: Center(
-                child: Image.network(imageUrl, fit: BoxFit.contain),
+  // 🔍 ፎቶውን ጠቅ ሲያደርጉት ብድግ ብሎ ቀረብ ብሎ የሚያሳይ Full Screen Popup
+  void _openZoomableImage(String imageUrl, String tag) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black87,
+        pageBuilder: (BuildContext context, _, __) {
+          return Scaffold(
+            backgroundColor: Colors.black.withOpacity(0.92),
+            body: SafeArea(
+              child: Stack(
+                children: [
+                  Center(
+                    child: Hero(
+                      tag: tag,
+                      child: InteractiveViewer(
+                        minScale: 1.0,
+                        maxScale: 4.0,
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ],
               ),
             ),
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -468,6 +478,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                         final postId = post['id']?.toString() ?? '';
                         final caption = post['caption'] ?? '';
                         final mediaUrl = post['media_url'] ?? '';
+                        final heroTag = 'post_image_$postId\_$index';
                         
                         Color postBgColor = const Color(0xFF1A1A2E);
                         if (post['bg_color'] != null) {
@@ -481,7 +492,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 1. User Header (ክቡ ፕሮፋይልና ስም - ምንም የዳር ሳጥን የለውም)
+                              // 1. User Header
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                                 child: Row(
@@ -532,19 +543,22 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // 2. Media or Text Content (ማዕክሉን ጫን ሲሉት (Long Press) ፎቶው ሙሉ ስክሪን ይከፈታል)
+                              // 2. Media Content (ቲክ/Tap ሲያደርጉት ብድግ ብሎ ይቀረባል)
                               if (mediaUrl.isNotEmpty)
                                 GestureDetector(
-                                  onLongPress: () => _showFullScreenImage(mediaUrl),
-                                  child: Container(
-                                    height: 320,
-                                    width: double.infinity,
-                                    color: Colors.black,
-                                    child: Image.network(
-                                      mediaUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => const Center(
-                                        child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                  onTap: () => _openZoomableImage(mediaUrl, heroTag),
+                                  child: Hero(
+                                    tag: heroTag,
+                                    child: Container(
+                                      height: 340,
+                                      width: double.infinity,
+                                      color: Colors.black,
+                                      child: Image.network(
+                                        mediaUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const Center(
+                                          child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                        ),
                                       ),
                                     ),
                                   ),
