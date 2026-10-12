@@ -15,10 +15,6 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
 
-  // Profile data variables
-  String _userName = 'Community Creator';
-  String? _userAvatarUrl;
-
   final TextEditingController _postCaptionController = TextEditingController();
   File? _selectedImageFile;
   final ImagePicker _picker = ImagePicker();
@@ -53,31 +49,14 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUserProfileAndPosts();
+    _fetchPosts();
   }
 
-  // Fetch user profile data and posts simultaneously
-  Future<void> _fetchUserProfileAndPosts() async {
+  Future<void> _fetchPosts() async {
     try {
-      // 1. Fetch user profile
-      try {
-        final profileData = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .maybeSingle();
-
-        if (profileData != null) {
-          setState(() {
-            _userName = profileData['full_name'] ?? 'Community Creator';
-            _userAvatarUrl = profileData['avatar_url'];
-          });
-        }
-      } catch (_) {}
-
-      // 2. Fetch posts
       final response = await supabase
           .from('posts')
-          .select()
+          .select('id, caption, media_url, bg_color, created_at, user_id, profiles(full_name, avatar_url)')
           .order('created_at', ascending: false);
 
       setState(() {
@@ -153,8 +132,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       }
 
       final colorValue = _selectedBackgroundColor.value.toRadixString(16);
+      final currentUser = supabase.auth.currentUser;
 
       await supabase.from('posts').insert({
+        'user_id': currentUser?.id,
         'caption': _postCaptionController.text.trim(),
         'media_url': imageUrl,
         'bg_color': colorValue,
@@ -179,7 +160,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       });
 
       Navigator.pop(context);
-      _fetchUserProfileAndPosts();
+      _fetchPosts();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -417,7 +398,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)))
           : RefreshIndicator(
-              onRefresh: _fetchUserProfileAndPosts,
+              onRefresh: _fetchPosts,
               color: const Color(0xFF2575FC),
               backgroundColor: const Color(0xFF1F1F23),
               child: _posts.isEmpty
@@ -434,46 +415,33 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                     )
                   : ListView.builder(
                       itemCount: _posts.length,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                       itemBuilder: (context, index) {
                         final post = _posts[index];
                         final postId = post['id']?.toString() ?? '';
                         final caption = post['caption'] ?? '';
                         final mediaUrl = post['media_url'] ?? '';
                         final isImagePost = mediaUrl.isNotEmpty;
+
+                        final profile = post['profiles'] is Map ? post['profiles'] as Map<String, dynamic> : null;
+                        final authorName = profile?['full_name'] ?? 'Community Creator';
+                        final authorAvatar = profile?['avatar_url'] as String?;
                         
-                        // 🛑 ፎቶ ካለው ጽዱ የሆነ ጥቁር ባክግራውንድ፣ ጽሁፍ ብቻ ከሆነ ደግሞ የተመረጠውን ከለር ይጠቀማል
-                        Color postBgColor = isImagePost ? const Color(0xFF16161A) : const Color(0xFF1A1A2E);
+                        Color postBgColor = const Color(0xFF1A1A2E);
                         if (!isImagePost && post['bg_color'] != null) {
                           try {
                             postBgColor = Color(int.parse(post['bg_color'], radix: 16));
                           } catch (_) {}
                         }
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            color: postBgColor,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isImagePost ? Colors.white12 : Colors.white24,
-                              width: 0.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 24.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // User Header
+                              // 1. Clean Header (ክቡ ፕሮፋይልና ስም ብቻ - ምንም ሳጥን ወይም ጠርዝ የለውም)
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                                padding: const EdgeInsets.only(left: 4, right: 4, bottom: 10),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
@@ -482,10 +450,10 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                         CircleAvatar(
                                           radius: 20,
                                           backgroundColor: const Color(0xFF2575FC),
-                                          backgroundImage: (_userAvatarUrl != null && _userAvatarUrl!.isNotEmpty)
-                                              ? NetworkImage(_userAvatarUrl!)
+                                          backgroundImage: (authorAvatar != null && authorAvatar.isNotEmpty)
+                                              ? NetworkImage(authorAvatar)
                                               : null,
-                                          child: (_userAvatarUrl == null || _userAvatarUrl!.isEmpty)
+                                          child: (authorAvatar == null || authorAvatar.isEmpty)
                                               ? const Icon(Icons.person, color: Colors.white, size: 22)
                                               : null,
                                         ),
@@ -494,7 +462,7 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              _userName,
+                                              authorName,
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.bold,
@@ -536,45 +504,65 @@ class _ExploreFeedScreenState extends State<ExploreFeedScreen> {
                                 ),
                               ),
 
-                              // Image display without fixed black spaces
+                              // 2. Post Content (Image or Text Poster)
                               if (isImagePost)
-                                Image.network(
-                                  mediaUrl,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Container(
-                                      height: 220,
-                                      color: const Color(0xFF1A1A20),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          color: Color(0xFF2575FC),
-                                          strokeWidth: 2,
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: Image.network(
+                                    mediaUrl,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        height: 250,
+                                        color: const Color(0xFF16161A),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                            color: Color(0xFF2575FC),
+                                            strokeWidth: 2,
+                                          ),
                                         ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      height: 180,
+                                      color: const Color(0xFF1F1F23),
+                                      child: const Center(
+                                        child: Icon(Icons.broken_image, color: Colors.white38, size: 40),
                                       ),
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) => Container(
-                                    height: 180,
-                                    color: const Color(0xFF1F1F23),
-                                    child: const Center(
-                                      child: Icon(Icons.broken_image, color: Colors.white38, size: 40),
+                                    ),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: postBgColor,
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Text(
+                                    caption,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
 
-                              // Post Caption
-                              if (caption.isNotEmpty)
+                              // 3. Caption below image (if image post has caption)
+                              if (isImagePost && caption.isNotEmpty)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  padding: const EdgeInsets.only(left: 6, right: 6, top: 10),
                                   child: Text(
                                     caption,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.92),
-                                      fontSize: isImagePost ? 14 : 16,
-                                      height: 1.4,
-                                      fontWeight: isImagePost ? FontWeight.normal : FontWeight.w600,
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 14,
+                                      height: 1.35,
                                     ),
                                   ),
                                 ),
