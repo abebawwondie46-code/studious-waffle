@@ -196,9 +196,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Push Notifications',
                     subtitle: 'Receive alerts for new likes and comments',
                     value: _pushNotifications,
-                    onChanged: (val) {
+                    onChanged: (val) async {
                       setState(() => _pushNotifications = val);
-                      _updatePreference('push_notifications', val);
+                      await _updatePreference('push_notifications', val);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(val ? 'Push Notifications Enabled' : 'Push Notifications Disabled'),
+                          backgroundColor: val ? Colors.green : Colors.grey,
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
                     },
                   ),
                   _buildSwitchTile(
@@ -206,9 +214,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Email Notifications',
                     subtitle: 'Receive monthly updates and news',
                     value: _emailNotifications,
-                    onChanged: (val) {
+                    onChanged: (val) async {
                       setState(() => _emailNotifications = val);
-                      _updatePreference('email_notifications', val);
+                      await _updatePreference('email_notifications', val);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(val ? 'Email Notifications Enabled' : 'Email Notifications Disabled'),
+                          backgroundColor: val ? Colors.green : Colors.grey,
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
                     },
                   ),
 
@@ -219,9 +235,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Private Account',
                     subtitle: 'Only approved followers can see your posts',
                     value: _privateAccount,
-                    onChanged: (val) {
+                    onChanged: (val) async {
                       setState(() => _privateAccount = val);
-                      _updatePreference('private_account', val);
+                      await _updatePreference('private_account', val);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(val ? 'Account set to Private' : 'Account set to Public'),
+                          backgroundColor: val ? Colors.indigo : Colors.grey,
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
                     },
                   ),
                   _buildSwitchTile(
@@ -229,9 +253,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Dark Mode',
                     subtitle: 'Enable or disable dark appearance',
                     value: _darkMode,
-                    onChanged: (val) {
+                    onChanged: (val) async {
                       setState(() => _darkMode = val);
-                      _updatePreference('dark_mode', val);
+                      await _updatePreference('dark_mode', val);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(val ? 'Dark Mode Enabled' : 'Light Mode Enabled'),
+                          backgroundColor: Colors.blueAccent,
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
                     },
                   ),
 
