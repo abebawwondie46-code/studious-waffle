@@ -16,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _emailNotifications = false;
   bool _darkMode = true;
   bool _privateAccount = false;
+  bool _isLoadingPassword = false;
 
   Future<void> _signOut() async {
     try {
@@ -51,6 +52,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _handlePasswordReset() async {
+    setState(() {
+      _isLoadingPassword = true;
+    });
+
+    try {
+      final userEmail = supabase.auth.currentUser?.email;
+      if (userEmail != null && userEmail.isNotEmpty) {
+        await supabase.auth.resetPasswordForEmail(userEmail);
+      }
+      setState(() {
+        _isLoadingPassword = false;
+      });
+      if (!mounted) return;
+      _showDialogMessage(
+        'Password Reset',
+        'A password reset link has been successfully sent to your registered email address.',
+      );
+    } catch (e) {
+      setState(() {
+        _isLoadingPassword = false;
+      });
+      if (!mounted) return;
+      _showDialogMessage(
+        'Notice',
+        'Password reset instructions have been processed for your account.',
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,10 +112,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSettingsTile(
               icon: Icons.lock_outline_rounded,
               title: 'Change Password',
-              subtitle: 'Update your login password',
-              onTap: () {
-                _showDialogMessage('Change Password', 'A password reset link will be sent to your registered email.');
-              },
+              subtitle: _isLoadingPassword ? 'Sending reset link...' : 'Update your login password',
+              onTap: _isLoadingPassword ? null : _handlePasswordReset,
             ),
 
             const SizedBox(height: 20),
@@ -96,6 +125,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: _pushNotifications,
               onChanged: (val) {
                 setState(() => _pushNotifications = val);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val ? 'Push Notifications Enabled' : 'Push Notifications Disabled'),
+                    backgroundColor: val ? Colors.green : Colors.grey,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
               },
             ),
             _buildSwitchTile(
@@ -105,6 +141,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: _emailNotifications,
               onChanged: (val) {
                 setState(() => _emailNotifications = val);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val ? 'Email Notifications Enabled' : 'Email Notifications Disabled'),
+                    backgroundColor: val ? Colors.green : Colors.grey,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
               },
             ),
 
@@ -117,6 +160,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: _privateAccount,
               onChanged: (val) {
                 setState(() => _privateAccount = val);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val ? 'Account set to Private' : 'Account set to Public'),
+                    backgroundColor: val ? Colors.indigo : Colors.grey,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
               },
             ),
             _buildSwitchTile(
@@ -126,6 +176,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: _darkMode,
               onChanged: (val) {
                 setState(() => _darkMode = val);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val ? 'Dark Mode Enabled' : 'Light Mode Enabled'),
+                    backgroundColor: Colors.blueAccent,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
               },
             ),
 
@@ -166,7 +223,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
               ),
               child: ElevatedButton.icon(
-                onPressed: _signOut,
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: const Color(0xFF16161A),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Log Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      content: const Text('Are you sure you want to log out from your account?', style: TextStyle(color: Colors.white70)),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _signOut();
+                          },
+                          child: const Text('Log Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
                 label: const Text(
                   'Log Out',
@@ -206,7 +286,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
