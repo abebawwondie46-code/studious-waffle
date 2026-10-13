@@ -10,22 +10,54 @@ class AccountInfoDialog {
     String fullName = 'Community Creator';
     String phone = 'Not provided';
 
+    // Loading State ማሳያ ዲያሎግ
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF2575FC)),
+      ),
+    );
+
     try {
       if (user != null) {
+        // የተጠቃሚውን መረጃ በራሱ Auth User ID መፈለግ
         final profile = await supabase
+            .from('profiles')
+            .select('full_name, phone_number, email')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (profile != null) {
+          if (profile['full_name'] != null && profile['full_name'].toString().trim().isNotEmpty) {
+            fullName = profile['full_name'];
+          }
+          if (profile['phone_number'] != null && profile['phone_number'].toString().trim().isNotEmpty) {
+            phone = profile['phone_number'];
+          }
+          if (profile['email'] != null && profile['email'].toString().trim().isNotEmpty) {
+            email = profile['email'];
+          }
+        }
+      }
+    } catch (_) {
+      // ስህተት ቢፈጠር ወይም ዳታቤዝ ላይ ባይገኝ የቀደመውን የመገለጫ ዳታ ለመፈለግ መሞከር
+      try {
+        final profileFallback = await supabase
             .from('profiles')
             .select('full_name, phone_number, email')
             .maybeSingle();
 
-        if (profile != null) {
-          fullName = profile['full_name'] ?? fullName;
-          phone = profile['phone_number'] ?? phone;
-          email = profile['email'] ?? email;
+        if (profileFallback != null) {
+          fullName = profileFallback['full_name'] ?? fullName;
+          phone = profileFallback['phone_number'] ?? phone;
+          email = profileFallback['email'] ?? email;
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     if (!context.mounted) return;
+    Navigator.pop(context); // Loading ማቆም
 
     showDialog(
       context: context,
