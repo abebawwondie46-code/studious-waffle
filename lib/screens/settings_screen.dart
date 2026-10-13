@@ -90,12 +90,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _signOut() async {
     try {
       await supabase.auth.signOut();
-      if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    } catch (_) {
-      if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
+    } catch (_) {}
+
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   void _showDialogMessage(String title, String message) {
@@ -349,7 +347,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       leading: const Icon(Icons.power_settings_new_rounded, color: Colors.white70),
                       title: const Text('Log Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
                       subtitle: const Text('Sign out from your account', style: TextStyle(color: Colors.white38, fontSize: 12)),
-                      // Trailing ንጥል (ቀስት) ሙሉ በሙሉ እንዲጠፋ ተደርጓል
                     ),
                   ),
                 ],
