@@ -1081,9 +1081,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSettingsTile(
               icon: Icons.info_outline_rounded,
               title: 'About App',
-              subtitle: 'Version 1.0.0 • VibeShare Community',
+              subtitle: 'Version 1.0.0 • kuanyngne Community',
               onTap: () {
-                _showDialogMessage('About', 'VibeShare Community App v1.0.0\nBuilt with Flutter & Supabase.');
+                _showDialogMessage('About', 'kuanyngne Community App v1.0.0\nBuilt with Flutter & Supabase.');
               },
             ),
             _buildSettingsTile(
