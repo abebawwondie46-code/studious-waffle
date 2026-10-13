@@ -122,7 +122,8 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     });
 
     final prefs = await SharedPreferences.getInstance();
-    final uniqueKey = 'followed_${widget.videoId ?? widget.videoUrl}';
+    final creatorKey = widget.userName ?? widget.userAvatar ?? 'creator_unknown';
+    final uniqueKey = 'followed_creator_$creatorKey';
     final isLocallyFollowed = prefs.getBool(uniqueKey) ?? false;
 
     if (isLocallyFollowed && mounted) {
@@ -146,7 +147,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
           : await query.eq('video_url', widget.videoUrl).maybeSingle();
 
       if (response != null && mounted) {
-        final bool serverIsFollowing = response['is_following'] ?? false;
+        final prefs = await SharedPreferences.getInstance();
+        final creatorKey = widget.userName ?? widget.userAvatar ?? 'creator_unknown';
+        final uniqueKey = 'followed_creator_$creatorKey';
+        final isLocallyFollowed = prefs.getBool(uniqueKey) ?? false;
+
+        final bool serverIsFollowing = (response['is_following'] ?? false) || isLocallyFollowed;
         
         setState(() {
           _likeCount = response['likes_count'] ?? _likeCount;
@@ -161,8 +167,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
         });
 
         if (serverIsFollowing) {
-          final prefs = await SharedPreferences.getInstance();
-          final uniqueKey = 'followed_${widget.videoId ?? widget.videoUrl}';
           await prefs.setBool(uniqueKey, true);
         }
       }
@@ -179,12 +183,12 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     setState(() {
       _isFollowing = newFollowState;
       _followersCount = newFollowersCount;
-      // 🛑 ፎሎ ሲደረግ የ (+) ምልክቱ ወዲያውኑ እንዲጠፋ እና የቲክ ምልክት እንዲታይ ይደረጋል
       _hidePlusSignPermanently = newFollowState; 
     });
 
     final prefs = await SharedPreferences.getInstance();
-    final uniqueKey = 'followed_${widget.videoId ?? widget.videoUrl}';
+    final creatorKey = widget.userName ?? widget.userAvatar ?? 'creator_unknown';
+    final uniqueKey = 'followed_creator_$creatorKey';
     await prefs.setBool(uniqueKey, newFollowState);
 
     try {
