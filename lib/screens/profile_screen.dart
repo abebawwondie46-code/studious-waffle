@@ -250,34 +250,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _signOut() async {
-    try {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Successfully logged out!'),
-            backgroundColor: Colors.blueAccent,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-
-      try {
-        await supabase.from('profiles').delete().match({'id': 1});
-      } catch (_) {}
-
-      try {
-        await supabase.auth.signOut();
-      } catch (_) {}
-
-      if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    } catch (_) {
-      if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -334,21 +306,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         actions: [
           IconButton(
-              icon: const Icon(Icons.settings_rounded, color: Colors.white70),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsScreen(
-                      fullName: _nameController.text,
-                      email: _emailController.text,
-                      phone: _phoneController.text,
-                    ),
+            icon: const Icon(Icons.settings_rounded, color: Colors.white70),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    fullName: _nameController.text,
+                    email: _emailController.text,
+                    phone: _phoneController.text,
                   ),
-                );
-              },
-              tooltip: 'Settings',
-            ),
+                ),
+              );
+            },
+            tooltip: 'Settings',
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -526,30 +498,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _ProfileStatItem(title: 'Followers', count: _followersCount.toString()),
                   ),
                 ],
-              ),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
-              ),
-              child: ElevatedButton(
-                onPressed: _signOut,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1F1F23),
-                  shadowColor: Colors.transparent,
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text(
-                  'Log Out',
-                  style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -859,12 +807,9 @@ class UserLikesScreen extends StatelessWidget {
                     ),
                     if (videoUrl.isNotEmpty)
                       Container(
-                        height: 220,
-                        width: double.infinity,
-                        color: Colors.black,
-                        child: const Center(
-                          child: Icon(Icons.play_circle_fill, color: Colors.white, size: 60),
-                        ),
+                        height: 200,
+                        color: Colors.black12,
+                        child: const Center(child: Icon(Icons.play_circle_fill, color: Colors.white54, size: 50)),
                       ),
                     Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -890,66 +835,15 @@ class UserFollowersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SupabaseClient supabase = Supabase.instance.client;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0C),
       appBar: AppBar(
-        title: const Text('Followers List', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Followers', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0A0A0C),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: supabase.from('profiles').select(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
-          }
-          if (snapshot.hasError) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _ProfileScreenState.showNoInternetToast(context);
-            });
-            return const Center(
-              child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
-            );
-          }
-          final followers = snapshot.data ?? [];
-          if (followers.isEmpty) {
-            return const Center(child: Text('No followers found.', style: TextStyle(color: Colors.white54)));
-          }
-
-          return ListView.builder(
-            itemCount: followers.length,
-            padding: const EdgeInsets.all(12),
-            itemBuilder: (context, index) {
-              final follower = followers[index];
-              final name = follower['full_name'] ?? 'Community Member';
-              final avatar = follower['avatar_url'];
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16161A),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white10, width: 0.5),
-                ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFF2575FC),
-                    backgroundImage: (avatar != null && avatar.isNotEmpty)
-                        ? NetworkImage(avatar)
-                        : null,
-                    child: (avatar == null || avatar.isEmpty)
-                        ? const Icon(Icons.person, color: Colors.white)
-                        : null,
-                  ),
-                  title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Community Member', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                ),
-              );
-            },
-          );
-        },
+      body: const Center(
+        child: Text('No followers yet.', style: TextStyle(color: Colors.white54)),
       ),
     );
   }
