@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'account_info_dialog.dart'; // የተነጠለውን ፋይል ማስገባት (Import ማድረግ)
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -25,7 +26,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadPreferences();
   }
 
-  // Load preferences from SharedPreferences & Supabase
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -59,7 +59,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // Save preference to Local Storage and Supabase
   Future<void> _updatePreference(String key, bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);
@@ -79,7 +78,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {}
   }
 
-  // Logout Logic
   Future<void> _signOut() async {
     try {
       await supabase.auth.signOut();
@@ -109,76 +107,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Action: Account Information Dialog
-  Future<void> _showAccountInfoDialog() async {
-    final user = supabase.auth.currentUser;
-    String email = user?.email ?? 'No Email';
-    String fullName = 'Community Creator';
-    String phone = 'Not provided';
-
-    try {
-      if (user != null) {
-        final profile = await supabase
-            .from('profiles')
-            .select('full_name, phone_number')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (profile != null) {
-          fullName = profile['full_name'] ?? fullName;
-          phone = profile['phone_number'] ?? phone;
-        }
-      }
-    } catch (_) {}
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF16161A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Account Information', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInfoRow(Icons.person, 'Full Name', fullName),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.email, 'Email', email),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.phone, 'Phone', phone),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: Color(0xFF2575FC))),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: const Color(0xFF2575FC), size: 20),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Action: Password Reset Link
   Future<void> _handlePasswordReset() async {
     final userEmail = supabase.auth.currentUser?.email;
 
@@ -238,7 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.person_outline_rounded,
                     title: 'Account Information',
                     subtitle: 'Manage your profile and phone details',
-                    onTap: _showAccountInfoDialog,
+                    onTap: () => AccountInfoDialog.show(context), // እዚህ ጋር በቀላሉ ይጠራል
                   ),
                   _buildSettingsTile(
                     icon: Icons.lock_outline_rounded,
@@ -257,13 +185,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (val) {
                       setState(() => _pushNotifications = val);
                       _updatePreference('push_notifications', val);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(val ? 'Push Notifications Enabled' : 'Push Notifications Disabled'),
-                          backgroundColor: val ? Colors.green : Colors.grey,
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
                     },
                   ),
                   _buildSwitchTile(
@@ -274,13 +195,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (val) {
                       setState(() => _emailNotifications = val);
                       _updatePreference('email_notifications', val);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(val ? 'Email Notifications Enabled' : 'Email Notifications Disabled'),
-                          backgroundColor: val ? Colors.green : Colors.grey,
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
                     },
                   ),
 
@@ -294,13 +208,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (val) {
                       setState(() => _privateAccount = val);
                       _updatePreference('private_account', val);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(val ? 'Account set to Private' : 'Account set to Public'),
-                          backgroundColor: val ? Colors.indigo : Colors.grey,
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
                     },
                   ),
                   _buildSwitchTile(
@@ -311,13 +218,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (val) {
                       setState(() => _darkMode = val);
                       _updatePreference('dark_mode', val);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(val ? 'Dark Mode Enabled' : 'Light Mode Enabled'),
-                          backgroundColor: Colors.blueAccent,
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
                     },
                   ),
 
@@ -358,8 +258,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
 
                   const SizedBox(height: 30),
-
-                  // Logout Button
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
