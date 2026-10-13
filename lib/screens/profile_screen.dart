@@ -334,15 +334,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_rounded, color: Colors.white70),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
-            tooltip: 'Settings',
-          ),
+              icon: const Icon(Icons.settings_rounded, color: Colors.white70),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SettingsScreen(
+                      fullName: _nameController.text,
+                      email: _emailController.text,
+                      phone: _phoneController.text,
+                    ),
+                  ),
+                );
+              },
+              tooltip: 'Settings',
+            ),
         ],
       ),
       body: SingleChildScrollView(
