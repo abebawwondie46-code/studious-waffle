@@ -313,15 +313,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 10),
                   Container(
-                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
+                      color: const Color(0xFF16161A),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                      border: Border.all(color: Colors.redAccent.withOpacity(0.3), width: 0.5),
                     ),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
+                    child: ListTile(
+                      onTap: () {
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
@@ -345,20 +346,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                      label: const Text(
-                        'Log Out',
-                        style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF16161A),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
+                      leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                      title: const Text('Log Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600, fontSize: 15)),
+                      subtitle: const Text('Sign out from your account', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                      trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 16),
                     ),
                   ),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
