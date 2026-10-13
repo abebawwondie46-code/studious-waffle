@@ -179,20 +179,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     setState(() {
       _isFollowing = newFollowState;
       _followersCount = newFollowersCount;
+      // 🛑 ፎሎ ሲደረግ የ (+) ምልክቱ ወዲያውኑ እንዲጠፋ እና የቲክ ምልክት እንዲታይ ይደረጋል
+      _hidePlusSignPermanently = newFollowState; 
     });
 
-    if (newFollowState) {
-      Future.delayed(const Duration(seconds: 2), () async {
-        if (mounted) {
-          setState(() {
-            _hidePlusSignPermanently = true;
-          });
-          final prefs = await SharedPreferences.getInstance();
-          final uniqueKey = 'followed_${widget.videoId ?? widget.videoUrl}';
-          await prefs.setBool(uniqueKey, true);
-        }
-      });
-    }
+    final prefs = await SharedPreferences.getInstance();
+    final uniqueKey = 'followed_${widget.videoId ?? widget.videoUrl}';
+    await prefs.setBool(uniqueKey, newFollowState);
 
     try {
       final query = Supabase.instance.client.from('videos');
@@ -407,7 +400,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     super.build(context);
     
-    // 🛑 ቪዲዮው ሙሉ በሙሉ ተጭኖ መጫወት ሲጀምር ብቻ አዝራሮቹ እንዲታዩ የሚደረግበት ሁኔታ
     final bool isVideoReadyAndPlaying = _isInitialized && 
         _videoController != null && 
         _videoController!.value.isInitialized && 
@@ -462,7 +454,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
               : const Center(
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
-          
+        
           Positioned(
             left: 0,
             right: 0,
@@ -496,7 +488,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // 🛑 ቪዲዮው መጫወት ሲጀምር ብቻ ላይክ፣ ኮሜንት፣ ሼር እና ሌሎች አዝራሮች እንዲታዩ ይደረጋል
           if (isVideoReadyAndPlaying)
             Positioned(
               right: 12,
