@@ -276,7 +276,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () {
                       _showDialogMessage(
                         'About VibeShare',
-                        'VibeShare Community App v1.0.0\nDesigned for community creators, video sharing, and interactive engagement. Built with Flutter & Supabase.',
+                        'VibeShare Community App v1.0.0\n\n'
+                        'Designed specifically for community creators, video sharing, and interactive engagement.\n\n'
+                        '• Built with Flutter & Supabase\n'
+                        '• Fast & Secure Media Sharing\n'
+                        '• Developed for Creators',
                       );
                     },
                   ),
@@ -287,7 +291,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () {
                       _showDialogMessage(
                         'Help Center & Feedback',
-                        'Need assistance? Reach out to our support team at support@vibeshare.com or visit our community portal.',
+                        'Need assistance or want to share feedback?\n\n'
+                        '• Support Email: support@vibeshare.com\n'
+                        '• Community Portal: available 24/7\n\n'
+                        'We are always here to help you grow your community!',
                       );
                     },
                   ),
@@ -298,7 +305,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () {
                       _showDialogMessage(
                         'Privacy Policy',
-                        'Your privacy is important to us. All user data, media, and credentials are strictly encrypted and stored using Supabase cloud infrastructure.',
+                        'Your privacy is our top priority.\n\n'
+                        '• All user data, media, and credentials are encrypted.\n'
+                        '• Securely stored using Supabase cloud infrastructure.\n'
+                        '• We never share your personal information with third parties.',
                       );
                     },
                   ),
