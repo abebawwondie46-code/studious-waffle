@@ -345,7 +345,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                      icon: const Icon(Icons.power_settings_new_rounded, color: Colors.redAccent),
                       label: const Text(
                         'Log Out',
                         style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
