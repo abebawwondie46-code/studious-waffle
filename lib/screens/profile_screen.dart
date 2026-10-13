@@ -835,15 +835,66 @@ class UserFollowersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SupabaseClient supabase = Supabase.instance.client;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0C),
       appBar: AppBar(
-        title: const Text('Followers', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Followers List', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0A0A0C),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: const Center(
-        child: Text('No followers yet.', style: TextStyle(color: Colors.white54)),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: supabase.from('profiles').select(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
+          }
+          if (snapshot.hasError) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _ProfileScreenState.showNoInternetToast(context);
+            });
+            return const Center(
+              child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
+            );
+          }
+          final followers = snapshot.data ?? [];
+          if (followers.isEmpty) {
+            return const Center(child: Text('No followers found.', style: TextStyle(color: Colors.white54)));
+          }
+
+          return ListView.builder(
+            itemCount: followers.length,
+            padding: const EdgeInsets.all(12),
+            itemBuilder: (context, index) {
+              final follower = followers[index];
+              final name = follower['full_name'] ?? 'Community Member';
+              final avatar = follower['avatar_url'];
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16161A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10, width: 0.5),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFF2575FC),
+                    backgroundImage: (avatar != null && avatar.isNotEmpty)
+                        ? NetworkImage(avatar)
+                        : null,
+                    child: (avatar == null || avatar.isEmpty)
+                        ? const Icon(Icons.person, color: Colors.white)
+                        : null,
+                  ),
+                  title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Community Member', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
