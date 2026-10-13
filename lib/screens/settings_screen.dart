@@ -346,10 +346,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         );
                       },
-                      leading: const Icon(Icons.logout_rounded, color: Colors.white70),
+                      leading: const Icon(Icons.power_settings_new_rounded, color: Colors.white70),
                       title: const Text('Log Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
                       subtitle: const Text('Sign out from your account', style: TextStyle(color: Colors.white38, fontSize: 12)),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 16),
+                      // Trailing ንጥል (ቀስት) ሙሉ በሙሉ እንዲጠፋ ተደርጓል
                     ),
                   ),
                 ],
