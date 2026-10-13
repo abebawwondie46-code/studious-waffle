@@ -37,8 +37,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserProfileAndStats();
   }
 
-  void _showNoInternetToast() {
-    if (!mounted) return;
+  static void showNoInternetToast(BuildContext context) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Row(
@@ -101,7 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      _showNoInternetToast();
+      if (mounted) showNoInternetToast(context);
       setState(() {
         _isLoading = false;
       });
@@ -181,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isUploadingImage = false;
       });
-      _showNoInternetToast();
+      if (mounted) showNoInternetToast(context);
     }
   }
 
@@ -245,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isSaving = false;
       });
-      _showNoInternetToast();
+      if (mounted) showNoInternetToast(context);
     }
   }
 
@@ -625,20 +625,28 @@ class GlobalSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    return _buildSearchResults();
+    return _buildSearchResults(context);
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    return _buildSearchResults();
+    return _buildSearchResults(context);
   }
 
-  Widget _buildSearchResults() {
+  Widget _buildSearchResults(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: supabase.from('posts').select(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
+        }
+        if (snapshot.hasError) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _ProfileScreenState.showNoInternetToast(context);
+          });
+          return const Center(
+            child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
+          );
         }
         final posts = snapshot.data ?? [];
         final filtered = posts.where((p) {
@@ -692,7 +700,12 @@ class UserPostsScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _ProfileScreenState.showNoInternetToast(context);
+            });
+            return const Center(
+              child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
+            );
           }
           final posts = snapshot.data ?? [];
           if (posts.isEmpty) {
@@ -785,7 +798,12 @@ class UserLikesScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _ProfileScreenState.showNoInternetToast(context);
+            });
+            return const Center(
+              child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
+            );
           }
           final videos = snapshot.data ?? [];
           if (videos.isEmpty) {
@@ -881,7 +899,12 @@ class UserFollowersScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white54)));
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _ProfileScreenState.showNoInternetToast(context);
+            });
+            return const Center(
+              child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
+            );
           }
           final followers = snapshot.data ?? [];
           if (followers.isEmpty) {
