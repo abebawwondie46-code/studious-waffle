@@ -1,64 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountInfoDialog {
-  static Future<void> show(BuildContext context) async {
-    final SupabaseClient supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-
-    String email = user?.email ?? 'No Email';
-    String fullName = 'Community Creator';
-    String phone = 'Not provided';
-
-    // Loading State ማሳያ ዲያሎግ
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF2575FC)),
-      ),
-    );
-
-    try {
-      if (user != null) {
-        // የተጠቃሚውን መረጃ በራሱ Auth User ID መፈለግ
-        final profile = await supabase
-            .from('profiles')
-            .select('full_name, phone_number, email')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (profile != null) {
-          if (profile['full_name'] != null && profile['full_name'].toString().trim().isNotEmpty) {
-            fullName = profile['full_name'];
-          }
-          if (profile['phone_number'] != null && profile['phone_number'].toString().trim().isNotEmpty) {
-            phone = profile['phone_number'];
-          }
-          if (profile['email'] != null && profile['email'].toString().trim().isNotEmpty) {
-            email = profile['email'];
-          }
-        }
-      }
-    } catch (_) {
-      // ስህተት ቢፈጠር ወይም ዳታቤዝ ላይ ባይገኝ የቀደመውን የመገለጫ ዳታ ለመፈለግ መሞከር
-      try {
-        final profileFallback = await supabase
-            .from('profiles')
-            .select('full_name, phone_number, email')
-            .maybeSingle();
-
-        if (profileFallback != null) {
-          fullName = profileFallback['full_name'] ?? fullName;
-          phone = profileFallback['phone_number'] ?? phone;
-          email = profileFallback['email'] ?? email;
-        }
-      } catch (_) {}
-    }
-
-    if (!context.mounted) return;
-    Navigator.pop(context); // Loading ማቆም
-
+  static void show({
+    required BuildContext context,
+    required String fullName,
+    required String email,
+    required String phone,
+  }) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -76,11 +24,11 @@ class AccountInfoDialog {
           children: [
             const Divider(color: Colors.white10),
             const SizedBox(height: 10),
-            _buildInfoRow(Icons.person_rounded, 'Full Name', fullName),
+            _buildInfoRow(Icons.person_rounded, 'Full Name', fullName.isEmpty ? 'Community Creator' : fullName),
             const SizedBox(height: 16),
-            _buildInfoRow(Icons.email_rounded, 'Email Address', email),
+            _buildInfoRow(Icons.email_rounded, 'Email Address', email.isEmpty ? 'No Email' : email),
             const SizedBox(height: 16),
-            _buildInfoRow(Icons.phone_rounded, 'Phone Number', phone),
+            _buildInfoRow(Icons.phone_rounded, 'Phone Number', phone.isEmpty ? 'Not provided' : phone),
           ],
         ),
         actions: [
