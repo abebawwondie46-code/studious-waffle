@@ -319,7 +319,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF16161A),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.redAccent.withOpacity(0.3), width: 0.5),
+                      border: Border.all(color: Colors.white10, width: 0.5),
                     ),
                     child: ListTile(
                       onTap: () {
@@ -346,8 +346,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         );
                       },
-                      leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                      title: const Text('Log Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600, fontSize: 15)),
+                      leading: const Icon(Icons.logout_rounded, color: Colors.white70),
+                      title: const Text('Log Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
                       subtitle: const Text('Sign out from your account', style: TextStyle(color: Colors.white38, fontSize: 12)),
                       trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 16),
                     ),
