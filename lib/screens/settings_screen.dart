@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'account_info_dialog.dart'; // የተነጠለውን ፋይል ማስገባት (Import ማድረግ)
+import 'account_info_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final String fullName;
+  final String email;
+  final String phone;
+
+  const SettingsScreen({
+    super.key,
+    this.fullName = 'Community Creator',
+    this.email = 'No Email',
+    this.phone = 'Not provided',
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -108,9 +117,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handlePasswordReset() async {
-    final userEmail = supabase.auth.currentUser?.email;
+    final userEmail = supabase.auth.currentUser?.email ?? widget.email;
 
-    if (userEmail == null || userEmail.isEmpty) {
+    if (userEmail.isEmpty || userEmail == 'No Email') {
       _showDialogMessage('Error', 'No registered email found for this account.');
       return;
     }
@@ -166,7 +175,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.person_outline_rounded,
                     title: 'Account Information',
                     subtitle: 'Manage your profile and phone details',
-                    onTap: () => AccountInfoDialog.show(context), // እዚህ ጋር በቀላሉ ይጠራል
+                    onTap: () => AccountInfoDialog.show(
+                      context: context,
+                      fullName: widget.fullName,
+                      email: widget.email,
+                      phone: widget.phone,
+                    ),
                   ),
                   _buildSettingsTile(
                     icon: Icons.lock_outline_rounded,
