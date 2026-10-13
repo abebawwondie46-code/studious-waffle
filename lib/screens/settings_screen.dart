@@ -35,6 +35,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadPreferences();
   }
 
+  // ኢንተርኔት ሲጠፋ ወይም የኔትወርክ ስህተት ሲኖር ማሳወቂያ ማሳያ Toast
+  static void showNoInternetToast(BuildContext context) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, color: Colors.white),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text('No internet connection! Please check your network.'),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.redAccent,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -61,7 +81,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           });
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) showNoInternetToast(context);
+    }
 
     setState(() {
       _isLoadingPreferences = false;
@@ -84,18 +106,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
           await supabase.from('profiles').update({column: value}).eq('id', userId);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) showNoInternetToast(context);
+    }
   }
 
   Future<void> _signOut() async {
+    // 1. መጀመሪያ ማሳወቂያውን በማሳየት ስራ እንጀምራለን
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.white),
+            SizedBox(width: 10),
+            Text('Successfully logged out!'),
+          ],
+        ),
+        backgroundColor: Colors.blueAccent,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    // 2. ከ Supabase እና ዳታቤዝ ለመውጣት መሞከር
     try {
       await supabase.from('profiles').delete().match({'id': 1});
     } catch (_) {}
 
     try {
       await supabase.auth.signOut();
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) showNoInternetToast(context);
+    }
 
+    // 3. ወደ Login ገጽ መቀየር
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
@@ -144,11 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _isLoadingPassword = false;
       });
-      if (!mounted) return;
-      _showDialogMessage(
-        'Password Reset Error',
-        'Failed to send password reset email. Please try again later.',
-      );
+      if (mounted) showNoInternetToast(context);
     }
   }
 
