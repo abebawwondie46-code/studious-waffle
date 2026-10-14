@@ -1,9 +1,8 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
   final String videoId;
@@ -26,6 +25,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isLoading = true;
   bool _isSending = false;
   String? _replyingToUser;
+  String? _currentUserAvatar; // የተጠቃሚውን የፕሮፋይል ፎቶ ለመያዝ
 
   final Set<String> _likedCommentIds = {};
   final Set<String> _dislikedCommentIds = {};
@@ -35,7 +35,16 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   @override
   void initState() {
     super.initState();
+    _loadUserProfile();
     _fetchCommentsFromSupabase();
+  }
+
+  // ከ SharedPreferences የፕሮፋይል ፎቶን ማንበብ
+  Future<void> _loadUserProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currentUserAvatar = prefs.getString('current_user_avatar');
+    });
   }
 
   void _showToast(String message, {bool isError = false}) {
@@ -109,6 +118,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         'user_name': 'You',
         'comment_text': finalCommentText,
         'image_url': imageUrl,
+        'user_avatar': _currentUserAvatar, // ፎቶውን ከኮሜንቱ ጋር ማስቀመጥ
         'likes_count': 0,
         'dislikes_count': 0,
       };
@@ -206,38 +216,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
+  // የዌብ ሰርች አማራጭ ታጥፎ ቀጥታ ጋላሪ እንዲከፍት ተደርጓል
   void _onImagePickPressed() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF2A2A2A),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          height: 160,
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.greenAccent),
-                title: const Text('Pick photo from gallery', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickAndUploadFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.public, color: Colors.greenAccent),
-                title: const Text('Search photo & GIF from web', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showWebImageSearchDialog();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    _pickAndUploadFromGallery();
   }
 
   Future<void> _pickAndUploadFromGallery() async {
@@ -246,156 +227,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     if (image != null) {
       await _sendCommentToSupabase(imageUrl: image.path);
     }
-  }
-
-  void _showWebImageSearchDialog() {
-    TextEditingController searchController = TextEditingController(text: 'funny animation');
-    List<String> searchResults = [];
-    bool isSearching = true;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            Future<void> searchImages(String query) async {
-              if (query.trim().isEmpty) return;
-              setDialogState(() => isSearching = true);
-              try {
-                final url = Uri.parse('https://api.unsplash.com/search/photos?query=${Uri.encodeComponent(query)}&per_page=30');
-                final response = await http.get(
-                  url,
-                  headers: {
-                    'Authorization': 'Client-ID YOUR_UNSPLASH_ACCESS_KEY',
-                  },
-                );
-
-                if (response.statusCode == 200) {
-                  final data = jsonDecode(response.body);
-                  final results = data['results'] as List;
-                  setDialogState(() {
-                    searchResults = results.map((e) => e['urls']['regular'].toString()).toList();
-                    isSearching = false;
-                  });
-                } else {
-                  setDialogState(() => isSearching = false);
-                }
-              } on SocketException {
-                setDialogState(() => isSearching = false);
-                _showToast('No internet connection!', isError: true);
-              } catch (e) {
-                debugPrint('Search error: $e');
-                setDialogState(() => isSearching = false);
-              }
-            }
-
-            if (searchResults.isEmpty && isSearching) {
-              searchImages('funny animation');
-            }
-
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1E1E1E),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Search Photo/GIF from Web', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey, size: 18),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              content: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.9,
-                height: MediaQuery.of(context).size.height * 0.55,
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: searchController,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: 'e.g. anime, fire, love, funny...',
-                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                        filled: true,
-                        fillColor: Colors.grey[850],
-                        prefixIcon: const Icon(Icons.search, color: Colors.greenAccent, size: 20),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.arrow_forward, color: Colors.greenAccent),
-                          onPressed: () => searchImages(searchController.text),
-                        ),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                      onSubmitted: (val) => searchImages(val),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: isSearching
-                          ? const Center(child: CircularProgressIndicator(color: Colors.greenAccent))
-                          : searchResults.isEmpty
-                              ? const Center(child: Text('No results found, try again', style: TextStyle(color: Colors.grey, fontSize: 12)))
-                              : GridView.builder(
-                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
-                                    crossAxisSpacing: 8,
-                                    mainAxisSpacing: 8,
-                                  ),
-                                  itemCount: searchResults.length,
-                                  itemBuilder: (context, index) {
-                                    return GestureDetector(
-                                      onTap: () async {
-                                        String selectedUrl = searchResults[index];
-                                        Navigator.pop(context);
-                                        await _sendCommentToSupabase(imageUrl: selectedUrl);
-                                      },
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Stack(
-                                          fit: StackFit.expand,
-                                          children: [
-                                            Image.network(
-                                              searchResults[index],
-                                              fit: BoxFit.cover,
-                                              loadingBuilder: (context, child, loadingProgress) {
-                                                if (loadingProgress == null) return child;
-                                                return Center(
-                                                  child: CircularProgressIndicator(
-                                                    value: loadingProgress.expectedTotalBytes != null
-                                                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                                        : null,
-                                                    strokeWidth: 2,
-                                                    color: Colors.greenAccent,
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                            Positioned(
-                                              bottom: 4,
-                                              right: 4,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.black54,
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: const Text('Send', style: TextStyle(color: Colors.white, fontSize: 9)),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   void _onEmojiPressed() {
@@ -506,6 +337,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final String userName = item['user_name'] ?? 'You';
                             final String commentText = item['comment_text'] ?? '';
                             final String? imageUrl = item['image_url'];
+                            final String? userAvatar = item['user_avatar'];
                             final int likesCount = item['likes_count'] ?? 0;
                             final int dislikesCount = item['dislikes_count'] ?? 0;
                             final String timeAgo = _formatTimeAgo(item['created_at']);
@@ -522,13 +354,19 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      // የኮሜንት አድራጊው ፎቶ (ካለ በ NetworkImage ካለፈ ፊደል)
                                       CircleAvatar(
                                         radius: 16,
                                         backgroundColor: Colors.green[800],
-                                        child: Text(
-                                          userName.isNotEmpty ? userName[0] : 'U',
-                                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                        ),
+                                        backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
+                                            ? NetworkImage(userAvatar)
+                                            : null,
+                                        child: (userAvatar == null || userAvatar.isEmpty)
+                                            ? Text(
+                                                userName.isNotEmpty ? userName[0] : 'U',
+                                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                              )
+                                            : null,
                                       ),
                                       const SizedBox(width: 10),
                                       Expanded(
@@ -654,10 +492,16 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         ),
                       Row(
                         children: [
+                          // የኮሜንት መጻፊያው አጠገብ ያለው የእርስዎ ፕሮፋይል ፎቶ
                           CircleAvatar(
                             radius: 14,
                             backgroundColor: Colors.green[800],
-                            child: const Text('U', style: TextStyle(color: Colors.white, fontSize: 10)),
+                            backgroundImage: (_currentUserAvatar != null && _currentUserAvatar!.isNotEmpty)
+                                ? NetworkImage(_currentUserAvatar!)
+                                : null,
+                            child: (_currentUserAvatar == null || _currentUserAvatar!.isEmpty)
+                                ? const Text('U', style: TextStyle(color: Colors.white, fontSize: 10))
+                                : null,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
