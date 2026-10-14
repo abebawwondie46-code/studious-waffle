@@ -25,7 +25,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isLoading = true;
   bool _isSending = false;
   String? _replyingToUser;
-  String? _currentUserAvatar; // ከ SharedPreferences ወይም ከ Supabase የሚወሰድ የፕሮፋይል ፎቶ
+  String? _currentUserAvatar; // የተጠቃሚውን የፕሮፋይል ፎቶ ከ SharedPreferences ለመያዝ
 
   final Set<String> _likedCommentIds = {};
   final Set<String> _dislikedCommentIds = {};
@@ -118,7 +118,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         'user_name': 'You',
         'comment_text': finalCommentText,
         'image_url': imageUrl,
-        'user_avatar': _currentUserAvatar, // የፕሮፋይል ፎቶውን አብሮ ማስቀመጥ
         'likes_count': 0,
         'dislikes_count': 0,
       };
@@ -280,7 +279,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
-  // ፎቶዎችን ከኔትወርክም ይሁን ከስልክ ፋይል በአግባቡ አጣርቶ የሚያሳይ Helper
+  // ፕሮፋይል ፎቶዎችን ከኔትወርክ ወይም ከስልክ ፋይል በአግባቡ አጣርቶ የሚያሳይ ዊጅት
   Widget _buildAvatar(String? avatarUrl, String fallbackLetter, {double radius = 16}) {
     ImageProvider? imageProvider;
 
@@ -365,7 +364,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final String userName = item['user_name'] ?? 'You';
                             final String commentText = item['comment_text'] ?? '';
                             final String? imageUrl = item['image_url'];
-                            final String? userAvatar = item['user_avatar'];
                             final int likesCount = item['likes_count'] ?? 0;
                             final int dislikesCount = item['dislikes_count'] ?? 0;
                             final String timeAgo = _formatTimeAgo(item['created_at']);
@@ -382,9 +380,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      // 1. በኮሜንቶች ዝርዝር ላይ የፕሮፋይል ፎቶ ማሳያ
+                                      // የጻፈው ሰው ፕሮፋይል ፎቶ (እርስዎ ከሆኑ _currentUserAvatar ያሳያል)
                                       _buildAvatar(
-                                        userAvatar,
+                                        userName == 'You' ? _currentUserAvatar : null,
                                         userName.isNotEmpty ? userName[0] : 'U',
                                         radius: 16,
                                       ),
@@ -512,7 +510,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         ),
                       Row(
                         children: [
-                          // 2. በኮሜንት መጻፊያው ሳጥን ጎን (የነበረው U ቦታ ላይ) የእርስዎ ፕሮፋይል ፎቶ ማሳያ
+                          // የኮሜንት መጻፊያው አጠገብ ያለው የእርስዎ ፕሮፋይል ፎቶ (የቀድሞው U ቦታ)
                           _buildAvatar(
                             _currentUserAvatar,
                             'U',
