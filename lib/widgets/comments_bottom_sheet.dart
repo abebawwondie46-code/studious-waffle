@@ -30,7 +30,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isSending = false;
   String? _replyingToUser;
 
-  String _currentUserName = 'You';
+  // ነባሪ ስም እና ፎቶ
+  String _currentUserName = 'Community Creator';
   String? _currentUserAvatar;
 
   final Set<String> _likedCommentIds = {};
@@ -41,30 +42,38 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
-    _fetchCommentsFromSupabase();
+    _loadUserProfileAndComments();
   }
 
-  // ከ SharedPreferences ወይም ከ Parameters የተጠቃሚውን ስም እና ፎቶ ማንበብ
-  Future<void> _loadUserProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // የተለያዩ ሊሆኑ የሚችሉ SharedPreferences ኪዎችን (Keys) ማጣራት
-    String name = widget.userName ?? 
-                  prefs.getString('current_user_name') ?? 
-                  prefs.getString('user_name') ?? 
-                  'You';
-                  
-    String? avatar = widget.userAvatar ?? 
-                     prefs.getString('current_user_avatar') ?? 
-                     prefs.getString('user_avatar');
+  // ከ Supabase Profiles ታብል እንዲሁም ከ Parameters/SharedPreferences ፕሮፋይል መጫን
+  Future<void> _loadUserProfileAndComments() async {
+    try {
+      final profileData = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .maybeSingle();
 
-    if (mounted) {
+      if (profileData != null && mounted) {
+        setState(() {
+          _currentUserName = profileData['full_name'] ?? widget.userName ?? 'Community Creator';
+          _currentUserAvatar = profileData['avatar_url'] ?? widget.userAvatar;
+        });
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        setState(() {
+          _currentUserName = widget.userName ?? prefs.getString('current_user_name') ?? 'Community Creator';
+          _currentUserAvatar = widget.userAvatar ?? prefs.getString('current_user_avatar');
+        });
+      }
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _currentUserName = name;
-        _currentUserAvatar = avatar;
+        _currentUserName = widget.userName ?? prefs.getString('current_user_name') ?? 'Community Creator';
+        _currentUserAvatar = widget.userAvatar ?? prefs.getString('current_user_avatar');
       });
     }
+
+    await _fetchCommentsFromSupabase();
   }
 
   void _showToast(String message, {bool isError = false}) {
@@ -133,7 +142,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
 
     try {
-      // ቋሚው 'You' ሳይሆን እውነተኛው ስምዎ እንዲመዘገብ ተደርጓል
       final newRow = {
         'video_id': widget.videoId,
         'user_name': _currentUserName,
@@ -300,7 +308,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
-  // የፕሮፋይል ፎቶውን ከፋይል ወይም ከኔትወርክ አጣርቶ የሚያሳይ ዊጅት
   Widget _buildAvatar(String? avatarUrl, String fallbackName, {double radius = 16}) {
     ImageProvider? imageProvider;
 
@@ -316,7 +323,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 
     return CircleAvatar(
       radius: radius,
-      backgroundColor: Colors.green[800],
+      backgroundColor: const Color(0xFF2575FC),
       backgroundImage: imageProvider,
       child: imageProvider == null
           ? Text(
@@ -391,7 +398,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final int dislikesCount = item['dislikes_count'] ?? 0;
                             final String timeAgo = _formatTimeAgo(item['created_at']);
 
-                            // የኮሜንቱ ባለቤት እርስዎ ከሆኑ ወይም በዳታቤዝ 'You' ብሎ ከገባ ስምዎን እና ፎቶዎን ያሳያል
                             final bool isMyComment = (dbUserName == 'You' || dbUserName == _currentUserName);
                             final String displayName = isMyComment ? _currentUserName : dbUserName;
                             final String? displayAvatar = isMyComment ? _currentUserAvatar : null;
