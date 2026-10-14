@@ -25,7 +25,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isLoading = true;
   bool _isSending = false;
   String? _replyingToUser;
-  String? _currentUserAvatar; // የተጠቃሚውን የፕሮፋይል ፎቶ ከ SharedPreferences ለመያዝ
+  String? _currentUserAvatar; // ከ SharedPreferences የሚነበብ የፕሮፋይል ፎቶ
 
   final Set<String> _likedCommentIds = {};
   final Set<String> _dislikedCommentIds = {};
@@ -279,7 +279,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
-  // ፕሮፋይል ፎቶዎችን ከኔትወርክ ወይም ከስልክ ፋይል በአግባቡ አጣርቶ የሚያሳይ ዊጅት
+  // የፕሮፋይል ፎቶውን ከፋይል ወይም ከኔትወርክ አጣርቶ የሚያሳይ ዊጅት
   Widget _buildAvatar(String? avatarUrl, String fallbackLetter, {double radius = 16}) {
     ImageProvider? imageProvider;
 
@@ -380,10 +380,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      // የጻፈው ሰው ፕሮፋይል ፎቶ (እርስዎ ከሆኑ _currentUserAvatar ያሳያል)
+                                      // 1. በኮሜንቶች ዝርዝር ላይ የፕሮፋይል ፎቶ (ፎቶ ከሌለ 'Y' ይጠቀማል)
                                       _buildAvatar(
                                         userName == 'You' ? _currentUserAvatar : null,
-                                        userName.isNotEmpty ? userName[0] : 'U',
+                                        'Y',
                                         radius: 16,
                                       ),
                                       const SizedBox(width: 10),
@@ -510,10 +510,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         ),
                       Row(
                         children: [
-                          // የኮሜንት መጻፊያው አጠገብ ያለው የእርስዎ ፕሮፋይል ፎቶ (የቀድሞው U ቦታ)
+                          // 2. በኮሜንት መጻፊያው አጠገብ የነበረው 'U' ተወግዶ የፕሮፋይል ፎቶዎ (ፎቶ ከሌለ 'Y') እንዲገባ ተደርጓል
                           _buildAvatar(
                             _currentUserAvatar,
-                            'U',
+                            'Y',
                             radius: 14,
                           ),
                           const SizedBox(width: 6),
