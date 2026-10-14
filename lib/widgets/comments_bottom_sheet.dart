@@ -25,7 +25,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isLoading = true;
   bool _isSending = false;
   String? _replyingToUser;
-  String? _currentUserAvatar; // የተጠቃሚውን የፕሮፋይል ፎቶ ለመያዝ
+  String? _currentUserAvatar; // ከ SharedPreferences ወይም ከ Supabase የሚወሰድ የፕሮፋይል ፎቶ
 
   final Set<String> _likedCommentIds = {};
   final Set<String> _dislikedCommentIds = {};
@@ -118,7 +118,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         'user_name': 'You',
         'comment_text': finalCommentText,
         'image_url': imageUrl,
-        'user_avatar': _currentUserAvatar, // ፎቶውን ከኮሜንቱ ጋር ማስቀመጥ
+        'user_avatar': _currentUserAvatar, // የፕሮፋይል ፎቶውን አብሮ ማስቀመጥ
         'likes_count': 0,
         'dislikes_count': 0,
       };
@@ -216,7 +216,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     );
   }
 
-  // የዌብ ሰርች አማራጭ ታጥፎ ቀጥታ ጋላሪ እንዲከፍት ተደርጓል
   void _onImagePickPressed() {
     _pickAndUploadFromGallery();
   }
@@ -279,6 +278,35 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       _replyingToUser = '@$userName';
     });
     FocusScope.of(context).requestFocus(_commentFocusNode);
+  }
+
+  // ፎቶዎችን ከኔትወርክም ይሁን ከስልክ ፋይል በአግባቡ አጣርቶ የሚያሳይ Helper
+  Widget _buildAvatar(String? avatarUrl, String fallbackLetter, {double radius = 16}) {
+    ImageProvider? imageProvider;
+
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+        imageProvider = NetworkImage(avatarUrl);
+      } else if (File(avatarUrl).existsSync()) {
+        imageProvider = FileImage(File(avatarUrl));
+      }
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Colors.green[800],
+      backgroundImage: imageProvider,
+      child: imageProvider == null
+          ? Text(
+              fallbackLetter,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: radius * 0.75,
+                fontWeight: FontWeight.bold,
+              ),
+            )
+          : null,
+    );
   }
 
   @override
@@ -354,19 +382,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      // የኮሜንት አድራጊው ፎቶ (ካለ በ NetworkImage ካለፈ ፊደል)
-                                      CircleAvatar(
+                                      // 1. በኮሜንቶች ዝርዝር ላይ የፕሮፋይል ፎቶ ማሳያ
+                                      _buildAvatar(
+                                        userAvatar,
+                                        userName.isNotEmpty ? userName[0] : 'U',
                                         radius: 16,
-                                        backgroundColor: Colors.green[800],
-                                        backgroundImage: (userAvatar != null && userAvatar.isNotEmpty)
-                                            ? NetworkImage(userAvatar)
-                                            : null,
-                                        child: (userAvatar == null || userAvatar.isEmpty)
-                                            ? Text(
-                                                userName.isNotEmpty ? userName[0] : 'U',
-                                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                              )
-                                            : null,
                                       ),
                                       const SizedBox(width: 10),
                                       Expanded(
@@ -492,16 +512,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         ),
                       Row(
                         children: [
-                          // የኮሜንት መጻፊያው አጠገብ ያለው የእርስዎ ፕሮፋይል ፎቶ
-                          CircleAvatar(
+                          // 2. በኮሜንት መጻፊያው ሳጥን ጎን (የነበረው U ቦታ ላይ) የእርስዎ ፕሮፋይል ፎቶ ማሳያ
+                          _buildAvatar(
+                            _currentUserAvatar,
+                            'U',
                             radius: 14,
-                            backgroundColor: Colors.green[800],
-                            backgroundImage: (_currentUserAvatar != null && _currentUserAvatar!.isNotEmpty)
-                                ? NetworkImage(_currentUserAvatar!)
-                                : null,
-                            child: (_currentUserAvatar == null || _currentUserAvatar!.isEmpty)
-                                ? const Text('U', style: TextStyle(color: Colors.white, fontSize: 10))
-                                : null,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
