@@ -30,7 +30,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isSending = false;
   String? _replyingToUser;
 
-  // ነባሪ ስም እና ፎቶ
   String _currentUserName = 'Community Creator';
   String? _currentUserAvatar;
 
@@ -45,7 +44,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     _loadUserProfileAndComments();
   }
 
-  // ከ Supabase Profiles ታብል እንዲሁም ከ Parameters/SharedPreferences ፕሮፋይል መጫን
   Future<void> _loadUserProfileAndComments() async {
     try {
       final profileData = await supabase
@@ -97,6 +95,12 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       setState(() {
         _comments = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
+
+        // ዳታው ሲመጣ ቀድሞ ላይክ የተደረጉትን በ Set ውስጥ መለየት (ከተፈለገ)
+        for (var item in _comments) {
+          final commentId = item['id'].toString();
+          // እንደ አሰራርዎ የራሳቸውን ላይክ ሁኔታ እዚህ ማረጋገጥ ይቻላል
+        }
       });
 
       if (widget.onCommentCountUpdated != null) {
@@ -170,40 +174,56 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
+  // ተስተካክሎ የገባው የላይክ እና ዲስላይክ ፈንክሽን
   Future<void> _handleLikeDislike(String commentId, int currentLikes, int currentDislikes, bool isLike) async {
+    bool isCurrentlyLiked = _likedCommentIds.contains(commentId);
+    bool isCurrentlyDisliked = _dislikedCommentIds.contains(commentId);
+
+    int updatedLikes = currentLikes;
+    int updatedDislikes = currentDislikes;
+
     setState(() {
       if (isLike) {
-        if (_likedCommentIds.contains(commentId)) {
+        if (isCurrentlyLiked) {
           _likedCommentIds.remove(commentId);
-          currentLikes = currentLikes > 0 ? currentLikes - 1 : 0;
+          updatedLikes = currentLikes > 0 ? currentLikes - 1 : 0;
         } else {
           _likedCommentIds.add(commentId);
-          currentLikes += 1;
-          if (_dislikedCommentIds.contains(commentId)) {
+          updatedLikes = currentLikes + 1;
+          if (isCurrentlyDisliked) {
             _dislikedCommentIds.remove(commentId);
-            currentDislikes = currentDislikes > 0 ? currentDislikes - 1 : 0;
+            updatedDislikes = currentDislikes > 0 ? currentDislikes - 1 : 0;
           }
         }
       } else {
-        if (_dislikedCommentIds.contains(commentId)) {
+        if (isCurrentlyDisliked) {
           _dislikedCommentIds.remove(commentId);
-          currentDislikes = currentDislikes > 0 ? currentDislikes - 1 : 0;
+          updatedDislikes = currentDislikes > 0 ? currentDislikes - 1 : 0;
         } else {
           _dislikedCommentIds.add(commentId);
-          currentDislikes += 1;
-          if (_likedCommentIds.contains(commentId)) {
+          updatedDislikes = currentDislikes + 1;
+          if (isCurrentlyLiked) {
             _likedCommentIds.remove(commentId);
-            currentLikes = currentLikes > 0 ? currentLikes - 1 : 0;
+            updatedLikes = currentLikes > 0 ? currentLikes - 1 : 0;
           }
         }
+      }
+
+      // 1. በ UI ውስጥ ወዲያውኑ ቁጥሩን ማዘመን
+      final index = _comments.indexWhere((c) => c['id'].toString() == commentId);
+      if (index != -1) {
+        _comments[index]['likes_count'] = updatedLikes;
+        _comments[index]['dislikes_count'] = updatedDislikes;
       }
     });
 
     try {
+      // 2. ዳታቤዝ ላይ ማዘመን
       await supabase.from('comments').update({
-        'likes_count': currentLikes,
-        'dislikes_count': currentDislikes,
+        'likes_count': updatedLikes,
+        'dislikes_count': updatedDislikes,
       }).eq('id', commentId);
+      
     } on SocketException {
       _showToast('No internet connection!', isError: true);
     } catch (e) {
