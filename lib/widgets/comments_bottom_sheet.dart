@@ -26,7 +26,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isSending = false;
   String? _replyingToUser;
 
-  // የተጠቃሚውን ስም እና የፕሮፋይል ፎቶ ለመያዝ
+  // የተጠቃሚውን ስም እና የፕሮፋይል ፎቶ ከ SharedPreferences ለመጫን
   String _currentUserName = 'You';
   String? _currentUserAvatar;
 
@@ -42,7 +42,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     _fetchCommentsFromSupabase();
   }
 
-  // ከ SharedPreferences የተጠቃሚውን ስም እና የፕሮፋይል ፎቶ ማንበብ
+  // ከ SharedPreferences የፕሮፋይል ስም እና ፎቶ ማንበብ
   Future<void> _loadUserProfile() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -283,7 +283,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
-  // የፕሮፋይል ፎቶን ከሊንክ ወይም ከስልክ ፋይል አጣርቶ የሚያሳይ Helper Widget
+  // የፕሮፋይል ፎቶን ከኔትወርክ ወይም ከስልክ ፋይል አጣርቶ የሚያሳይ ዊጅት
   Widget _buildAvatar(String? avatarUrl, String fallbackName, {double radius = 16}) {
     ImageProvider? imageProvider;
 
@@ -374,7 +374,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final int dislikesCount = item['dislikes_count'] ?? 0;
                             final String timeAgo = _formatTimeAgo(item['created_at']);
 
-                            // ኮሜንቱ የእንተ ከሆነ የእንተን ስም እና ፎቶ መጠቀም
                             final bool isMyComment = (dbUserName == 'You' || dbUserName == _currentUserName);
                             final String displayName = isMyComment ? _currentUserName : dbUserName;
                             final String? displayAvatar = isMyComment ? _currentUserAvatar : null;
@@ -391,7 +390,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      // 1. በኮሜንቶች ዝርዝር ላይ የፕሮፋይል ፎቶ ማሳያ
                                       _buildAvatar(
                                         displayAvatar,
                                         displayName,
@@ -403,7 +401,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            // የተጠቃሚው እውነተኛ ስም
                                             Text(
                                               displayName,
                                               style: const TextStyle(
@@ -522,7 +519,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         ),
                       Row(
                         children: [
-                          // 2. በኮሜንት መጻፊያው አጠገብ የእርስዎ የፕሮፋይል ፎቶ
                           _buildAvatar(
                             _currentUserAvatar,
                             _currentUserName,
