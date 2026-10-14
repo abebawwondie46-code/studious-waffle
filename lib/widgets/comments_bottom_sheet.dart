@@ -7,11 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CommentsBottomSheet extends StatefulWidget {
   final String videoId;
   final Function(int)? onCommentCountUpdated;
+  final String? userAvatar; // አዲስ የተጨመረ
+  final String? userName;   // አዲስ የተጨመረ
 
   const CommentsBottomSheet({
     super.key,
     required this.videoId,
     this.onCommentCountUpdated,
+    this.userAvatar,
+    this.userName,
   });
 
   @override
@@ -26,7 +30,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isSending = false;
   String? _replyingToUser;
 
-  // የተጠቃሚውን ስም እና የፕሮፋይል ፎቶ ከ SharedPreferences ለመጫን
   String _currentUserName = 'You';
   String? _currentUserAvatar;
 
@@ -42,13 +45,20 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     _fetchCommentsFromSupabase();
   }
 
-  // ከ SharedPreferences የፕሮፋይል ስም እና ፎቶ ማንበብ
+  // ከ Parameters ወይም ከ SharedPreferences ፕሮፋይል መጫን
   Future<void> _loadUserProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _currentUserName = prefs.getString('current_user_name') ?? 'You';
-      _currentUserAvatar = prefs.getString('current_user_avatar');
-    });
+    
+    // በቅድሚያ ከ Parameter የተላከውን መውሰድ፡ ካልተላከ ከ SharedPreferences ማንበብ
+    String name = widget.userName ?? prefs.getString('current_user_name') ?? prefs.getString('user_name') ?? 'You';
+    String? avatar = widget.userAvatar ?? prefs.getString('current_user_avatar') ?? prefs.getString('user_avatar');
+
+    if (mounted) {
+      setState(() {
+        _currentUserName = name;
+        _currentUserAvatar = avatar;
+      });
+    }
   }
 
   void _showToast(String message, {bool isError = false}) {
@@ -119,7 +129,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     try {
       final newRow = {
         'video_id': widget.videoId,
-        'user_name': _currentUserName, // እውነተኛ የተጠቃሚ ስም ማስገባት
+        'user_name': _currentUserName,
         'comment_text': finalCommentText,
         'image_url': imageUrl,
         'likes_count': 0,
@@ -283,7 +293,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
-  // የፕሮፋይል ፎቶን ከኔትወርክ ወይም ከስልክ ፋይል አጣርቶ የሚያሳይ ዊጅት
   Widget _buildAvatar(String? avatarUrl, String fallbackName, {double radius = 16}) {
     ImageProvider? imageProvider;
 
