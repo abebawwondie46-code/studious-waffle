@@ -95,12 +95,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       setState(() {
         _comments = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
-
-        // ዳታው ሲመጣ ቀድሞ ላይክ የተደረጉትን በ Set ውስጥ መለየት (ከተፈለገ)
-        for (var item in _comments) {
-          final commentId = item['id'].toString();
-          // እንደ አሰራርዎ የራሳቸውን ላይክ ሁኔታ እዚህ ማረጋገጥ ይቻላል
-        }
       });
 
       if (widget.onCommentCountUpdated != null) {
@@ -135,8 +129,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
-  Future<void> _sendCommentToSupabase({String? text, String? imageUrl}) async {
-    if ((text == null || text.trim().isEmpty) && imageUrl == null) return;
+  // ፎቶውን ወደ Supabase Storage ጫንና የሕዝብ ሊንኩን (Public URL) አግኝቶ ወደ ዳታቤዝ የሚልከው ክፍል
+  Future<void> _sendCommentToSupabase({String? text, File? imageFile}) async {
+    if ((text == null || text.trim().isEmpty) && imageFile == null) return;
 
     setState(() => _isSending = true);
 
@@ -146,11 +141,31 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
 
     try {
+      String uploadedImageUrl = '';
+      if (imageFile != null) {
+        try {
+          final fileName = 'comment_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final filePath = 'comments/$fileName';
+
+          // በ Supabase Storage 'videos' (ወይም የሚጠቀሙበት ባኬት ስም) ላይ ፎቶውን መጫን
+          await supabase.storage.from('videos').upload(
+                filePath,
+                imageFile,
+                fileOptions: const FileOptions(upsert: false),
+              );
+
+          // የሰርቨሩን ትክክለኛ የሕዝብ ሊንክ ማግኘት
+          uploadedImageUrl = supabase.storage.from('videos').getPublicUrl(filePath);
+        } catch (storageError) {
+          debugPrint('Storage error: $storageError');
+        }
+      }
+
       final newRow = {
         'video_id': widget.videoId,
         'user_name': _currentUserName,
         'comment_text': finalCommentText,
-        'image_url': imageUrl,
+        'image_url': uploadedImageUrl.isNotEmpty ? uploadedImageUrl : null,
         'likes_count': 0,
         'dislikes_count': 0,
       };
@@ -174,7 +189,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
   }
 
-  // ተስተካክሎ የገባው የላይክ እና ዲስላይክ ፈንክሽን
   Future<void> _handleLikeDislike(String commentId, int currentLikes, int currentDislikes, bool isLike) async {
     bool isCurrentlyLiked = _likedCommentIds.contains(commentId);
     bool isCurrentlyDisliked = _dislikedCommentIds.contains(commentId);
@@ -209,7 +223,6 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         }
       }
 
-      // 1. በ UI ውስጥ ወዲያውኑ ቁጥሩን ማዘመን
       final index = _comments.indexWhere((c) => c['id'].toString() == commentId);
       if (index != -1) {
         _comments[index]['likes_count'] = updatedLikes;
@@ -218,12 +231,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     });
 
     try {
-      // 2. ዳታቤዝ ላይ ማዘመን
       await supabase.from('comments').update({
         'likes_count': updatedLikes,
         'dislikes_count': updatedDislikes,
       }).eq('id', commentId);
-      
     } on SocketException {
       _showToast('No internet connection!', isError: true);
     } catch (e) {
@@ -272,7 +283,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      await _sendCommentToSupabase(imageUrl: image.path);
+      await _sendCommentToSupabase(imageFile: File(image.path));
     }
   }
 
@@ -459,9 +470,18 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                                 padding: const EdgeInsets.only(top: 4, bottom: 4),
                                                 child: ClipRRect(
                                                   borderRadius: BorderRadius.circular(8),
-                                                  child: imageUrl.startsWith('http')
-                                                      ? Image.network(imageUrl, width: 150, height: 150, fit: BoxFit.cover)
-                                                      : Image.file(File(imageUrl), width: 150, height: 150, fit: BoxFit.cover),
+                                                  // አሁን ከሰርቨር በሚመጣ ትክክለኛ የሕዝብ ሊንክ (NetworkImage) በቋሚነት ይነበባል
+                                                  child: Image.network(
+                                                    imageUrl,
+                                                    width: 150,
+                                                    height: 150,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                                      width: 150,
+                                                      height: 150,
+                                                      child: Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                                                    ),
+                                                  ),
                                                 ),
                                               )
                                             else
