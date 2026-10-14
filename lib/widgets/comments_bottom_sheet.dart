@@ -7,8 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CommentsBottomSheet extends StatefulWidget {
   final String videoId;
   final Function(int)? onCommentCountUpdated;
-  final String? userAvatar; // አዲስ የተጨመረ
-  final String? userName;   // አዲስ የተጨመረ
+  final String? userAvatar;
+  final String? userName;
 
   const CommentsBottomSheet({
     super.key,
@@ -45,13 +45,19 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     _fetchCommentsFromSupabase();
   }
 
-  // ከ Parameters ወይም ከ SharedPreferences ፕሮፋይል መጫን
+  // ከ SharedPreferences ወይም ከ Parameters የተጠቃሚውን ስም እና ፎቶ ማንበብ
   Future<void> _loadUserProfile() async {
     final prefs = await SharedPreferences.getInstance();
     
-    // በቅድሚያ ከ Parameter የተላከውን መውሰድ፡ ካልተላከ ከ SharedPreferences ማንበብ
-    String name = widget.userName ?? prefs.getString('current_user_name') ?? prefs.getString('user_name') ?? 'You';
-    String? avatar = widget.userAvatar ?? prefs.getString('current_user_avatar') ?? prefs.getString('user_avatar');
+    // የተለያዩ ሊሆኑ የሚችሉ SharedPreferences ኪዎችን (Keys) ማጣራት
+    String name = widget.userName ?? 
+                  prefs.getString('current_user_name') ?? 
+                  prefs.getString('user_name') ?? 
+                  'You';
+                  
+    String? avatar = widget.userAvatar ?? 
+                     prefs.getString('current_user_avatar') ?? 
+                     prefs.getString('user_avatar');
 
     if (mounted) {
       setState(() {
@@ -127,6 +133,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     }
 
     try {
+      // ቋሚው 'You' ሳይሆን እውነተኛው ስምዎ እንዲመዘገብ ተደርጓል
       final newRow = {
         'video_id': widget.videoId,
         'user_name': _currentUserName,
@@ -293,6 +300,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
+  // የፕሮፋይል ፎቶውን ከፋይል ወይም ከኔትወርክ አጣርቶ የሚያሳይ ዊጅት
   Widget _buildAvatar(String? avatarUrl, String fallbackName, {double radius = 16}) {
     ImageProvider? imageProvider;
 
@@ -383,6 +391,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                             final int dislikesCount = item['dislikes_count'] ?? 0;
                             final String timeAgo = _formatTimeAgo(item['created_at']);
 
+                            // የኮሜንቱ ባለቤት እርስዎ ከሆኑ ወይም በዳታቤዝ 'You' ብሎ ከገባ ስምዎን እና ፎቶዎን ያሳያል
                             final bool isMyComment = (dbUserName == 'You' || dbUserName == _currentUserName);
                             final String displayName = isMyComment ? _currentUserName : dbUserName;
                             final String? displayAvatar = isMyComment ? _currentUserAvatar : null;
