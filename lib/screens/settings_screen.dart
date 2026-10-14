@@ -335,7 +335,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _showDialogMessage(
                         'Help Center & Feedback',
                         'Need assistance or want to share feedback?\n\n'
-                        '• Support Email: support@vibeshare.com\n'
+                        '• Support Email: support@kuanyngne.com\n'
                         '• Community Portal: available 24/7\n\n'
                         'We are always here to help you grow your community!',
                       );
