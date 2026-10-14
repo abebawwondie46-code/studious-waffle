@@ -25,7 +25,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   bool _isLoading = true;
   bool _isSending = false;
   String? _replyingToUser;
-  String? _currentUserAvatar; // ከ SharedPreferences የሚነበብ የፕሮፋይል ፎቶ
+
+  // የተጠቃሚውን ስም እና የፕሮፋይል ፎቶ ለመያዝ
+  String _currentUserName = 'You';
+  String? _currentUserAvatar;
 
   final Set<String> _likedCommentIds = {};
   final Set<String> _dislikedCommentIds = {};
@@ -39,10 +42,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     _fetchCommentsFromSupabase();
   }
 
-  // ከ SharedPreferences የፕሮፋይል ፎቶን ማንበብ
+  // ከ SharedPreferences የተጠቃሚውን ስም እና የፕሮፋይል ፎቶ ማንበብ
   Future<void> _loadUserProfile() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      _currentUserName = prefs.getString('current_user_name') ?? 'You';
       _currentUserAvatar = prefs.getString('current_user_avatar');
     });
   }
@@ -115,7 +119,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     try {
       final newRow = {
         'video_id': widget.videoId,
-        'user_name': 'You',
+        'user_name': _currentUserName, // እውነተኛ የተጠቃሚ ስም ማስገባት
         'comment_text': finalCommentText,
         'image_url': imageUrl,
         'likes_count': 0,
@@ -279,8 +283,8 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     FocusScope.of(context).requestFocus(_commentFocusNode);
   }
 
-  // የፕሮፋይል ፎቶውን ከፋይል ወይም ከኔትወርክ አጣርቶ የሚያሳይ ዊጅት
-  Widget _buildAvatar(String? avatarUrl, String fallbackLetter, {double radius = 16}) {
+  // የፕሮፋይል ፎቶን ከሊንክ ወይም ከስልክ ፋይል አጣርቶ የሚያሳይ Helper Widget
+  Widget _buildAvatar(String? avatarUrl, String fallbackName, {double radius = 16}) {
     ImageProvider? imageProvider;
 
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
@@ -291,13 +295,15 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
       }
     }
 
+    final String initialLetter = fallbackName.trim().isNotEmpty ? fallbackName.trim()[0].toUpperCase() : 'U';
+
     return CircleAvatar(
       radius: radius,
       backgroundColor: Colors.green[800],
       backgroundImage: imageProvider,
       child: imageProvider == null
           ? Text(
-              fallbackLetter,
+              initialLetter,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: radius * 0.75,
@@ -361,12 +367,17 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           itemBuilder: (context, index) {
                             final item = _comments[index];
                             final String commentId = item['id'].toString();
-                            final String userName = item['user_name'] ?? 'You';
+                            final String dbUserName = item['user_name'] ?? 'You';
                             final String commentText = item['comment_text'] ?? '';
                             final String? imageUrl = item['image_url'];
                             final int likesCount = item['likes_count'] ?? 0;
                             final int dislikesCount = item['dislikes_count'] ?? 0;
                             final String timeAgo = _formatTimeAgo(item['created_at']);
+
+                            // ኮሜንቱ የእንተ ከሆነ የእንተን ስም እና ፎቶ መጠቀም
+                            final bool isMyComment = (dbUserName == 'You' || dbUserName == _currentUserName);
+                            final String displayName = isMyComment ? _currentUserName : dbUserName;
+                            final String? displayAvatar = isMyComment ? _currentUserAvatar : null;
 
                             final bool isLiked = _likedCommentIds.contains(commentId);
                             final bool isDisliked = _dislikedCommentIds.contains(commentId);
@@ -380,10 +391,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      // 1. በኮሜንቶች ዝርዝር ላይ የፕሮፋይል ፎቶ (ፎቶ ከሌለ 'Y' ይጠቀማል)
+                                      // 1. በኮሜንቶች ዝርዝር ላይ የፕሮፋይል ፎቶ ማሳያ
                                       _buildAvatar(
-                                        userName == 'You' ? _currentUserAvatar : null,
-                                        'Y',
+                                        displayAvatar,
+                                        displayName,
                                         radius: 16,
                                       ),
                                       const SizedBox(width: 10),
@@ -392,8 +403,9 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
+                                            // የተጠቃሚው እውነተኛ ስም
                                             Text(
-                                              userName,
+                                              displayName,
                                               style: const TextStyle(
                                                 color: Colors.grey,
                                                 fontSize: 12,
@@ -425,7 +437,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                                 Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 10)),
                                                 const SizedBox(width: 12),
                                                 GestureDetector(
-                                                  onTap: () => _onReplyPressed(userName),
+                                                  onTap: () => _onReplyPressed(displayName),
                                                   child: const Text(
                                                     'Reply',
                                                     style: TextStyle(
@@ -510,10 +522,10 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                         ),
                       Row(
                         children: [
-                          // 2. በኮሜንት መጻፊያው አጠገብ የነበረው 'U' ተወግዶ የፕሮፋይል ፎቶዎ (ፎቶ ከሌለ 'Y') እንዲገባ ተደርጓል
+                          // 2. በኮሜንት መጻፊያው አጠገብ የእርስዎ የፕሮፋይል ፎቶ
                           _buildAvatar(
                             _currentUserAvatar,
-                            'Y',
+                            _currentUserName,
                             radius: 14,
                           ),
                           const SizedBox(width: 6),
