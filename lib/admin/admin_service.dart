@@ -40,13 +40,12 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን በቀጥታ ማሻሻል (ያለ ምንም ውስብስብ ኮንዲሽን)
+  /// 3. የ app_settings መረጃዎችን (Maintenance እና Announcement) በቀጥታ ማሻሻል
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
   }) async {
     try {
-      // ያሉትን ሪኮርዶች በሙሉ በማምጣት የመጀመሪያውን id በመጠቀም ማስተካከል
       final List<dynamic> existing = await _supabase.from('app_settings').select('id');
       
       if (existing.isNotEmpty) {
@@ -79,25 +78,29 @@ class AdminService {
     if (!context.mounted) return;
 
     if (maintenanceMode) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF2A2A2A),
-          title: const Text('System Maintenance', style: TextStyle(color: Colors.redAccent)),
-          content: const Text(
-            'አፑ በአሁኑ ሰዓት በጥገና ላይ ይገኛል። እባክዎ ትንሽ ቆይተው ይሞክሩ።',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {},
-              child: const Text('OK', style: TextStyle(color: Colors.greenAccent)),
+      // አድሚን ካልሆነ በስተቀር ተጠቃሚዎችን በሙሉ በጥገና ፖፕ-አፕ መቆለፍ
+      bool isAdmin = await checkIfUserIsAdmin();
+      if (!isAdmin) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: const Color(0xFF2A2A2A),
+            title: const Text('System Maintenance', style: TextStyle(color: Colors.redAccent)),
+            content: const Text(
+              'አፑ በአሁኑ ሰዓት በጥገና ላይ ይገኛል። እባክዎ ትንሽ ቆይተው ይሞክሩ።',
+              style: TextStyle(color: Colors.white70),
             ),
-          ],
-        ),
-      );
-      return;
+            actions: [
+              TextButton(
+                onPressed: () {},
+                child: const Text('OK', style: TextStyle(color: Colors.greenAccent)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
     }
 
     if (announcement != null && announcement.trim().isNotEmpty) {
@@ -310,7 +313,7 @@ class AdminService {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
-                          final topUsers = snapshot.data ?? [];
+                          final topUsers = snapshot.data ?? {};
                           if (topUsers.isEmpty) return const Center(child: Text('ምንም መረጃ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
