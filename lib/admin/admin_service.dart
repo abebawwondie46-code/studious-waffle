@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ (ኢሜል ወይም ፕሮፋይል ቢቀየርም የማይቀየር አስተማማኝ መንገድ)
+  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ (ፕሮፋይል ወይም ኢሜል ቢቀየርም የማይለወጥ አስተማማኝ መንገድ)
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -23,6 +23,21 @@ class AdminService {
       debugPrint('Error checking admin status: $e');
     }
     return false;
+  }
+
+  /// 2. የ app_settings መረጃዎችን ከሰርቨር ማንበብ
+  static Future<Map<String, dynamic>?> fetchAppSettings() async {
+    try {
+      final response = await _supabase
+          .from('app_settings')
+          .select()
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      debugPrint('Error fetching app settings: $e');
+      return null;
+    }
   }
 
   /// 3. የ app_settings መረጃዎችን ማሻሻል
@@ -52,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 4. አፕ ሲከፈት ማስታወቂያዎችን ብቻ የሚያሳይ (እርስዎን በጭራሽ የማይዘጋ)
+  /// 4. አፕ ሲከፈት ማስታወቂያዎችን ብቻ የሚያሳይ
   static Future<void> checkAppStatus(BuildContext context) async {
     final settings = await fetchAppSettings();
     if (settings == null) return;
