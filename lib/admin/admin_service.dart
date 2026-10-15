@@ -78,7 +78,6 @@ class AdminService {
     if (!context.mounted) return;
 
     if (maintenanceMode) {
-      // አድሚን ካልሆነ በስተቀር ተጠቃሚዎችን በሙሉ በጥገና ፖፕ-አፕ መቆለፍ
       bool isAdmin = await checkIfUserIsAdmin();
       if (!isAdmin) {
         showDialog(
@@ -313,7 +312,7 @@ class AdminService {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
-                          final topUsers = snapshot.data ?? {};
+                          final topUsers = snapshot.data ?? []; // እዚህ ጋር ከ {} ወደ [] ተስተካክሏል
                           if (topUsers.isEmpty) return const Center(child: Text('ምንም መረጃ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
