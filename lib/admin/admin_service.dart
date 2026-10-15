@@ -40,7 +40,7 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን ማሻሻል ወይም አዲስ መፍጠር (Upsert - ሰርቨሩ ላይ ስህተት እንዳይፈጠር የሚያደርግ)
+  /// 3. የ app_settings መረጃዎችን ማሻሻል
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -49,18 +49,15 @@ class AdminService {
       final isAdmin = await checkIfUserIsAdmin();
       if (!isAdmin) return false;
 
-      // ሰርቨር ላይ არსደቱን ለማየት 
       final existing = await _supabase.from('app_settings').select('id').maybeSingle();
       
       if (existing != null) {
-        // ካለ ፕራይማሪ ከልዩ መለያው (id) ጋር ኡፕዴት ማድረግ
         final id = existing['id'];
         await _supabase.from('app_settings').update({
           'maintenance_mode': maintenanceMode,
           'announcement': announcement,
         }).eq('id', id);
       } else {
-        // ከሌለ በአዲስ መልክ ማስገባት (Insert)
         await _supabase.from('app_settings').insert({
           'maintenance_mode': maintenanceMode,
           'announcement': announcement,
