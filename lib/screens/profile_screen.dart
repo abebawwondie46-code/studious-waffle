@@ -891,6 +891,11 @@ class UserFollowersScreen extends StatelessWidget {
               final email = user['email'] ?? '';
               final avatarUrl = user['avatar_url'];
 
+              // ኢሜሉን በነጥብ (•) መደበቅ
+              final maskedEmail = email.isNotEmpty 
+                  ? ('•' * (email.length > 10 ? 10 : email.length)) 
+                  : 'No email';
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
@@ -909,7 +914,7 @@ class UserFollowersScreen extends StatelessWidget {
                         : null,
                   ),
                   title: Text(fullName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: Text(email.isNotEmpty ? email : 'No email', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  subtitle: Text(maskedEmail, style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 ),
               );
             },
