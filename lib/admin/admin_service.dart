@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ (ትክክለኛው መንገድ)
+  /// 1. አድሚን መሆን አለመሆኑን ማረጋገጥ
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -67,8 +67,15 @@ class AdminService {
     }
   }
 
-  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ
+  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ (ለአድሚን ክፍት የሆነ)
   static Future<void> checkAppStatus(BuildContext context) async {
+    // መጀመሪያ አድሚን መሆንዎን እርግጠኛ እንሁን (አድሚን ከሆኑ ማስተካከያውን ሙሉ በሙሉ እንለፈው)
+    bool isAdmin = await checkIfUserIsAdmin();
+    if (isAdmin) {
+      // አድሚን ከሆኑ ሰርቨር ላይ ጥገና ቢበራም አፑን በቀጥታ እንዲጠቀሙ ይደረጋል (ምንም ዲያሎግ አይወጣም)
+      return;
+    }
+
     final settings = await fetchAppSettings();
     if (settings == null) return;
 
@@ -78,29 +85,25 @@ class AdminService {
     if (!context.mounted) return;
 
     if (maintenanceMode) {
-      bool isAdmin = await checkIfUserIsAdmin();
-      // አድሚን ከሆኑ በጥገና ሰዓትም ቢሆን አፑን መክፈት ይችላሉ (አይዘጋብዎትም)
-      if (!isAdmin) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF2A2A2A),
-            title: const Text('System Maintenance', style: TextStyle(color: Colors.redAccent)),
-            content: const Text(
-              'አፑ በአሁኑ ሰዓት በጥገና ላይ ይገኛል። እባክዎ ትንሽ ቆይተው ይሞክሩ።',
-              style: TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {},
-                child: const Text('OK', style: TextStyle(color: Colors.greenAccent)),
-              ),
-            ],
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF2A2A2A),
+          title: const Text('System Maintenance', style: TextStyle(color: Colors.redAccent)),
+          content: const Text(
+            'አፑ በአሁኑ ሰዓት በጥገና ላይ ይገኛል። እባክዎ ትንሽ ቆይተው ይሞክሩ።',
+            style: TextStyle(color: Colors.white70),
           ),
-        );
-        return;
-      }
+          actions: [
+            TextButton(
+              onPressed: () {},
+              child: const Text('OK', style: TextStyle(color: Colors.greenAccent)),
+            ),
+          ],
+        ),
+      );
+      return;
     }
 
     if (announcement != null && announcement.trim().isNotEmpty) {
