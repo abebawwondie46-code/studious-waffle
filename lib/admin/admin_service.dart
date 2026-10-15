@@ -40,7 +40,7 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን ማሻሻል (Update)
+  /// 3. የ app_settings መረጃዎችን ማሻሻል (Maintenance እና Announcement)
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -71,7 +71,7 @@ class AdminService {
     return false;
   }
 
-  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ (ይህ ከ main.dart ይጠራል)
+  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ
   static Future<void> checkAppStatus(BuildContext context) async {
     final settings = await fetchAppSettings();
     if (settings == null) return;
@@ -158,7 +158,7 @@ class AdminService {
     }
   }
 
-  /// 8. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ
+  /// 8. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ (ሁሉም መቆጣጠሪያዎች የተካተቱበት)
   static void showAdminPanel(BuildContext context) async {
     final settings = await fetchAppSettings();
     
@@ -172,7 +172,7 @@ class AdminService {
     showDialog(
       context: context,
       builder: (context) => DefaultTabController(
-        length: 3,
+        length: 4, // 4 ታቦች (ቅንብሮች፣ ስታቲስቲክስ፣ ተጠቃሚዎች፣ ሽልማት)
         child: AlertDialog(
           backgroundColor: const Color(0xFF16161A),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -180,29 +180,83 @@ class AdminService {
             children: const [
               Icon(Icons.admin_panel_settings, color: Colors.redAccent),
               SizedBox(width: 10),
-              Text('የአድሚን ማዕከል (Admin Control)', style: TextStyle(color: Colors.white, fontSize: 16)),
+              Text('የአድሚን ማዕከል (Admin Control)', style: TextStyle(color: Colors.white, fontSize: 15)),
             ],
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 400,
+            height: 420,
             child: Column(
               children: [
                 const TabBar(
+                  isScrollable: true,
                   labelColor: Colors.redAccent,
                   unselectedLabelColor: Colors.white54,
                   indicatorColor: Colors.redAccent,
                   tabs: [
-                    Tab(text: 'ስታቲስቲክስ', icon: Icon(Icons.analytics, size: 18)),
-                    Tab(text: 'ተጠቃሚዎች', icon: Icon(Icons.people, size: 18)),
-                    Tab(text: 'ሽልማት/Leaderboard', icon: Icon(Icons.emoji_events, size: 18)),
+                    Tab(text: 'ቅንብሮች/Maintenance', icon: Icon(Icons.settings, size: 16)),
+                    Tab(text: 'ስታቲስቲክስ', icon: Icon(Icons.analytics, size: 16)),
+                    Tab(text: 'ተጠቃሚዎች', icon: Icon(Icons.people, size: 16)),
+                    Tab(text: 'ሽልማት/Leaderboard', icon: Icon(Icons.emoji_events, size: 16)),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Expanded(
                   child: TabBarView(
                     children: [
-                      // Tab 1: Analytics
+                      // Tab 1: System Settings (Maintenance & Announcement)
+                      StatefulBuilder(
+                        builder: (context, setStateBuilder) => ListView(
+                          children: [
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: announcementController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'አዲስ ማስታወቂያ ጻፍ (Announcement)',
+                                labelStyle: TextStyle(color: Colors.white54),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white24),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            SwitchListTile(
+                              title: const Text(
+                                'የጥገና ሁኔታ (Maintenance)',
+                                style: TextStyle(color: Colors.white, fontSize: 14),
+                              ),
+                              value: maintenanceValue,
+                              activeColor: Colors.redAccent,
+                              onChanged: (val) {
+                                setStateBuilder(() {
+                                  maintenanceValue = val;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                              onPressed: () async {
+                                bool success = await updateAppSettings(
+                                  maintenanceMode: maintenanceValue,
+                                  announcement: announcementController.text,
+                                );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(success ? 'ቅንብሩ ተቀይሯል!' : 'ማስተካከል አልተቻለም'),
+                                    backgroundColor: success ? Colors.green : Colors.red,
+                                  ),
+                                );
+                              },
+                              child: const Text('ቅንብሮችን አስቀምጥ', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Tab 2: Analytics
                       FutureBuilder<Map<String, int>>(
                         future: fetchAppStatistics(),
                         builder: (context, snapshot) {
@@ -220,7 +274,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 2: Users Management
+                      // Tab 3: Users Management (Ban / Unban)
                       FutureBuilder<List<Map<String, dynamic>>>(
                         future: _supabase.from('profiles').select('full_name, email, is_banned').limit(20),
                         builder: (context, snapshot) {
@@ -252,7 +306,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 3: Reward Leaderboard
+                      // Tab 4: Reward Leaderboard
                       FutureBuilder<List<Map<String, dynamic>>>(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
