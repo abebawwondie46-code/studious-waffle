@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን በኢሜል ማረጋገጥ (ፈጣን እና አስተማማኝ)
+  /// 1. አድሚን መሆን አለመሆኑን ማረጋገጥ
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -67,47 +67,14 @@ class AdminService {
     }
   }
 
-  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ
+  /// 4. አፕ ሲከፈት ማስታወቂያዎችን ብቻ የሚያሳይ (እርስዎን በጭራሽ የማይዘጋ)
   static Future<void> checkAppStatus(BuildContext context) async {
-    // መጀመሪያ የቅንብር መረጃዎችን ከሰርቨር እናምጣ
     final settings = await fetchAppSettings();
     if (settings == null) return;
 
-    final bool maintenanceMode = settings['maintenance_mode'] ?? false;
     final String? announcement = settings['announcement'];
 
-    // Maintenance ኦን ከሆነ ብቻ አድሚን መሆን አለመሆንዎን እንፈትሻለን
-    if (maintenanceMode) {
-      bool isAdmin = await checkIfUserIsAdmin();
-      // አድሚን ከሆኑ ማስተካከያው (Maintenance) ዲያሎግ በጭራሽ እንዳይወጣብን እዚህ ጋር እናቆመዋለን
-      if (isAdmin) {
-        return;
-      }
-    }
-
     if (!context.mounted) return;
-
-    if (maintenanceMode) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF2A2A2A),
-          title: const Text('System Maintenance', style: TextStyle(color: Colors.redAccent)),
-          content: const Text(
-            'አፑ በአሁኑ ሰዓት በጥገና ላይ ይገኛል። እባክዎ ትንሽ ቆይተው ይሞክሩ።',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {},
-              child: const Text('OK', style: TextStyle(color: Colors.greenAccent)),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
 
     if (announcement != null && announcement.trim().isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
