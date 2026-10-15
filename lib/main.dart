@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/feed_screen.dart';
 import 'screens/create_screen.dart'; // አዲሱ የቪዲዮ መፍጠሪያ ፋይል
 import 'screens/profile_screen.dart'; // አዲሱ የፕሮፋይል ፋይል
+import 'admin/admin_service.dart'; // <--- አዲሱን የአድሚን ሰርቪስ ፋይል እዚህ አስመጣን
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +52,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const CreateScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // አፕ ሲከፈት ከ Supabase የሰርቨር ቅንብሮችን (Maintenance mode እና Announcement) ማረጋገጥ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AdminService.checkAppStatus(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
