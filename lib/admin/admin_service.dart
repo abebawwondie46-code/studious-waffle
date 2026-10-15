@@ -40,7 +40,7 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን ማሻሻል (Maintenance እና Announcement)
+  /// 3. የ app_settings መረጃዎችን ማሻሻል ወይም አዲስ መፍጠር (Upsert - ሰርቨሩ ላይ ስህተት እንዳይፈጠር የሚያደርግ)
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -49,26 +49,28 @@ class AdminService {
       final isAdmin = await checkIfUserIsAdmin();
       if (!isAdmin) return false;
 
+      // ሰርቨር ላይ არსደቱን ለማየት 
       final existing = await _supabase.from('app_settings').select('id').maybeSingle();
       
       if (existing != null) {
+        // ካለ ፕራይማሪ ከልዩ መለያው (id) ጋር ኡፕዴት ማድረግ
         final id = existing['id'];
         await _supabase.from('app_settings').update({
           'maintenance_mode': maintenanceMode,
           'announcement': announcement,
         }).eq('id', id);
-        return true;
       } else {
+        // ከሌለ በአዲስ መልክ ማስገባት (Insert)
         await _supabase.from('app_settings').insert({
           'maintenance_mode': maintenanceMode,
           'announcement': announcement,
         });
-        return true;
       }
+      return true;
     } catch (e) {
       debugPrint('Error updating app settings: $e');
+      return false;
     }
-    return false;
   }
 
   /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ
@@ -158,7 +160,7 @@ class AdminService {
     }
   }
 
-  /// 8. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ (ሁሉም መቆጣጠሪያዎች የተካተቱበት)
+  /// 8. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ
   static void showAdminPanel(BuildContext context) async {
     final settings = await fetchAppSettings();
     
@@ -172,7 +174,7 @@ class AdminService {
     showDialog(
       context: context,
       builder: (context) => DefaultTabController(
-        length: 4, // 4 ታቦች (ቅንብሮች፣ ስታቲስቲክስ፣ ተጠቃሚዎች፣ ሽልማት)
+        length: 4,
         child: AlertDialog(
           backgroundColor: const Color(0xFF16161A),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -204,7 +206,7 @@ class AdminService {
                 Expanded(
                   child: TabBarView(
                     children: [
-                      // Tab 1: System Settings (Maintenance & Announcement)
+                      // Tab 1: System Settings
                       StatefulBuilder(
                         builder: (context, setStateBuilder) => ListView(
                           children: [
@@ -274,7 +276,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 3: Users Management (Ban / Unban)
+                      // Tab 3: Users Management
                       FutureBuilder<List<Map<String, dynamic>>>(
                         future: _supabase.from('profiles').select('full_name, email, is_banned').limit(20),
                         builder: (context, snapshot) {
