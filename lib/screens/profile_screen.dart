@@ -20,11 +20,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isSaving = false;
   bool _isEditing = false;
   bool _obscureEmail = true;
-  bool _isAdmin = false; // አድሚን መሆን አለመሆኑን ለመያዝ
   
   int _postsCount = 0;
   int _likesCount = 0;
   int _followersCount = 0;
+  int _adminTapCount = 0; // ለድብቅ ክሊክ መቁጠሪያ
   
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -38,14 +38,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadUserProfileAndStats();
-    _checkAdminStatus(); // አድሚን መሆን አለመሆኑን ማረጋገጫ መጥራት
-  }
-
-  Future<void> _checkAdminStatus() async {
-    bool admin = await AdminService.checkIfUserIsAdmin();
-    setState(() {
-      _isAdmin = admin;
-    });
   }
 
   static void showNoInternetToast(BuildContext context) {
@@ -307,7 +299,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               tooltip: 'Search Posts, Likes & Followers',
             ),
             const Spacer(),
-            const Text('Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            // ድብቅ የሆነ የአድሚን መክፈቻ (Profile ጽሁፉን 5 ጊዜ ሲጫኑት በ AdminService በኩል ይከፈታል)
+            GestureDetector(
+              onTap: () async {
+                _adminTapCount++;
+                if (_adminTapCount >= 5) {
+                  _adminTapCount = 0;
+                  bool isAdmin = await AdminService.checkIfUserIsAdmin();
+                  if (isAdmin) {
+                    if (!mounted) return;
+                    AdminService.showAdminPanel(context);
+                  }
+                }
+              },
+              child: const Text('Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            ),
             const Spacer(),
             const SizedBox(width: 48),
           ],
@@ -511,24 +517,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // አድሚን ከሆኑ ብቻ የሚታይ የአድሚን ፓነል ቁልፍ
-            if (_isAdmin) ...[
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () => AdminService.showAdminPanel(context),
-                icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
-                label: const Text(
-                  'የአድሚን ፓነል (Admin Panel)',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
           ],
         ),
       ),
