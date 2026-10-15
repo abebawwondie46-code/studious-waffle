@@ -4,16 +4,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አሁን የገባው ተጠቃሚ አድሚን መሆኑን ማረጋገጫ
+  /// 1. አሁን የገባው ተጠቃሚ አድሚን መሆኑን በኢሜል ማረጋገጫ
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) return false;
+      if (user == null || user.email == null) return false;
 
+      // በ UUID ፋንታ በቀጥታ በ ዩዘር ኢሜል (email) ማረጋገጥ
       final response = await _supabase
           .from('profiles')
           .select('is_admin')
-          .eq('id', user.id)
+          .eq('email', user.email!)
           .maybeSingle();
 
       if (response != null && response['is_admin'] == true) {
