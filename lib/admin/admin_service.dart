@@ -25,7 +25,7 @@ class AdminService {
     return false;
   }
 
-  /// 2. የ app_settings መረጃዎችን (Maintenance mode እና Announcement) ከሰርቨር ማንበብ
+  /// 2. የ app_settings መረጃዎችን ከሰርቨር ማንበብ
   static Future<Map<String, dynamic>?> fetchAppSettings() async {
     try {
       final response = await _supabase
@@ -40,7 +40,33 @@ class AdminService {
     }
   }
 
-  /// 3. አድሚን ሆኖ አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ ፖፕ-አፕ (Dialog)
+  /// 3. አድሚን ብቻ ሆነው የ app_settings መረጃዎችን (Maintenance mode ወይም Announcement) ማሻሻል (Update)
+  static Future<bool> updateAppSettings({
+    required bool maintenanceMode,
+    required String announcement,
+  }) async {
+    try {
+      final isAdmin = await checkIfUserIsAdmin();
+      if (!isAdmin) return false;
+
+      // በመጀመሪያ ያለውን ረድፍ (Row) መታወቂያ (id) ለማግኘት
+      final existing = await _supabase.from('app_settings').select('id').maybeSingle();
+      
+      if (existing != null) {
+        final id = existing['id'];
+        await _supabase.from('app_settings').update({
+          'maintenance_mode': maintenanceMode,
+          'announcement': announcement,
+        }).eq('id', id);
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error updating app settings: $e');
+    }
+    return false;
+  }
+
+  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ
   static Future<void> checkAppStatus(BuildContext context) async {
     final settings = await fetchAppSettings();
     if (settings == null) return;
@@ -50,7 +76,6 @@ class AdminService {
 
     if (!context.mounted) return;
 
-    // አፑ በጥገና ላይ ከሆነ
     if (maintenanceMode) {
       showDialog(
         context: context,
@@ -64,9 +89,7 @@ class AdminService {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                // አፑን መዝጋት ወይም ማወጣጫ ኮድ
-              },
+              onPressed: () {},
               child: const Text('OK', style: TextStyle(color: Colors.greenAccent)),
             ),
           ],
@@ -75,7 +98,6 @@ class AdminService {
       return;
     }
 
-    // ልዩ ማስታወቂያ ወይም መልእክት ካለ
     if (announcement != null && announcement.trim().isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
