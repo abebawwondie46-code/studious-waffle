@@ -4,16 +4,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን ማረጋገጥ
+  /// 1. አድሚን መሆን አለመሆኑን በኢሜል ማረጋገጥ (ፈጣን እና አስተማማኝ)
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) return false;
+      if (user == null || user.email == null) return false;
 
       final response = await _supabase
           .from('profiles')
           .select('is_admin')
-          .eq('id', user.id)
+          .eq('email', user.email!)
           .maybeSingle();
 
       if (response != null && response['is_admin'] == true) {
@@ -67,20 +67,23 @@ class AdminService {
     }
   }
 
-  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ (ለአድሚን ክፍት የሆነ)
+  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ
   static Future<void> checkAppStatus(BuildContext context) async {
-    // መጀመሪያ አድሚን መሆንዎን እርግጠኛ እንሁን (አድሚን ከሆኑ ማስተካከያውን ሙሉ በሙሉ እንለፈው)
-    bool isAdmin = await checkIfUserIsAdmin();
-    if (isAdmin) {
-      // አድሚን ከሆኑ ሰርቨር ላይ ጥገና ቢበራም አፑን በቀጥታ እንዲጠቀሙ ይደረጋል (ምንም ዲያሎግ አይወጣም)
-      return;
-    }
-
+    // መጀመሪያ የቅንብር መረጃዎችን ከሰርቨር እናምጣ
     final settings = await fetchAppSettings();
     if (settings == null) return;
 
     final bool maintenanceMode = settings['maintenance_mode'] ?? false;
     final String? announcement = settings['announcement'];
+
+    // Maintenance ኦን ከሆነ ብቻ አድሚን መሆን አለመሆንዎን እንፈትሻለን
+    if (maintenanceMode) {
+      bool isAdmin = await checkIfUserIsAdmin();
+      // አድሚን ከሆኑ ማስተካከያው (Maintenance) ዲያሎግ በጭራሽ እንዳይወጣብን እዚህ ጋር እናቆመዋለን
+      if (isAdmin) {
+        return;
+      }
+    }
 
     if (!context.mounted) return;
 
