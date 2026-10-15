@@ -25,7 +25,96 @@ class AdminService {
     return false;
   }
 
-  /// 2. አጠቃላይ ስታቲስቲክስ ማምጣት (የተጠቃሚዎች ብዛት፣ ፖስቶች፣ ቪዲዮዎች)
+  /// 2. የ app_settings መረጃዎችን ከሰርቨር ማንበብ
+  static Future<Map<String, dynamic>?> fetchAppSettings() async {
+    try {
+      final response = await _supabase
+          .from('app_settings')
+          .select()
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      debugPrint('Error fetching app settings: $e');
+      return null;
+    }
+  }
+
+  /// 3. የ app_settings መረጃዎችን ማሻሻል (Update)
+  static Future<bool> updateAppSettings({
+    required bool maintenanceMode,
+    required String announcement,
+  }) async {
+    try {
+      final isAdmin = await checkIfUserIsAdmin();
+      if (!isAdmin) return false;
+
+      final existing = await _supabase.from('app_settings').select('id').maybeSingle();
+      
+      if (existing != null) {
+        final id = existing['id'];
+        await _supabase.from('app_settings').update({
+          'maintenance_mode': maintenanceMode,
+          'announcement': announcement,
+        }).eq('id', id);
+        return true;
+      } else {
+        await _supabase.from('app_settings').insert({
+          'maintenance_mode': maintenanceMode,
+          'announcement': announcement,
+        });
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error updating app settings: $e');
+    }
+    return false;
+  }
+
+  /// 4. አፕ ሲከፈት Maintenance Mode ወይም Announcement ካለ ማሳያ (ይህ ከ main.dart ይጠራል)
+  static Future<void> checkAppStatus(BuildContext context) async {
+    final settings = await fetchAppSettings();
+    if (settings == null) return;
+
+    final bool maintenanceMode = settings['maintenance_mode'] ?? false;
+    final String? announcement = settings['announcement'];
+
+    if (!context.mounted) return;
+
+    if (maintenanceMode) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF2A2A2A),
+          title: const Text('System Maintenance', style: TextStyle(color: Colors.redAccent)),
+          content: const Text(
+            'አፑ በአሁኑ ሰዓት በጥገና ላይ ይገኛል። እባክዎ ትንሽ ቆይተው ይሞክሩ።',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {},
+              child: const Text('OK', style: TextStyle(color: Colors.greenAccent)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    if (announcement != null && announcement.trim().isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(announcement, style: const TextStyle(color: Colors.white)),
+          backgroundColor: Colors.green[800],
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  /// 5. አጠቃላይ ስታቲስቲክስ ማምጣት
   static Future<Map<String, int>> fetchAppStatistics() async {
     try {
       final usersRes = await _supabase.from('profiles').select('id');
@@ -42,7 +131,7 @@ class AdminService {
     }
   }
 
-  /// 3. አክቲቭ ተጠቃሚዎችን በነጥብ (Activity Points) ማምጣት (ለሽልማት ውድድር)
+  /// 6. አክቲቭ ተጠቃሚዎችን በነጥብ ማምጣት (Leaderboard)
   static Future<List<Map<String, dynamic>>> fetchTopActiveUsers() async {
     try {
       final response = await _supabase
@@ -56,7 +145,7 @@ class AdminService {
     }
   }
 
-  /// 4. ተጠቃሚን ማገድ (Ban User)
+  /// 7. ተጠቃሚን ማገድ ወይም መክፈት (Ban User)
   static Future<bool> toggleUserBan(String email, bool banStatus) async {
     try {
       await _supabase
@@ -69,8 +158,17 @@ class AdminService {
     }
   }
 
-  /// 5. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ (Tabs ያለው ኃይለኛ ፓነል)
-  static void showAdminPanel(BuildContext context) {
+  /// 8. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ
+  static void showAdminPanel(BuildContext context) async {
+    final settings = await fetchAppSettings();
+    
+    final TextEditingController announcementController = TextEditingController(
+      text: settings?['announcement'] ?? '',
+    );
+    bool maintenanceValue = settings?['maintenance_mode'] ?? false;
+
+    if (!context.mounted) return;
+
     showDialog(
       context: context,
       builder: (context) => DefaultTabController(
@@ -145,7 +243,7 @@ class AdminService {
                                   onPressed: () async {
                                     await toggleUserBan(user['email'], !isBanned);
                                     Navigator.pop(context);
-                                    showAdminPanel(context); // ሪፍሬሽ ለማድረግ
+                                    showAdminPanel(context);
                                   },
                                 ),
                               );
@@ -154,7 +252,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 3: Reward Leaderboard (አክቲቪቲ ሻምፒዮኖች)
+                      // Tab 3: Reward Leaderboard
                       FutureBuilder<List<Map<String, dynamic>>>(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
@@ -205,7 +303,7 @@ class AdminService {
         color: const Color(0xFF222228),
         borderRadius: BorderRadius.circular(12),
       ),
-      Row(
+      child: Row(
         children: [
           Icon(icon, color: color, size: 28),
           const SizedBox(width: 15),
