@@ -4,16 +4,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን ማረጋገጥ
+  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ (ትክክለኛው መንገድ)
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null || user.email == null) return false;
+      if (user == null) return false;
 
       final response = await _supabase
           .from('profiles')
           .select('is_admin')
-          .eq('email', user.email!)
+          .eq('id', user.id)
           .maybeSingle();
 
       if (response != null && response['is_admin'] == true) {
@@ -40,7 +40,7 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን (Maintenance እና Announcement) በቀጥታ ማሻሻል
+  /// 3. የ app_settings መረጃዎችን ማሻሻል
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -79,6 +79,7 @@ class AdminService {
 
     if (maintenanceMode) {
       bool isAdmin = await checkIfUserIsAdmin();
+      // አድሚን ከሆኑ በጥገና ሰዓትም ቢሆን አፑን መክፈት ይችላሉ (አይዘጋብዎትም)
       if (!isAdmin) {
         showDialog(
           context: context,
@@ -312,7 +313,7 @@ class AdminService {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
-                          final topUsers = snapshot.data ?? []; // እዚህ ጋር ከ {} ወደ [] ተስተካክሏል
+                          final topUsers = snapshot.data ?? [];
                           if (topUsers.isEmpty) return const Center(child: Text('ምንም መረጃ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
