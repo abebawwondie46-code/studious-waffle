@@ -3,7 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'settings_screen.dart'; // የሴቲንግ ፋይሉን ማስገባት (Import ማድረግ)
+import 'settings_screen.dart'; // የሴቲንግ ፋይሉን ማስገባት
+import '../admin/admin_service.dart'; // የአድሚን ሰርቪስ ፋይሉን ማስገባት
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,6 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isSaving = false;
   bool _isEditing = false;
   bool _obscureEmail = true;
+  bool _isAdmin = false; // አድሚን መሆን አለመሆኑን ለመያዝ
   
   int _postsCount = 0;
   int _likesCount = 0;
@@ -36,6 +38,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadUserProfileAndStats();
+    _checkAdminStatus(); // አድሚን መሆን አለመሆኑን ማረጋገጫ መጥራት
+  }
+
+  Future<void> _checkAdminStatus() async {
+    bool admin = await AdminService.checkIfUserIsAdmin();
+    setState(() {
+      _isAdmin = admin;
+    });
   }
 
   static void showNoInternetToast(BuildContext context) {
@@ -501,6 +511,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // አድሚን ከሆኑ ብቻ የሚታይ የአድሚን ፓነል ቁልፍ
+            if (_isAdmin) ...[
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => AdminService.showAdminPanel(context),
+                icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                label: const Text(
+                  'የአድሚን ፓነል (Admin Panel)',
+                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
           ],
         ),
       ),
@@ -858,38 +886,39 @@ class UserFollowersScreen extends StatelessWidget {
               child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
             );
           }
-          final followers = snapshot.data ?? [];
-          if (followers.isEmpty) {
+          final profiles = snapshot.data ?? [];
+          if (profiles.isEmpty) {
             return const Center(child: Text('No followers found.', style: TextStyle(color: Colors.white54)));
           }
 
           return ListView.builder(
-            itemCount: followers.length,
+            itemCount: profiles.length,
             padding: const EdgeInsets.all(12),
             itemBuilder: (context, index) {
-              final follower = followers[index];
-              final name = follower['full_name'] ?? 'Community Member';
-              final avatar = follower['avatar_url'];
+              final user = profiles[index];
+              final fullName = user['full_name'] ?? 'User';
+              final email = user['email'] ?? '';
+              final avatarUrl = user['avatar_url'];
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xFF16161A),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white10, width: 0.5),
                 ),
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xFF2575FC),
-                    backgroundImage: (avatar != null && avatar.isNotEmpty)
-                        ? NetworkImage(avatar)
+                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                        ? NetworkImage(avatarUrl)
                         : null,
-                    child: (avatar == null || avatar.isEmpty)
+                    child: (avatarUrl == null || avatarUrl.isEmpty)
                         ? const Icon(Icons.person, color: Colors.white)
                         : null,
                   ),
-                  title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Community Member', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  title: Text(fullName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: Text(email.isNotEmpty ? email : 'No email', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 ),
               );
             },
