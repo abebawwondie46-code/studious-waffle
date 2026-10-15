@@ -40,19 +40,17 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን ማሻሻል
+  /// 3. የ app_settings መረጃዎችን በቀጥታ ማሻሻል (ያለ ምንም ውስብስብ ኮንዲሽን)
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
   }) async {
     try {
-      final isAdmin = await checkIfUserIsAdmin();
-      if (!isAdmin) return false;
-
-      final existing = await _supabase.from('app_settings').select('id').maybeSingle();
+      // ያሉትን ሪኮርዶች በሙሉ በማምጣት የመጀመሪያውን id በመጠቀም ማስተካከል
+      final List<dynamic> existing = await _supabase.from('app_settings').select('id');
       
-      if (existing != null) {
-        final id = existing['id'];
+      if (existing.isNotEmpty) {
+        final id = existing[0]['id'];
         await _supabase.from('app_settings').update({
           'maintenance_mode': maintenanceMode,
           'announcement': announcement,
