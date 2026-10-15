@@ -299,20 +299,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               tooltip: 'Search Posts, Likes & Followers',
             ),
             const Spacer(),
-            // ድብቅ የሆነ የአድሚን መክፈቻ (Profile ጽሁፉን 5 ጊዜ ሲጫኑት በ AdminService በኩል ይከፈታል)
+            // ድብቅ የሆነ የአድሚን መክፈቻ (Profile ጽሁፉን 5 ጊዜ በፍጥነት ሲጫኑት ይከፈታል)
             GestureDetector(
-              onTap: () async {
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
                 _adminTapCount++;
                 if (_adminTapCount >= 5) {
                   _adminTapCount = 0;
-                  bool isAdmin = await AdminService.checkIfUserIsAdmin();
-                  if (isAdmin) {
-                    if (!mounted) return;
-                    AdminService.showAdminPanel(context);
-                  }
+                  AdminService.showAdminPanel(context);
                 }
               },
-              child: const Text('Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Text(
+                  'Profile',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
             ),
             const Spacer(),
             const SizedBox(width: 48),
