@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አሁን የገባው ተጠቃሚ አድሚን መሆኑን ከ profiles ታብል ማረጋገጫ
+  /// 1. አሁን የገባው ተጠቃሚ አድሚን መሆኑን ማረጋገጫ
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -40,7 +40,7 @@ class AdminService {
     }
   }
 
-  /// 3. አድሚን ብቻ ሆነው የ app_settings መረጃዎችን (Maintenance mode ወይም Announcement) ማሻሻል (Update)
+  /// 3. የ app_settings መረጃዎችን ማሻሻል (Update)
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -49,7 +49,6 @@ class AdminService {
       final isAdmin = await checkIfUserIsAdmin();
       if (!isAdmin) return false;
 
-      // በመጀመሪያ ያለውን ረድፍ (Row) መታወቂያ (id) ለማግኘት
       final existing = await _supabase.from('app_settings').select('id').maybeSingle();
       
       if (existing != null) {
@@ -107,5 +106,78 @@ class AdminService {
         ),
       );
     }
+  }
+
+  /// 5. አድሚን ፓነል ፖፕ-አፕ (ቁልፉ ሲጫን የሚከፈተው ዳይሎግ)
+  static void showAdminPanel(BuildContext context) {
+    final TextEditingController announcementController = TextEditingController();
+    bool maintenanceValue = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF16161A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'የአድሚን መቆጣጠሪያ ፓነል',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: announcementController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'አዲስ ማስታወቂያ ጻፍ',
+                labelStyle: TextStyle(color: Colors.white54),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white24),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+            StatefulBuilder(
+              builder: (context, setStateBuilder) => SwitchListTile(
+                title: const Text(
+                  'የጥገና ሁኔታ (Maintenance)',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                value: maintenanceValue,
+                activeColor: Colors.redAccent,
+                onChanged: (val) {
+                  setStateBuilder(() {
+                    maintenanceValue = val;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ሰርዝ', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              bool success = await updateAppSettings(
+                maintenanceMode: maintenanceValue,
+                announcement: announcementController.text,
+              );
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(success ? 'ቅንብሩ ተቀይሯል!' : 'ማስተካከል አልተቻለም'),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                ),
+              );
+            },
+            child: const Text('አስቀምጥ', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 }
