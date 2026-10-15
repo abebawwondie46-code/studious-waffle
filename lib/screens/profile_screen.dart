@@ -3,8 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'settings_screen.dart';
-import '../admin/admin_service.dart';
+import 'settings_screen.dart'; // የሴቲንግ ፋይሉን ማስገባት (Import ማድረግ)
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,7 +19,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isSaving = false;
   bool _isEditing = false;
   bool _obscureEmail = true;
-  bool _isAdmin = false;
   
   int _postsCount = 0;
   int _likesCount = 0;
@@ -38,14 +36,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadUserProfileAndStats();
-    _checkAdminStatus();
-  }
-
-  Future<void> _checkAdminStatus() async {
-    bool admin = await AdminService.checkIfUserIsAdmin();
-    setState(() {
-      _isAdmin = admin;
-    });
   }
 
   static void showNoInternetToast(BuildContext context) {
@@ -511,30 +501,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // አድሚን ከሆኑ ብቻ የሚታይ የአድሚን ፓነል ቁልፍ
-            if (_isAdmin) ...[
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () => AdminService.showAdminPanel(context),
-                icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
-                label: const Text(
-                  'የአድሚን ፓነል (Admin Panel)',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
           ],
         ),
       ),
     );
   }
 }
+
 class _ProfileStatItem extends StatelessWidget {
   final String title;
   final String count;
@@ -752,5 +725,177 @@ class UserPostsScreen extends StatelessWidget {
         },
       ),
     );
- 
-          
+  }
+}
+
+// User Likes Screen
+class UserLikesScreen extends StatelessWidget {
+  final String userName;
+  final String? avatarUrl;
+
+  const UserLikesScreen({super.key, required this.userName, this.avatarUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final SupabaseClient supabase = Supabase.instance.client;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0C),
+      appBar: AppBar(
+        title: const Text('Liked Videos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF0A0A0C),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: supabase.from('videos').select().order('likes_count', ascending: false),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
+          }
+          if (snapshot.hasError) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _ProfileScreenState.showNoInternetToast(context);
+            });
+            return const Center(
+              child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
+            );
+          }
+          final videos = snapshot.data ?? [];
+          if (videos.isEmpty) {
+            return const Center(child: Text('No liked videos found.', style: TextStyle(color: Colors.white54)));
+          }
+
+          return ListView.builder(
+            itemCount: videos.length,
+            padding: const EdgeInsets.all(12),
+            itemBuilder: (context, index) {
+              final video = videos[index];
+              final caption = video['caption'] ?? video['title'] ?? 'No Description';
+              final videoUrl = video['video_url'] ?? video['media_url'] ?? '';
+              int rawLikes = (video['likes_count'] as num?)?.toInt() ?? 0;
+              final likesCount = max(0, rawLikes);
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16161A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10, width: 0.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF2575FC),
+                        backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
+                            ? NetworkImage(avatarUrl!)
+                            : null,
+                        child: (avatarUrl == null || avatarUrl!.isEmpty)
+                            ? const Icon(Icons.person, color: Colors.white)
+                            : null,
+                      ),
+                      title: Text(userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.favorite, color: Colors.pink, size: 18),
+                          const SizedBox(width: 6),
+                          Text('$likesCount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    if (videoUrl.isNotEmpty)
+                      Container(
+                        height: 200,
+                        color: Colors.black12,
+                        child: const Center(child: Icon(Icons.play_circle_fill, color: Colors.white54, size: 50)),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        caption,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// User Followers Screen
+class UserFollowersScreen extends StatelessWidget {
+  const UserFollowersScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final SupabaseClient supabase = Supabase.instance.client;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0C),
+      appBar: AppBar(
+        title: const Text('Followers List', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF0A0A0C),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: supabase.from('profiles').select(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF2575FC)));
+          }
+          if (snapshot.hasError) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _ProfileScreenState.showNoInternetToast(context);
+            });
+            return const Center(
+              child: Text('No internet connection.', style: TextStyle(color: Colors.white54)),
+            );
+          }
+          final followers = snapshot.data ?? [];
+          if (followers.isEmpty) {
+            return const Center(child: Text('No followers found.', style: TextStyle(color: Colors.white54)));
+          }
+
+          return ListView.builder(
+            itemCount: followers.length,
+            padding: const EdgeInsets.all(12),
+            itemBuilder: (context, index) {
+              final follower = followers[index];
+              final name = follower['full_name'] ?? 'Community Member';
+              final avatar = follower['avatar_url'];
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16161A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10, width: 0.5),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFF2575FC),
+                    backgroundImage: (avatar != null && avatar.isNotEmpty)
+                        ? NetworkImage(avatar)
+                        : null,
+                    child: (avatar == null || avatar.isEmpty)
+                        ? const Icon(Icons.person, color: Colors.white)
+                        : null,
+                  ),
+                  title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Community Member', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
