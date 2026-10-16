@@ -74,6 +74,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
+  /// ⚙️ የድብቅ ምት ብዛት ማስተካከያ (ቁጥሮቹ ተደብቀዋል፣ ሌላ ሰው በቀላሉ ማወቅ አይችልም)
   Future<void> _changeKnockSettings() async {
     int tempTaps = _requiredTaps;
     await showDialog(
@@ -81,15 +82,16 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       builder: (context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF242526),
-          title: const Text('የድብቅ ምት ብዛት መቀየሪያ', style: TextStyle(color: Colors.white)),
+          title: const Text('የድብቅ ምት ብዛት ማቀናበሪያ', style: TextStyle(color: Colors.white)),
           content: StatefulBuilder(
             builder: (context, setDialogState) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'ቻቱን ለመክፈት ስክሪኑን ስንት ጊዜ ማንኳኳት እንዳለብዎ ይምረጡ:',
+                    'ቻቱን ለመክፈት ስክሪኑን የሚነኩበትን የምት ሚስጥር ይምረጡ:',
                     style: TextStyle(color: Colors.white70, fontSize: 13),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -103,11 +105,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                           }
                         },
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          '$tempTaps ጊዜ',
-                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                          'ምስጢራዊ ምት', // 🔒 ከዚህ በፊት ቁጥሩ (ለምሳሌ 2 ጊዜ) ይታይ የነበረው ጠፍቷል
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
                       IconButton(
@@ -139,8 +141,18 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   _tapCount = 0;
                 });
                 Navigator.pop(context);
+                
+                // 🌟 በምስሉ ላይ እንደሚታየው በነጭ ባክግራውንድ (Toast) ብቅ የሚል የተረጋገጠ መልእክት
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('የድብቅ ምት ወደ $tempTaps ጊዜ ተቀይሯል! 🔒')),
+                  SnackBar(
+                    content: Text(
+                      'የድብቅ ምት ወደ $tempTaps ጊዜ ተቀይሯል! 🔒',
+                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: Colors.white,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                  ),
                 );
               },
               child: const Text('አስቀምጥ', style: TextStyle(color: Colors.white)),
