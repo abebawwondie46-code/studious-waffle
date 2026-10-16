@@ -462,7 +462,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
         
-          // የቪዲዮ መግለጫ (Caption) እና ከግራ በኩል ከታች የተተከለው በአሻራ የሚከፈት ሚስጥራዊ ቻት ቁልፍ
+          // የቪዲዮ መግለጫ (Caption) እና ከግራ በኩል ከታች የተተከለው በአሻራ የሚከፈት ሚስጥራዊ ቻት ቁልፍ (ጽሁፉ ተወግዶ አሻራዋ ብቻ ተቀምጣለች)
           Positioned(
             left: 0,
             right: 70,
@@ -492,7 +492,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // 🔒 ከግራ በኩል ከካፕሽኑ በታች የተተከለ ሚስጥራዊ ቻት አዝራር
+                  // 🔒 ጽሁፍ የሌለበት ንጹህ የአሻራ ክበብ አዝራር ብቻ
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -506,22 +506,16 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.blueAccent.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.blueAccent, width: 1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.blueAccent, width: 1.5),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.fingerprint, color: Colors.blueAccent, size: 18),
-                          SizedBox(width: 6),
-                          Text(
-                            'ሚስጥራዊ ቻት (በአሻራ)',
-                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                      child: const Icon(
+                        Icons.fingerprint,
+                        color: Colors.blueAccent,
+                        size: 26,
                       ),
                     ),
                   ),
