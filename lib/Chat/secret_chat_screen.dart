@@ -27,7 +27,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _authenticateUser();
+    // ስክሪኑ ሲከፈት በአውቶማቲክ የአሻራ ማረጋገጫውን መጠየቅ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _authenticateUser();
+    });
   }
 
   @override
@@ -37,7 +40,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.dispose();
   }
 
-  // አፑ ከጀርባ (Background) ተመልሶ ሲመጣ አሻራ እንደገና እንዲጠይቅ
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
@@ -47,7 +49,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  /// የአሻራ ማረጋገጫ መጠየቅ
+  /// የአሻራ ወይም የፒን ማረጋገጫ መጠየቅ
   Future<void> _authenticateUser() async {
     bool authenticated = await BiometricService.authenticateWithFingerprint();
     if (mounted) {
@@ -82,6 +84,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     if (!_isUnlocked) {
       return Scaffold(
         backgroundColor: const Color(0xFF121212),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -131,7 +141,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ],
         ),
         actions: [
-          // አሻራ እንደገና መቆለፊያ ቁልፍ
           IconButton(
             icon: const Icon(Icons.lock, color: Colors.redAccent),
             onPressed: () {
@@ -144,7 +153,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ),
       body: Column(
         children: [
-          // የመልእክቶች ዝርዝር (Real-time Stream)
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: _supabase
@@ -174,14 +182,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               },
             ),
           ),
-
-          // የመልእክት መጻፊያ ሳጥን (Messenger-style Input)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             color: const Color(0xFF242526),
             child: Row(
               children: [
-                // ራሱን የሚያጠፋ መልእክት ማብሪያ (Self Destruct Toggle)
                 IconButton(
                   icon: Icon(
                     Icons.timer,
@@ -234,7 +239,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  /// የመልእክት ማሳያ ባብል (Custom Bubble)
   Widget _buildMessageBubble(String text, bool isMe, bool isSelfDestruct) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
