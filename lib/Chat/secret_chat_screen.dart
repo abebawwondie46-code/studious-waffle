@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kuanyngne/Chat/biometric_service.dart';
 
 class SecretChatScreen extends StatefulWidget {
@@ -20,13 +21,18 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   final TextEditingController _messageController = TextEditingController();
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
   bool _isSelfDestruct = false; 
+
+  int _tapCount = 0; 
+  int _requiredTaps = 3; // ነባሪው (Default) የምት ብዛት 3 ነው።
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadCustomTaps(); // ተጠቃሚው ያስቀመጠውን የድብቅ ምት ብዛት መጫን
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _authenticateUser();
     });
@@ -43,23 +49,127 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       setState(() {
+        _isFingerprintPassed = false;
         _isUnlocked = false;
+        _tapCount = 0;
       });
     }
   }
 
-  /// 🔒 አሻራ ወይም ፒን በቀጥታ የሚጠይቀው ትክክለኛው ፋንክሽን
+  /// ተጠቃሚው ያስቀመጠውን የድብቅ ምት ብዛት ከማስታወሻ ማንበብ
+  Future<void> _loadCustomTaps() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _requiredTaps = prefs.getInt('secret_knock_taps') ?? 3;
+    });
+  }
+
+  /// የድብቅ ምት ብዛትን መቀየሪያ ዳይሎግ (Settings Dialog)
+  Future<void> _changeKnockSettings() async {
+    int tempTaps = _requiredTaps;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF242526),
+          title: const Text('የድብቅ ምት ብዛት መቀየሪያ', style: TextStyle(color: Colors.white)),
+          content: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'ቻቱን ለመክፈት ስክሪኑን ስንት ጊዜ ማንኳኳት እንዳለብዎ ይምረጡ:',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle, color: Colors.blueAccent, size: 32),
+                        onPressed: () {
+                          if (tempTaps > 2) {
+                            setDialogState(() => tempTaps--);
+                          }
+                        },
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          '$tempTaps ጊዜ',
+                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle, color: Colors.blueAccent, size: 32),
+                        onPressed: () {
+                          if (tempTaps < 6) {
+                            setDialogState(() => tempTaps++);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ይቅር', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setInt('secret_knock_taps', tempTaps);
+                setState(() {
+                  _requiredTaps = tempTaps;
+                  _tapCount = 0;
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('የድብቅ ምት ወደ $tempTaps ጊዜ ተቀይሯል! 🔒')),
+                );
+              },
+              child: const Text('አስቀምጥ', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 🔒 ደረጃ 1፦ የአሻራ ማረጋገጫ
   Future<void> _authenticateUser() async {
     try {
       bool authenticated = await BiometricService.authenticateWithFingerprint();
       if (mounted) {
         setState(() {
-          _isUnlocked = authenticated;
+          _isFingerprintPassed = authenticated;
+          _tapCount = 0;
         });
       }
     } catch (e) {
       print("Authentication error: $e");
     }
+  }
+
+  /// 🥁 ደረጃ 2፦ የድብቅ ምት (Knock Code) ማረጋገጫ
+  void _registerTap() {
+    if (!_isFingerprintPassed) {
+      _authenticateUser();
+      return;
+    }
+
+    setState(() {
+      _tapCount++;
+      if (_tapCount >= _requiredTaps) {
+        _isUnlocked = true; // የተመረጠው የምት ብዛት ሲሞላ ቻቱ ይከፈታል!
+      }
+    });
   }
 
   /// መልእክት መላክ
@@ -83,7 +193,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
-    // አሻራ ካልተረጋገጠ የተቆለፈ ስክሪን ማሳየት (አሻራውን ወይም ሰማያዊውን ቁልፍ ሲነኩ እንዲከፈት ተደርጓል)
     if (!_isUnlocked) {
       return Scaffold(
         backgroundColor: const Color(0xFF121212),
@@ -94,44 +203,96 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
+          actions: [
+            // ⚙️ ተጠቃሚው የሚፈልግበትን የምት ብዛት እንዲቀይርበት የቅንብሮች ቁልፍ
+            IconButton(
+              icon: const Icon(Icons.settings, color: Colors.white70),
+              onPressed: _changeKnockSettings,
+              tooltip: 'የድብቅ ምት ማስተካከያ',
+            ),
+          ],
         ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 👆 ትልቁን የአሻራ ምልክት ሲነኩት አሻራ እንዲጠራ አደረግነው
-                GestureDetector(
-                  onTap: _authenticateUser,
-                  child: const Icon(Icons.fingerprint, size: 90, color: Colors.blueAccent),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 30),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+        body: GestureDetector(
+          onTap: _registerTap,
+          behavior: HitTestBehavior.opaque,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isFingerprintPassed
+                          ? Colors.cyanAccent.withOpacity(0.15)
+                          : Colors.blueAccent.withOpacity(0.1),
+                      border: Border.all(
+                        color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                        width: 2,
                       ),
                     ),
-                    onPressed: _authenticateUser, // 🔓 ሰማያዊውን ቁልፍ ሲነኩም አሻራ ይጠራል
-                    icon: const Icon(Icons.lock_open, color: Colors.white),
-                    label: const Text(
-                      'በአሻራ ክፈት',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    child: Icon(
+                      _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
+                      size: 80,
+                      color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 25),
+                  Text(
+                    !_isFingerprintPassed
+                        ? 'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው'
+                        : 'ስክሪኑን $_requiredTaps ጊዜ ያንኳኩት...',
+                    style: TextStyle(
+                      color: _isFingerprintPassed ? Colors.cyanAccent : Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 15),
+
+                  // 🥁 ተለዋዋጭ የምት ነጥቦች ብዛት (Dynamic Progress Taps)
+                  if (_isFingerprintPassed)
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      children: List.generate(_requiredTaps, (index) {
+                        return Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: index < _tapCount ? Colors.cyanAccent : Colors.white24,
+                          ),
+                        );
+                      }),
+                    ),
+
+                  const SizedBox(height: 35),
+                  if (!_isFingerprintPassed)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _authenticateUser,
+                        icon: const Icon(Icons.lock_open, color: Colors.white),
+                        label: const Text(
+                          'በአሻራ ክፈት',
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -155,7 +316,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.receiverName, style: const TextStyle(fontSize: 16, color: Colors.white)),
-                const Text('በአሻራ የተጠበቀ', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                const Text('በአሻራ እና በድብቅ ምት የተጠበቀ', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
               ],
             ),
           ],
@@ -165,7 +326,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             icon: const Icon(Icons.lock, color: Colors.redAccent),
             onPressed: () {
               setState(() {
+                _isFingerprintPassed = false;
                 _isUnlocked = false;
+                _tapCount = 0;
               });
             },
           ),
