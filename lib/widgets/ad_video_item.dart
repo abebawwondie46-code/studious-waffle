@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'comments_bottom_sheet.dart';
-import 'package:kuanyngne/Chat/biometric_service.dart';// <--- ትክክለኛው የፋይል መድረሻ መንገድ (Chat ፎልደር)
+import 'package:kuanyngne/Chat/secret_chat_screen.dart'; // <--- የቻቱ ስክሪን የሚገኝበት ትክክለኛው መንገድ
 
 class AdVideoItem extends StatefulWidget {
   final String caption;
@@ -462,7 +462,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
         
-          // የቪዲዮ መግለጫ (Caption) እና ከግራ በኩል የተተከለው በአሻራ የሚከፈት የሚስጥራዊ ቻት ቁልፍ
+          // የቪዲዮ መግለጫ (Caption) እና ከግራ በኩል ከታች የተተከለው በአሻራ የሚከፈት ሚስጥራዊ ቻት ቁልፍ
           Positioned(
             left: 0,
             right: 70,
@@ -492,7 +492,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // 🔒 አዲስ ፈጠራ፡ ከግራ በኩል ከካፕሽኑ በታች የተተከለ ሚስጥራዊ ቻት (በአሻራ የተጠበቀ)
+                  // 🔒 ከግራ በኩል ከካፕሽኑ በታች የተተከለ ሚስጥራዊ ቻት አዝራር
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
