@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'comments_bottom_sheet.dart';
-import 'package:kuanyngne/Chat/secret_chat_screen.dart'; // <--- ትክክለኛው የፋይል መድረሻ መንገድ (Chat ፎልደር)
+import 'package:kuanyngne/Chat/biometric_service.dart';// <--- ትክክለኛው የፋይል መድረሻ መንገድ (Chat ፎልደር)
 
 class AdVideoItem extends StatefulWidget {
   final String caption;
