@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/feed_screen.dart';
-import 'screens/create_screen.dart'; 
-import 'screens/profile_screen.dart'; 
-import 'Chat/chat_list_screen.dart'; // <--- የሚስጥራዊ ቻቶች ዝርዝር ማሳያ ስክሪን
-import 'admin/admin_service.dart'; 
+import 'screens/create_screen.dart'; // አዲሱ የቪዲዮ መፍጠሪያ ፋይል
+import 'screens/profile_screen.dart'; // አዲሱ የፕሮፋይል ፋይል
+import 'admin/admin_service.dart'; // <--- አዲሱን የአድሚን ሰርቪስ ፋይል እዚህ አስመጣን
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // የሱፓቤስ ማገናኛ ቁልፎችዎ በትክክል ተካትተዋል
   await Supabase.initialize(
     url: 'https://yszkonhhprwtavxywchz.supabase.co',
     anonKey:
@@ -46,11 +46,10 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  // 🔒 4ቱን ዋና ዋና ስክሪኖች እዚህ አካተናል (Feed, Create, Chat, Profile)
+  // ሦስቱን ዋና ዋና ስክሪኖች እዚህ በንጹህ መልኩ አካተናል
   final List<Widget> _screens = [
     const FeedScreen(),
     const CreateScreen(),
-    const ChatListScreen(), // <--- አዲሱ የሚስጥራዊ ቻቶች ዝርዝር ማሳያ
     const ProfileScreen(),
   ];
 
@@ -58,6 +57,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     
+    // አፕ ሲከፈት ከ Supabase የሰርቨር ቅንብሮችን (Maintenance mode እና Announcement) ማረጋገጥ
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AdminService.checkAppStatus(context);
     });
@@ -86,10 +86,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
             label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline), // <--- የቻት አዝራር በታችኛው ባር ላይ
-            label: 'Chats',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
