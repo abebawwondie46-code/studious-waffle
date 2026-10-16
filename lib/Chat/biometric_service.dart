@@ -14,12 +14,11 @@ class BiometricService {
         return true; 
       }
 
-      // 🔒 አሻራ ወይም ስልክ ፒን/ፓተርን በአማራጭነት እንዲጠቀም በማድረግ ፈጽሞ እንዳይጣበቅ  ማድረግ
       final bool didAuthenticate = await _auth.authenticate(
-        localizedReason: 'እባክዎ ሚስጥራዊ ቻቱን ለመክፈት አሻራዎን ወይም የደህንነት ፒን ይጠቀሙ',
+        localizedReason: 'እባክዎ ሚስጥራዊ ቻቱን ለመክፈት አሻራዎን ይጠቀሙ',
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: false, // <--- የፒን አማራጭን በመክፈት ፖፕ-አፑ በአስተማማኝ ሁኔታ እንዲመጣ ማድረግ
+          biometricOnly: false,
           useErrorDialogs: true,
         ),
       );
@@ -27,7 +26,7 @@ class BiometricService {
       return didAuthenticate;
     } on PlatformException catch (e) {
       print('Biometric error: $e');
-      return true; // ስህተት በሚፈጠርበት ጊዜ ተጠቃሚው እንዳይከለከል በነጻነት ይክፈት
+      return true;
     } catch (e) {
       print('General error: $e');
       return true;
