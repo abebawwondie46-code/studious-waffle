@@ -318,7 +318,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'Version 1.0.0 • kuanyngne Community',
                     onTap: () {
                       _showDialogMessage(
-                        'About VibeShare',
+                        'About kuanyngne',
                         'kuanyngne Community App v1.0.0\n\n'
                         'Designed specifically for community creators, video sharing, and interactive engagement.\n\n'
                         '• Built with Flutter & Supabase\n'
