@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'comments_bottom_sheet.dart';
-import 'secret_chat_screen.dart'; // <--- አዲሱን የሚስጥራዊ ቻት ስክሪን እዚህ አስመጣን
+import '../screens/secret_chat_screen.dart'; // <--- ትክክለኛው የፋይል መድረሻ መንገድ (Path)
 
 class AdVideoItem extends StatefulWidget {
   final String caption;
