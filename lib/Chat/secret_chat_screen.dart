@@ -26,7 +26,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   bool _isSelfDestruct = false; 
 
   int _tapCount = 0; 
-  int _requiredTaps = 3; // ነባሪው የምት ብዛት
+  int _requiredTaps = 3; 
 
   @override
   void initState() {
@@ -63,7 +63,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// ⚙️ ቅንብሮችን ለመቀየር ሲሞክር ባለቤቱ መሆኑን በአሻራ ማረጋገጥ (ሌላ ሰው እንዳይቀይረው)
   Future<void> _verifyAndOpenSettings() async {
     bool authenticated = await BiometricService.authenticateWithFingerprint();
     if (authenticated && mounted) {
@@ -75,7 +74,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  /// የድብቅ ምት ብዛት መቀየሪያ ዳይሎግ
   Future<void> _changeKnockSettings() async {
     int tempTaps = _requiredTaps;
     await showDialog(
@@ -212,7 +210,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
-            // ⚙️ የቅንብሮች አዝራር (ሌላ ሰው ሊከፍተው ሲሞክር አሻራ ይጠይቃል)
             IconButton(
               icon: const Icon(Icons.settings, color: Colors.white70),
               onPressed: _verifyAndOpenSettings,
@@ -252,7 +249,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   Text(
                     !_isFingerprintPassed
                         ? 'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው'
-                        : 'ሚስጥራዊውን ምት በድብቅ ያንኳኩት...', // 🚫 ስንት ጊዜ እንደሆነ ማሳያዎቹ (Dots) ሙሉ በሙሉ ተወግደዋል!
+                        : 'ሚስጥራዊውን ምት በድብቅ ያንኳኩት...',
                     style: TextStyle(
                       color: _isFingerprintPassed ? Colors.cyanAccent : Colors.white,
                       fontSize: 16,
@@ -419,7 +416,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isMe
-              ? (isSelfDestroy ? Colors.orange[800] : Colors.blueAccent)
+              ? (isSelfDestruct ? Colors.orange[800] : Colors.blueAccent)
               : const Color(0xFF3A3B3C),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
