@@ -21,13 +21,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   final SupabaseClient _supabase = Supabase.instance.client;
 
   bool _isUnlocked = false;
-  bool _isSelfDestruct = false; // ራሱን የሚያጠፋ መልእክት ማብሪያ
+  bool _isSelfDestruct = false; 
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // ስክሪኑ ሲከፈት በአውቶማቲክ የአሻራ ማረጋገጫውን መጠየቅ
+    // ገጹ እንደተከፈተ ወዲያውኑ አሻራ እንዲጠይቅ ማድረግ
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _authenticateUser();
     });
@@ -49,13 +49,17 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  /// የአሻራ ወይም የፒን ማረጋገጫ መጠየቅ
+  /// 🔒 አሻራ ወይም ፒን በቀጥታ የሚጠይቀው ትክክለኛው ፋንክሽን
   Future<void> _authenticateUser() async {
-    bool authenticated = await BiometricService.authenticateWithFingerprint();
-    if (mounted) {
-      setState(() {
-        _isUnlocked = authenticated;
-      });
+    try {
+      bool authenticated = await BiometricService.authenticateWithFingerprint();
+      if (mounted) {
+        setState(() {
+          _isUnlocked = authenticated;
+        });
+      }
+    } catch (e) {
+      print("Authentication error: $e");
     }
   }
 
@@ -80,7 +84,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
-    // አሻራ ካልተረጋገጠ የተቆለፈ ስክሪን ማሳየት
+    // አሻራ ካልተረጋገጠ የተቆለፈ ስክሪን እና ግልጽ የማረጋገጫ ቁልፍ ማሳየት
     if (!_isUnlocked) {
       return Scaffold(
         backgroundColor: const Color(0xFF121212),
@@ -93,26 +97,39 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ),
         ),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.fingerprint, size: 90, color: Colors.blueAccent),
-              const SizedBox(height: 20),
-              const Text(
-                'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.fingerprint, size: 90, color: Colors.blueAccent),
+                const SizedBox(height: 20),
+                const Text(
+                  'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  textAlign: TextAlign.center,
                 ),
-                onPressed: _authenticateUser,
-                icon: const Icon(Icons.lock_open, color: Colors.white),
-                label: const Text('በአሻራ ክፈት', style: TextStyle(color: Colors.white)),
-              ),
-            ],
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: _authenticateUser, // <--- ቁልፉን ሲጫኑ በቀጥታ አሻራውን ይጠራል።
+                    icon: const Icon(Icons.lock_open, color: Colors.white),
+                    label: const Text(
+                      'በአሻራ ክፈት',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
