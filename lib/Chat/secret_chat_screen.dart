@@ -26,13 +26,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   bool _isSelfDestruct = false; 
 
   int _tapCount = 0; 
-  int _requiredTaps = 3; // ነባሪው (Default) የምት ብዛት 3 ነው።
+  int _requiredTaps = 3; // ነባሪው የምት ብዛት
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadCustomTaps(); // ተጠቃሚው ያስቀመጠውን የድብቅ ምት ብዛት መጫን
+    _loadCustomTaps();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _authenticateUser();
     });
@@ -56,7 +56,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  /// ተጠቃሚው ያስቀመጠውን የድብቅ ምት ብዛት ከማስታወሻ ማንበብ
   Future<void> _loadCustomTaps() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -64,7 +63,19 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// የድብቅ ምት ብዛትን መቀየሪያ ዳይሎግ (Settings Dialog)
+  /// ⚙️ ቅንብሮችን ለመቀየር ሲሞክር ባለቤቱ መሆኑን በአሻራ ማረጋገጥ (ሌላ ሰው እንዳይቀይረው)
+  Future<void> _verifyAndOpenSettings() async {
+    bool authenticated = await BiometricService.authenticateWithFingerprint();
+    if (authenticated && mounted) {
+      _changeKnockSettings();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('የባለቤቱ ማረጋገጫ ስላልተሳካ ቅንብሮቹን መክፈት አልተቻለም! 🚫')),
+      );
+    }
+  }
+
+  /// የድብቅ ምት ብዛት መቀየሪያ ዳይሎግ
   Future<void> _changeKnockSettings() async {
     int tempTaps = _requiredTaps;
     await showDialog(
@@ -142,7 +153,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  /// 🔒 ደረጃ 1፦ የአሻራ ማረጋገጫ
   Future<void> _authenticateUser() async {
     try {
       bool authenticated = await BiometricService.authenticateWithFingerprint();
@@ -157,7 +167,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  /// 🥁 ደረጃ 2፦ የድብቅ ምት (Knock Code) ማረጋገጫ
   void _registerTap() {
     if (!_isFingerprintPassed) {
       _authenticateUser();
@@ -167,12 +176,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     setState(() {
       _tapCount++;
       if (_tapCount >= _requiredTaps) {
-        _isUnlocked = true; // የተመረጠው የምት ብዛት ሲሞላ ቻቱ ይከፈታል!
+        _isUnlocked = true; 
       }
     });
   }
 
-  /// መልእክት መላክ
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -204,10 +212,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
-            // ⚙️ ተጠቃሚው የሚፈልግበትን የምት ብዛት እንዲቀይርበት የቅንብሮች ቁልፍ
+            // ⚙️ የቅንብሮች አዝራር (ሌላ ሰው ሊከፍተው ሲሞክር አሻራ ይጠይቃል)
             IconButton(
               icon: const Icon(Icons.settings, color: Colors.white70),
-              onPressed: _changeKnockSettings,
+              onPressed: _verifyAndOpenSettings,
               tooltip: 'የድብቅ ምት ማስተካከያ',
             ),
           ],
@@ -244,7 +252,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   Text(
                     !_isFingerprintPassed
                         ? 'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው'
-                        : 'ስክሪኑን $_requiredTaps ጊዜ ያንኳኩት...',
+                        : 'ሚስጥራዊውን ምት በድብቅ ያንኳኩት...', // 🚫 ስንት ጊዜ እንደሆነ ማሳያዎቹ (Dots) ሙሉ በሙሉ ተወግደዋል!
                     style: TextStyle(
                       color: _isFingerprintPassed ? Colors.cyanAccent : Colors.white,
                       fontSize: 16,
@@ -252,25 +260,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 15),
-
-                  // 🥁 ተለዋዋጭ የምት ነጥቦች ብዛት (Dynamic Progress Taps)
-                  if (_isFingerprintPassed)
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      children: List.generate(_requiredTaps, (index) {
-                        return Container(
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: index < _tapCount ? Colors.cyanAccent : Colors.white24,
-                          ),
-                        );
-                      }),
-                    ),
-
                   const SizedBox(height: 35),
                   if (!_isFingerprintPassed)
                     SizedBox(
@@ -430,7 +419,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isMe
-              ? (isSelfDestruct ? Colors.orange[800] : Colors.blueAccent)
+              ? (isSelfDestroy ? Colors.orange[800] : Colors.blueAccent)
               : const Color(0xFF3A3B3C),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
