@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'comments_bottom_sheet.dart';
+import 'secret_chat_screen.dart'; // <--- አዲሱን የሚስጥራዊ ቻት ስክሪን እዚህ አስመጣን
 
 class AdVideoItem extends StatefulWidget {
   final String caption;
@@ -14,6 +15,7 @@ class AdVideoItem extends StatefulWidget {
   final VoidCallback? onVideoDeleted;
   final String? userAvatar; 
   final String? userName;    
+  final String? creatorId;   // <--- ለቻቱ ተጠቃሚ መለያ የሚያስፈልግ
 
   const AdVideoItem({
     super.key,
@@ -24,6 +26,7 @@ class AdVideoItem extends StatefulWidget {
     this.onVideoDeleted,
     this.userAvatar,
     this.userName,
+    this.creatorId,
   });
 
   @override
@@ -459,12 +462,13 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                   child: CircularProgressIndicator(color: Colors.redAccent),
                 ),
         
+          // የቪዲዮ መግለጫ (Caption) እና ከግራ በኩል የተተከለው በአሻራ የሚከፈት የሚስጥራዊ ቻት ቁልፍ
           Positioned(
             left: 0,
-            right: 0,
+            right: 70,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 40, 70, 20),
+              padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
@@ -487,11 +491,46 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
                       fontSize: 14,
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  // 🔒 አዲስ ፈጠራ፡ ከግራ በኩል ከካፕሽኑ በታች የተተከለ ሚስጥራዊ ቻት (በአሻራ የተጠበቀ)
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SecretChatScreen(
+                            receiverId: widget.creatorId ?? 'unknown_id',
+                            receiverName: widget.userName ?? 'ተጠቃሚ',
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.blueAccent, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.fingerprint, color: Colors.blueAccent, size: 18),
+                          SizedBox(width: 6),
+                          Text(
+                            'ሚስጥራዊ ቻት (በአሻራ)',
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
 
+          // በቀኝ በኩል ያሉት መደበኛ የቲክቶክ አዝራሮች (Like, Comment, Share)
           if (isVideoReadyAndPlaying)
             Positioned(
               right: 12,
