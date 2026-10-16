@@ -6,33 +6,29 @@ class BiometricService {
 
   static Future<bool> authenticateWithFingerprint() async {
     try {
-      // የስልኩ ባዮሜትሪክ ወይም ሴኩሪቲ ዝግጁ መሆኑን ማረጋገጥ
-      final bool isDeviceSupported = await _auth.isDeviceSupported();
-      final bool canCheckBiometrics = await _auth.canCheckBiometrics;
+      // መሣሪያው አሻራ ማንበብ መቻሉን ማረጋገጥ
+      final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
+      final bool canAuthenticate =
+          canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
 
-      if (!isDeviceSupported && !canCheckBiometrics) {
-        // ስልኩ አሻራ የማያነብ ከሆነ ወይም ከተሰናከለ ቀጥታ ይክፈት
+      if (!canAuthenticate) {
         return true; 
       }
 
-      // የአሻራ ማረጋገጫ ሳጥኑን በቀጥታ መጥራት
+      // 🔒 አሻራ ብቻ (Biometric Only) እንዲጠይቅ የተደረገበት ውቅር
       final bool didAuthenticate = await _auth.authenticate(
         localizedReason: 'እባክዎ ሚስጥራዊ ቻቱን ለመክፈት አሻራዎን ይጠቀሙ',
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: true, // ቀጥታ የስልኩን አሻራ ሴንሰር እንዲቀሰቅስ
-          useErrorDialogs: true, // ስህተት ካለ የስልኩን ማስጠንቀቂያ እንዲያሳይ
+          biometricOnly: true, // <--- የፒን ወይም የናሙና አማራጭን በማጥፋት አሻራ ብቻ እንዲጠይቅ አደረገው
+          useErrorDialogs: true,
         ),
       );
 
       return didAuthenticate;
     } on PlatformException catch (e) {
-      print("Biometric Exception: ${e.message}");
-      // ማንኛውም የሲስተም ስህተት ካጋጠመ ተጠቃሚው እንዳይቆለፍበት መክፈት
-      return true;
-    } catch (e) {
-      print("General Biometric Error: $e");
-      return true;
+      print('Biometric error: $e');
+      return false;
     }
   }
 }
