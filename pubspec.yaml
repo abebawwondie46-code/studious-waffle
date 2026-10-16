@@ -21,6 +21,7 @@ dependencies:
   supabase_flutter: ^2.8.0
   flutter_tts: ^3.8.5
   shared_preferences: ^2.2.2
+  local_auth: ^2.1.8 # ለአሻራ/ባዮሜትሪክ ሴኪዩሪቲ
 
 dev_dependencies:
   flutter_test:
