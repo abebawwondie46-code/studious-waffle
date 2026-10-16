@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/biometric_service.dart';
+import 'package:kuanyngne/Chat/biometric_service.dart';
 
 class SecretChatScreen extends StatefulWidget {
   final String receiverId;
