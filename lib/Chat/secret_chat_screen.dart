@@ -27,7 +27,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // ገጹ እንደተከፈተ ወዲያውኑ አሻራ እንዲጠይቅ ማድረግ
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _authenticateUser();
     });
@@ -84,7 +83,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
-    // አሻራ ካልተረጋገጠ የተቆለፈ ስክሪን እና ግልጽ የማረጋገጫ ቁልፍ ማሳየት
+    // አሻራ ካልተረጋገጠ የተቆለፈ ስክሪን ማሳየት (አሻራውን ወይም ሰማያዊውን ቁልፍ ሲነኩ እንዲከፈት ተደርጓል)
     if (!_isUnlocked) {
       return Scaffold(
         backgroundColor: const Color(0xFF121212),
@@ -102,7 +101,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.fingerprint, size: 90, color: Colors.blueAccent),
+                // 👆 ትልቁን የአሻራ ምልክት ሲነኩት አሻራ እንዲጠራ አደረግነው
+                GestureDetector(
+                  onTap: _authenticateUser,
+                  child: const Icon(Icons.fingerprint, size: 90, color: Colors.blueAccent),
+                ),
                 const SizedBox(height: 20),
                 const Text(
                   'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው',
@@ -120,7 +123,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: _authenticateUser, // <--- ቁልፉን ሲጫኑ በቀጥታ አሻራውን ይጠራል።
+                    onPressed: _authenticateUser, // 🔓 ሰማያዊውን ቁልፍ ሲነኩም አሻራ ይጠራል
                     icon: const Icon(Icons.lock_open, color: Colors.white),
                     label: const Text(
                       'በአሻራ ክፈት',
