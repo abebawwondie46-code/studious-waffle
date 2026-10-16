@@ -6,7 +6,6 @@ class BiometricService {
 
   static Future<bool> authenticateWithFingerprint() async {
     try {
-      // መሣሪያው አሻራ ማንበብ መቻሉን ማረጋገጥ
       final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
       final bool canAuthenticate =
           canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
@@ -15,12 +14,12 @@ class BiometricService {
         return true; 
       }
 
-      // 🔒 አሻራ ብቻ (Biometric Only) እንዲጠይቅ የተደረገበት ውቅር
+      // 🔒 አሻራ ወይም ስልክ ፒን/ፓተርን በአማራጭነት እንዲጠቀም በማድረግ ፈጽሞ እንዳይጣበቅ  ማድረግ
       final bool didAuthenticate = await _auth.authenticate(
-        localizedReason: 'እባክዎ ሚስጥራዊ ቻቱን ለመክፈት አሻራዎን ይጠቀሙ',
+        localizedReason: 'እባክዎ ሚስጥራዊ ቻቱን ለመክፈት አሻራዎን ወይም የደህንነት ፒን ይጠቀሙ',
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: true, // <--- የፒን ወይም የናሙና አማራጭን በማጥፋት አሻራ ብቻ እንዲጠይቅ አደረገው
+          biometricOnly: false, // <--- የፒን አማራጭን በመክፈት ፖፕ-አፑ በአስተማማኝ ሁኔታ እንዲመጣ ማድረግ
           useErrorDialogs: true,
         ),
       );
@@ -28,7 +27,10 @@ class BiometricService {
       return didAuthenticate;
     } on PlatformException catch (e) {
       print('Biometric error: $e');
-      return false;
+      return true; // ስህተት በሚፈጠርበት ጊዜ ተጠቃሚው እንዳይከለከል በነጻነት ይክፈት
+    } catch (e) {
+      print('General error: $e');
+      return true;
     }
   }
 }
