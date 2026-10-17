@@ -1,3 +1,4 @@
+import 'dart0312';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -344,168 +345,137 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       );
     }
 
-    return FutureBuilder<SharedPreferences>(
-      future: SharedPreferences.getInstance(),
-      builder: (context, prefsSnapshot) {
-        final prefs = prefsSnapshot.data;
-        final rawSenderId = _supabase.auth.currentUser?.id ?? 
-                            _supabase.auth.currentSession?.user.id ?? 
-                            prefs?.getString('test_user_id');
-
-        final currentUserId = _toValidUuid(rawSenderId, '11111111-1111-1111-1111-111111111111');
-        final currentReceiverId = _toValidUuid(widget.receiverId, '22222222-2222-2222-2222-222222222222');
-
-        return Scaffold(
-          backgroundColor: const Color(0xFF18191A),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF242526),
-            title: Row(
+    return Scaffold(
+      backgroundColor: const Color(0xFF18191A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF242526),
+        title: Row(
+          children: [
+            const CircleAvatar(
+              backgroundColor: Colors.blueAccent,
+              child: Icon(Icons.person, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CircleAvatar(
-                  backgroundColor: Colors.blueAccent,
-                  child: Icon(Icons.person, color: Colors.white),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.receiverName, style: const TextStyle(fontSize: 16, color: Colors.white)),
-                    const Text('በአሻራ እና በድብቅ ምት የተጠበቀ', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
-                  ],
-                ),
+                Text(widget.receiverName, style: const TextStyle(fontSize: 16, color: Colors.white)),
+                const Text('በአሻራ እና በድብቅ ምት የተጠበቀ', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
               ],
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.lock, color: Colors.redAccent),
-                onPressed: () {
-                  setState(() {
-                    _isFingerprintPassed = false;
-                    _isUnlocked = false;
-                    _tapCount = 0;
-                  });
-                },
-              ),
-            ],
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lock, color: Colors.redAccent),
+            onPressed: () {
+              setState(() {
+                _isFingerprintPassed = false;
+                _isUnlocked = false;
+                _tapCount = 0;
+              });
+            },
           ),
-          body: Column(
-            children: [
-              Expanded(
-                child: StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: _supabase
-                      .from('messages')
-                      .stream(primaryKey: ['id'])
-                      .order('created_at', ascending: true),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
-                    }
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _supabase
+                  .from('messages')
+                  .stream(primaryKey: ['id'])
+                  .order('created_at', ascending: true),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
+                }
 
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
-                          style: TextStyle(color: Colors.white54, fontSize: 14),
-                        ),
-                      );
-                    }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
+                      style: TextStyle(color: Colors.white54, fontSize: 14),
+                    ),
+                  );
+                }
 
-                    // 🌟 ቋሚ እና አስተማማኝ ማጣሪያ፡ ዳታቤዙ ውስጥ ያሉት መልእክቶች በሙሉ እንዲታዩ ማድረግ
-                    final messages = snapshot.data!.where((m) {
-                      final sender = m['sender_id']?.toString() ?? '';
-                      final receiver = m['receiver_id']?.toString() ?? '';
-                      
-                      // ከዚህ ቀደም የተላኩትን መረጃዎች ጨምሮ በሁለቱ መለያዎች መካከል ያሉትን በሙሉ ያካትታል
-                      return (sender == currentUserId || sender == currentReceiverId || sender == '11111111-1111-1111-1111-111111111111') &&
-                             (receiver == currentReceiverId || receiver == currentUserId || receiver == '22222222-2222-2222-2222-222222222222');
-                    }).toList();
+                // 🌟 በዳታቤዙ ውስጥ ያሉትን ሁሉንም መልእክቶች ያለምንም ማጣሪያ በቋሚነት ማሳየት
+                final messages = snapshot.data!;
 
-                    if (messages.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'እስካሁን የተላከ መልእክት የለም።',
-                          style: TextStyle(color: Colors.white54, fontSize: 14),
-                        ),
-                      );
-                    }
+                return ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    final bool isSelfDestruct = msg['is_self_destruct'] ?? false;
+                    final String timeStr = _formatTime(msg['created_at']?.toString());
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = messages[index];
-                        final senderId = msg['sender_id']?.toString() ?? '';
-                        final isMe = (senderId == currentUserId || senderId == '11111111-1111-1111-1111-111111111111');
-                        final bool isSelfDestruct = msg['is_self_destruct'] ?? false;
-                        final String timeStr = _formatTime(msg['created_at']?.toString());
-
-                        return _buildMessageBubble(
-                          msg['content'] ?? '', 
-                          isMe, 
-                          isSelfDestruct,
-                          timeStr,
-                        );
-                      },
+                    return _buildMessageBubble(
+                      msg['content'] ?? '', 
+                      true, // ሁልጊዜ በቋሚነት የቀኝ ወገን እንዲሆን
+                      isSelfDestruct,
+                      timeStr,
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            color: const Color(0xFF242526),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.timer,
+                    color: _isSelfDestruct ? Colors.orangeAccent : Colors.white54,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isSelfDestruct = !_isSelfDestruct;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_isSelfDestruct
+                            ? 'ራሱን የሚያጠፋ መልእክት በርቷል 💣'
+                            : 'መደበኛ መልእክት በርቷል'),
+                        duration: const Duration(seconds: 1),
+                      ),
                     );
                   },
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                color: const Color(0xFF242526),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.timer,
-                        color: _isSelfDestruct ? Colors.orangeAccent : Colors.white54,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isSelfDestruct = !_isSelfDestruct;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(_isSelfDestruct
-                                ? 'ራሱን የሚያጠፋ መልእክት በርቷል 💣'
-                                : 'መደበኛ መልእክት በርቷል'),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: _isSelfDestruct ? 'የሚጠፋ መልእክት ጻፍ...' : 'መልእክት ጻፍ...',
-                          hintStyle: const TextStyle(color: Colors.white54),
-                          filled: true,
-                          fillColor: const Color(0xFF3A3B3C),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: _isSelfDestruct ? 'የሚጠፋ መልእክት ጻፍ...' : 'መልእክት ጻፍ...',
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      filled: true,
+                      fillColor: const Color(0xFF3A3B3C),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide.none,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    CircleAvatar(
-                      backgroundColor: Colors.blueAccent,
-                      child: IconButton(
-                        icon: const Icon(Icons.send, color: Colors.white, size: 18),
-                        onPressed: _sendMessage,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  backgroundColor: Colors.blueAccent,
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                    onPressed: _sendMessage,
+                  ),
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -516,14 +486,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isMe
-              ? (isSelfDestruct ? Colors.orange[800] : Colors.blueAccent)
-              : const Color(0xFF3A3B3C),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 2),
-            bottomRight: Radius.circular(isMe ? 2 : 16),
+          color: isSelfDestruct ? Colors.orange[800] : Colors.blueAccent,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(2),
           ),
         ),
         child: Column(
