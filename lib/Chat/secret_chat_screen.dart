@@ -52,11 +52,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      setState(() {
-        _isFingerprintPassed = false;
-        _isUnlocked = false;
-        _tapCount = 0;
-      });
+      if (!_isUnlocked) {
+        setState(() {
+          _isFingerprintPassed = false;
+          _tapCount = 0;
+        });
+      }
     }
   }
 
@@ -194,6 +195,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   }
 
   void _handleScreenTap() {
+    if (_isUnlocked) return; // ቻቱ ከተከፈተ በኋላ ስክሪኑ ሲነካ ዳግመኛ እንዳይረብሽ
+
     if (!_isFingerprintPassed) {
       _authenticateUser();
       return;
@@ -201,7 +204,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
     _tapResetTimer?.cancel();
     _tapResetTimer = Timer(const Duration(milliseconds: 1500), () {
-      if (mounted) {
+      if (mounted && !_isUnlocked) {
         setState(() {
           _tapCount = 0;
         });
@@ -218,16 +221,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// 📤 መልእክት ወደ Supabase መላክ
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
     final currentUser = _supabase.auth.currentUser;
-    if (currentUser == null) {
-      debugPrint('No authenticated user found for sending message.');
-      return;
-    }
+    if (currentUser == null) return;
 
     _messageController.clear();
 
@@ -241,9 +240,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       });
     } catch (e) {
       debugPrint('Error sending message: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('መልእክት መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።')),
-      );
     }
   }
 
@@ -375,7 +371,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   );
                 }
 
-                // 🔄 መልእክቶችን በሁለቱ ተጠቃሚዎች መካከል ብቻ እንዲጣሩ ማድረግ
                 final messages = snapshot.data!.where((m) {
                   final sender = m['sender_id']?.toString();
                   final receiver = m['receiver_id']?.toString();
