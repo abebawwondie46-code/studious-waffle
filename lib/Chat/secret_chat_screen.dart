@@ -25,7 +25,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
   bool _isSelfDestruct = false; 
-  static bool _hasEnteredChatOnce = false; // 🌟 አንዴ ቻቱ ውስጥ መግባቱን በቋሚነት (Globally in session) ይይዘዋል
+  static bool _hasEnteredChatOnce = false; 
 
   int _tapCount = 0; 
   int _requiredTaps = 3; 
@@ -67,7 +67,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// ⚙️ ሲቲንግ ለመክፈት ሲሞክር ቻቱ ውስጥ ቢያንስ አንድ ጊዜ መግባቱን ማረጋገጥ
   Future<void> _verifyAndOpenSettings() async {
     if (!_hasEnteredChatOnce) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +82,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       return;
     }
 
-    // አንዴ ቻቱን ከፈተ ካወቀ በባለቤቱ አሻራ ይረጋገጣል
     bool authenticated = await BiometricService.authenticateWithFingerprint();
     if (authenticated && mounted) {
       _changeKnockSettings();
@@ -94,7 +92,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  /// የድብቅ ምት ማቀናበሪያ ዳይሎግ
   Future<void> _changeKnockSettings() async {
     int tempTaps = _requiredTaps;
     await showDialog(
@@ -216,7 +213,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       if (_tapCount >= _requiredTaps) {
         _tapResetTimer?.cancel();
         _isUnlocked = true; 
-        _hasEnteredChatOnce = true; // 🌟 አንዴ ቻቱ ውስጥ መግባቱ በቋሚነት ይመዝገበታል!
+        _hasEnteredChatOnce = true; 
       }
     });
   }
@@ -260,7 +257,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ],
         ),
         body: GestureDetector(
-          onTap: _registerTap,
+          onTap: _registerTap, // ስክሪኑን ወይም የአሻራ ምልክቱን ሲነኩ አሻራ ይጠራል/ይቆጠራል
           behavior: HitTestBehavior.opaque,
           child: Center(
             child: Padding(
@@ -268,23 +265,27 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isFingerprintPassed
-                          ? Colors.cyanAccent.withOpacity(0.15)
-                          : Colors.blueAccent.withOpacity(0.1),
-                      border: Border.all(
-                        color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
-                        width: 2,
+                  // 👆 ትልቁ የአሻራ ምልክት ብቻ ቀረ (ሰማያዊው አዝራር ሙሉ በሙሉ ተወግዷል)
+                  GestureDetector(
+                    onTap: _authenticateUser,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isFingerprintPassed
+                            ? Colors.cyanAccent.withOpacity(0.15)
+                            : Colors.blueAccent.withOpacity(0.1),
+                        border: Border.all(
+                          color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                          width: 2,
+                        ),
                       ),
-                    ),
-                    child: Icon(
-                      _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
-                      size: 80,
-                      color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                      child: Icon(
+                        _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
+                        size: 80,
+                        color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 25),
@@ -299,26 +300,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 35),
-                  if (!_isFingerprintPassed)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: _authenticateUser,
-                        icon: const Icon(Icons.lock_open, color: Colors.white),
-                        label: const Text(
-                          'በአሻራ ክፈት',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -350,6 +331,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ],
         ),
         actions: [
+          // 🛑 ቻቱ ውስጥ ሆኖ ውጭ ለመውጫ የሚያገለግለው ቀይ የሎክ ቁልፍ
           IconButton(
             icon: const Icon(Icons.lock, color: Colors.redAccent),
             onPressed: () {
@@ -357,7 +339,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 _isFingerprintPassed = false;
                 _isUnlocked = false;
                 _tapCount = 0;
-                // ⚠️ አሁን _hasEnteredChatOnce እዚህ አልጠፋም! ስለዚህ ቻቱ ውስጥ አንዴ ከገባ በኋላ ሲቲንግ ሁልጊዜ ክፍት ሆኖ ይቆያል።
               });
             },
           ),
