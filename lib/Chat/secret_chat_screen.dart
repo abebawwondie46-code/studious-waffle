@@ -221,16 +221,20 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// 📤 መልእክት መላኪያ (ከነ Error ማሳያ ጋር)
+  /// 📤 መልእክት መላኪያ (የተጠቃሚ መለያን ከ Session በዘላቂነት የሚወስድ)
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    final currentUser = _supabase.auth.currentUser;
-    if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('የተጠቃሚ አካውንት አልተገኘም!')),
-      );
+    // 🌟 የተጠቃሚውን መለያ ከ currentUser ወይም ከ currentSession በታማኝነት ማግኘት
+    final userId = _supabase.auth.currentUser?.id ?? _supabase.auth.currentSession?.user.id;
+
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('የተጠቃሚ አካውንት አልተገኘም! እባክዎ እንደገና ይግቡ።')),
+        );
+      }
       return;
     }
 
@@ -238,7 +242,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
     try {
       await _supabase.from('messages').insert({
-        'sender_id': currentUser.id,
+        'sender_id': userId,
         'receiver_id': widget.receiverId,
         'content': text,
         'is_self_destruct': _isSelfDestruct,
@@ -322,7 +326,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       );
     }
 
-    final currentUserId = _supabase.auth.currentUser?.id ?? '';
+    final currentUserId = _supabase.auth.currentUser?.id ?? _supabase.auth.currentSession?.user.id ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFF18191A),
