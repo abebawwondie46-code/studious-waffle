@@ -79,7 +79,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     return fallback;
   }
 
-  /// ሰዓቱን (HH:mm) አጥርቶ የሚያወጣ ፋንክሽን
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
@@ -354,6 +353,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             prefs?.getString('test_user_id');
 
         final currentUserId = _toValidUuid(rawSenderId, '11111111-1111-1111-1111-111111111111');
+        final currentReceiverId = _toValidUuid(widget.receiverId, '22222222-2222-2222-2222-222222222222');
 
         return Scaffold(
           backgroundColor: const Color(0xFF18191A),
@@ -410,8 +410,23 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       );
                     }
 
-                    // 🌟 ሁለቱንም መደበኛ እና ልዩ መልእክቶች ከነ ሰዓታቸው በሙሉ የሚያመጣ ማጣሪያ
-                    final messages = snapshot.data!;
+                    // 🌟 መልእክቶች እንዳይጠፉ እና በሁለቱ ተጠቃሚዎች መካከል ያለጥርጥር እንዲታዩ የተስተካከለ ማጣሪያ
+                    final messages = snapshot.data!.where((m) {
+                      final sender = m['sender_id']?.toString() ?? '';
+                      final receiver = m['receiver_id']?.toString() ?? '';
+                      
+                      return (sender == currentUserId && receiver == currentReceiverId) ||
+                             (sender == currentReceiverId && receiver == currentUserId);
+                    }).toList();
+
+                    if (messages.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'እስካሁን የተላከ መልእክት የለም።',
+                          style: TextStyle(color: Colors.white54, fontSize: 14),
+                        ),
+                      );
+                    }
 
                     return ListView.builder(
                       padding: const EdgeInsets.all(12),
@@ -492,7 +507,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  /// 💬 የመልእክት ሳጥን (ከነ ሰዓቱ የሚታይበት ዲዛይን)
   Widget _buildMessageBubble(String text, bool isMe, bool isSelfDestruct, String time) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
