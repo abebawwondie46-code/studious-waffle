@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,9 +25,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
   bool _isSelfDestruct = false; 
+  bool _hasEnteredChat = false; // 🔒 ቻቱ ውስጥ ဝင်ቶ መውጣቱን የሚያረጋግጥ ጥብቅ መቆለፊያ
 
   int _tapCount = 0; 
   int _requiredTaps = 3; 
+  Timer? _tapResetTimer; 
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _tapResetTimer?.cancel();
     _messageController.dispose();
     super.dispose();
   }
@@ -51,6 +55,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       setState(() {
         _isFingerprintPassed = false;
         _isUnlocked = false;
+        _hasEnteredChat = false; // ስልኩ ሲዘጋ ቻቱ ውስጥ መኖሩ ቀርቶ ሙሉ በሙሉ ይዘጋል
         _tapCount = 0;
       });
     }
@@ -63,7 +68,23 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
+  /// ⚙️ ሲቲንግ ለመክፈት ሲሞክር ቻቱ ውስጥ ገብቶ መውጣቱን ማረጋገጥ
   Future<void> _verifyAndOpenSettings() async {
+    if (!_hasEnteredChat) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'መጀመሪያ ሚስጥራዊውን ቻት መክፈትና ማጠናቀቅ አለብዎት! 🚫',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.white,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // ቻቱ ውስጥ ገብቶ ከወጣ በኋላ በባለቤቱ አሻራ ይረጋገጣል
     bool authenticated = await BiometricService.authenticateWithFingerprint();
     if (authenticated && mounted) {
       _changeKnockSettings();
@@ -74,7 +95,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  /// ⚙️ የድብቅ ምት ብዛት ማስተካከያ (ቁጥሮቹ ተደብቀዋል፣ ሌላ ሰው በቀላሉ ማወቅ አይችልም)
+  /// የድብቅ ምት ማቀናበሪያ ዳይሎግ
   Future<void> _changeKnockSettings() async {
     int tempTaps = _requiredTaps;
     await showDialog(
@@ -108,7 +129,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'ምስጢራዊ ምት', // 🔒 ከዚህ በፊት ቁጥሩ (ለምሳሌ 2 ጊዜ) ይታይ የነበረው ጠፍቷል
+                          'ምስጢራዊ ምት',
                           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -139,10 +160,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 setState(() {
                   _requiredTaps = tempTaps;
                   _tapCount = 0;
+                  _hasEnteredChat = false; // አንዴ ከቀየረ በኋላ እንደገና ቻቱ ውስጥ መግባት ይጠበቅበታል
                 });
                 Navigator.pop(context);
                 
-                // 🌟 በምስሉ ላይ እንደሚታየው በነጭ ባክግራውንድ (Toast) ብቅ የሚል የተረጋገጠ መልእክት
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
@@ -183,10 +204,21 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       return;
     }
 
+    _tapResetTimer?.cancel();
+    _tapResetTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() {
+          _tapCount = 0;
+        });
+      }
+    });
+
     setState(() {
       _tapCount++;
       if (_tapCount >= _requiredTaps) {
+        _tapResetTimer?.cancel();
         _isUnlocked = true; 
+        _hasEnteredChat = true; // 🌟 ቻቱ ውስጥ በትክክል መግባቱን ይመዝግበታል!
       }
     });
   }
@@ -224,7 +256,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           actions: [
             IconButton(
               icon: const Icon(Icons.settings, color: Colors.white70),
-              onPressed: _verifyAndOpenSettings,
+              onPressed: _verifyAndOpenSettings, // 🔒 ቻቱ ውስጥ ሳይገባ ከቶውኑ ሊከፍተው አይችልም
               tooltip: 'የድብቅ ምት ማስተካከያ',
             ),
           ],
@@ -326,6 +358,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               setState(() {
                 _isFingerprintPassed = false;
                 _isUnlocked = false;
+                _hasEnteredChat = false; // 🔒 ቻቱ ሲዘጋ የቅንብር ፈቃዱም አብሮ ይዘጋል
                 _tapCount = 0;
               });
             },
