@@ -79,6 +79,19 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     return fallback;
   }
 
+  /// ሰዓቱን (HH:mm) አጥርቶ የሚያወጣ ፋንክሽን
+  String _formatTime(String? createdAt) {
+    if (createdAt == null || createdAt.isEmpty) return '';
+    try {
+      final dateTime = DateTime.parse(createdAt).toLocal();
+      final hour = dateTime.hour.toString().padLeft(2, '0');
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+      return '$hour:$minute';
+    } catch (_) {
+      return '';
+    }
+  }
+
   Future<void> _verifyAndOpenSettings() async {
     if (!_hasEnteredChatOnce) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -341,7 +354,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             prefs?.getString('test_user_id');
 
         final currentUserId = _toValidUuid(rawSenderId, '11111111-1111-1111-1111-111111111111');
-        final currentReceiverId = _toValidUuid(widget.receiverId, '22222222-2222-2222-2222-222222222222');
 
         return Scaffold(
           backgroundColor: const Color(0xFF18191A),
@@ -398,23 +410,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       );
                     }
 
-                    // 🌟 የተጣራ እና የማያወላውል የ መልእክቶች ማጣሪያ ሎጂክ
-                    final messages = snapshot.data!.where((m) {
-                      final sender = m['sender_id']?.toString() ?? '';
-                      final receiver = m['receiver_id']?.toString() ?? '';
-                      
-                      return (sender == currentUserId && receiver == currentReceiverId) ||
-                             (sender == currentReceiverId && receiver == currentUserId);
-                    }).toList();
-
-                    if (messages.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'እስካሁን የተላከ መልእክት የለም።',
-                          style: TextStyle(color: Colors.white54, fontSize: 14),
-                        ),
-                      );
-                    }
+                    // 🌟 ሁለቱንም መደበኛ እና ልዩ መልእክቶች ከነ ሰዓታቸው በሙሉ የሚያመጣ ማጣሪያ
+                    final messages = snapshot.data!;
 
                     return ListView.builder(
                       padding: const EdgeInsets.all(12),
@@ -423,8 +420,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         final msg = messages[index];
                         final isMe = msg['sender_id']?.toString() == currentUserId;
                         final bool isSelfDestruct = msg['is_self_destruct'] ?? false;
+                        final String timeStr = _formatTime(msg['created_at']?.toString());
 
-                        return _buildMessageBubble(msg['content'] ?? '', isMe, isSelfDestruct);
+                        return _buildMessageBubble(
+                          msg['content'] ?? '', 
+                          isMe, 
+                          isSelfDestruct,
+                          timeStr,
+                        );
                       },
                     );
                   },
@@ -489,12 +492,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  Widget _buildMessageBubble(String text, bool isMe, bool isSelfDestruct) {
+  /// 💬 የመልእክት ሳጥን (ከነ ሰዓቱ የሚታይበት ዲዛይን)
+  Widget _buildMessageBubble(String text, bool isMe, bool isSelfDestruct, String time) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isMe
               ? (isSelfDestruct ? Colors.orange[800] : Colors.blueAccent)
@@ -506,20 +510,33 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             bottomRight: Radius.circular(isMe ? 2 : 16),
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isSelfDestruct)
-              const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.timer, size: 14, color: Colors.white70),
-              ),
-            Flexible(
-              child: Text(
-                text,
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isSelfDestruct)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Icon(Icons.timer, size: 14, color: Colors.white70),
+                  ),
+                Flexible(
+                  child: Text(
+                    text,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                  ),
+                ),
+              ],
             ),
+            if (time.isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(
+                time,
+                style: const TextStyle(color: Colors.white60, fontSize: 10),
+              ),
+            ],
           ],
         ),
       ),
