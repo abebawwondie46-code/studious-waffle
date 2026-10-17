@@ -398,15 +398,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       );
                     }
 
-                    // 🌟 መልእክቶቹን ያለ ምንም ገደብ ከሁለቱም አቅጣጫዎች በግልጽ ማጣራት
+                    // 🌟 የተጣራ እና የማያወላውል የ መልእክቶች ማጣሪያ ሎጂክ
                     final messages = snapshot.data!.where((m) {
                       final sender = m['sender_id']?.toString() ?? '';
                       final receiver = m['receiver_id']?.toString() ?? '';
                       
-                      bool isFromMeToReceiver = (sender == currentUserId && receiver == currentReceiverId);
-                      bool isFromReceiverToMe = (sender == currentReceiverId && receiver == currentUserId);
-                      
-                      return isFromMeToReceiver || isFromReceiverToMe;
+                      return (sender == currentUserId && receiver == currentReceiverId) ||
+                             (sender == currentReceiverId && receiver == currentUserId);
                     }).toList();
 
                     if (messages.isEmpty) {
