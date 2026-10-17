@@ -68,7 +68,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// 🛠️ ማንኛውንም ID ወደ ትክክለኛ የ UUID ቅርጽ መቀየሪያ
   String _toValidUuid(String? rawId, String fallback) {
     if (rawId == null || rawId.isEmpty || rawId == 'unknown_id') {
       return fallback;
@@ -233,7 +232,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// 📤 መልእክት መላኪያ (ከ UUID ማስተካከያ ጋር)
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -243,7 +241,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                           _supabase.auth.currentSession?.user.id ?? 
                           prefs.getString('test_user_id');
 
-    // 🔒 ሁለቱም IDዎች ወደ ትክክለኛ UUID ይለወጣሉ
     final validSenderId = _toValidUuid(rawSenderId, '11111111-1111-1111-1111-111111111111');
     final validReceiverId = _toValidUuid(widget.receiverId, '22222222-2222-2222-2222-222222222222');
 
@@ -401,11 +398,15 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       );
                     }
 
+                    // 🌟 መልእክቶቹን ያለ ምንም ገደብ ከሁለቱም አቅጣጫዎች በግልጽ ማጣራት
                     final messages = snapshot.data!.where((m) {
-                      final sender = m['sender_id']?.toString();
-                      final receiver = m['receiver_id']?.toString();
-                      return (sender == currentUserId && receiver == currentReceiverId) ||
-                             (sender == currentReceiverId && receiver == currentUserId);
+                      final sender = m['sender_id']?.toString() ?? '';
+                      final receiver = m['receiver_id']?.toString() ?? '';
+                      
+                      bool isFromMeToReceiver = (sender == currentUserId && receiver == currentReceiverId);
+                      bool isFromReceiverToMe = (sender == currentReceiverId && receiver == currentUserId);
+                      
+                      return isFromMeToReceiver || isFromReceiverToMe;
                     }).toList();
 
                     if (messages.isEmpty) {
@@ -422,7 +423,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final msg = messages[index];
-                        final isMe = msg['sender_id'] == currentUserId;
+                        final isMe = msg['sender_id']?.toString() == currentUserId;
                         final bool isSelfDestruct = msg['is_self_destruct'] ?? false;
 
                         return _buildMessageBubble(msg['content'] ?? '', isMe, isSelfDestruct);
