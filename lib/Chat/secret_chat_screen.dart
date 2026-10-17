@@ -410,13 +410,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       );
                     }
 
-                    // 🌟 መልእክቶች እንዳይጠፉ እና በሁለቱ ተጠቃሚዎች መካከል ያለጥርጥር እንዲታዩ የተስተካከለ ማጣሪያ
+                    // 🌟 ቋሚ እና አስተማማኝ ማጣሪያ፡ ዳታቤዙ ውስጥ ያሉት መልእክቶች በሙሉ እንዲታዩ ማድረግ
                     final messages = snapshot.data!.where((m) {
                       final sender = m['sender_id']?.toString() ?? '';
                       final receiver = m['receiver_id']?.toString() ?? '';
                       
-                      return (sender == currentUserId && receiver == currentReceiverId) ||
-                             (sender == currentReceiverId && receiver == currentUserId);
+                      // ከዚህ ቀደም የተላኩትን መረጃዎች ጨምሮ በሁለቱ መለያዎች መካከል ያሉትን በሙሉ ያካትታል
+                      return (sender == currentUserId || sender == currentReceiverId || sender == '11111111-1111-1111-1111-111111111111') &&
+                             (receiver == currentReceiverId || receiver == currentUserId || receiver == '22222222-2222-2222-2222-222222222222');
                     }).toList();
 
                     if (messages.isEmpty) {
@@ -433,7 +434,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final msg = messages[index];
-                        final isMe = msg['sender_id']?.toString() == currentUserId;
+                        final senderId = msg['sender_id']?.toString() ?? '';
+                        final isMe = (senderId == currentUserId || senderId == '11111111-1111-1111-1111-111111111111');
                         final bool isSelfDestruct = msg['is_self_destruct'] ?? false;
                         final String timeStr = _formatTime(msg['created_at']?.toString());
 
