@@ -25,7 +25,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
   bool _isSelfDestruct = false; 
-  bool _hasEnteredChat = false; // 🔒 ቻቱ ውስጥ ဝင်ቶ መውጣቱን የሚያረጋግጥ ጥብቅ መቆለፊያ
+  static bool _hasEnteredChatOnce = false; // 🌟 አንዴ ቻቱ ውስጥ መግባቱን በቋሚነት (Globally in session) ይይዘዋል
 
   int _tapCount = 0; 
   int _requiredTaps = 3; 
@@ -55,7 +55,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       setState(() {
         _isFingerprintPassed = false;
         _isUnlocked = false;
-        _hasEnteredChat = false; // ስልኩ ሲዘጋ ቻቱ ውስጥ መኖሩ ቀርቶ ሙሉ በሙሉ ይዘጋል
         _tapCount = 0;
       });
     }
@@ -68,9 +67,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// ⚙️ ሲቲንግ ለመክፈት ሲሞክር ቻቱ ውስጥ ገብቶ መውጣቱን ማረጋገጥ
+  /// ⚙️ ሲቲንግ ለመክፈት ሲሞክር ቻቱ ውስጥ ቢያንስ አንድ ጊዜ መግባቱን ማረጋገጥ
   Future<void> _verifyAndOpenSettings() async {
-    if (!_hasEnteredChat) {
+    if (!_hasEnteredChatOnce) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -84,7 +83,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       return;
     }
 
-    // ቻቱ ውስጥ ገብቶ ከወጣ በኋላ በባለቤቱ አሻራ ይረጋገጣል
+    // አንዴ ቻቱን ከፈተ ካወቀ በባለቤቱ አሻራ ይረጋገጣል
     bool authenticated = await BiometricService.authenticateWithFingerprint();
     if (authenticated && mounted) {
       _changeKnockSettings();
@@ -160,7 +159,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 setState(() {
                   _requiredTaps = tempTaps;
                   _tapCount = 0;
-                  _hasEnteredChat = false; // አንዴ ከቀየረ በኋላ እንደገና ቻቱ ውስጥ መግባት ይጠበቅበታል
                 });
                 Navigator.pop(context);
                 
@@ -218,7 +216,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       if (_tapCount >= _requiredTaps) {
         _tapResetTimer?.cancel();
         _isUnlocked = true; 
-        _hasEnteredChat = true; // 🌟 ቻቱ ውስጥ በትክክል መግባቱን ይመዝግበታል!
+        _hasEnteredChatOnce = true; // 🌟 አንዴ ቻቱ ውስጥ መግባቱ በቋሚነት ይመዝገበታል!
       }
     });
   }
@@ -256,7 +254,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           actions: [
             IconButton(
               icon: const Icon(Icons.settings, color: Colors.white70),
-              onPressed: _verifyAndOpenSettings, // 🔒 ቻቱ ውስጥ ሳይገባ ከቶውኑ ሊከፍተው አይችልም
+              onPressed: _verifyAndOpenSettings,
               tooltip: 'የድብቅ ምት ማስተካከያ',
             ),
           ],
@@ -358,8 +356,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               setState(() {
                 _isFingerprintPassed = false;
                 _isUnlocked = false;
-                _hasEnteredChat = false; // 🔒 ቻቱ ሲዘጋ የቅንብር ፈቃዱም አብሮ ይዘጋል
                 _tapCount = 0;
+                // ⚠️ አሁን _hasEnteredChatOnce እዚህ አልጠፋም! ስለዚህ ቻቱ ውስጥ አንዴ ከገባ በኋላ ሲቲንግ ሁልጊዜ ክፍት ሆኖ ይቆያል።
               });
             },
           ),
