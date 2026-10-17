@@ -68,6 +68,18 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
+  /// 🛠️ ማንኛውንም ID ወደ ትክክለኛ የ UUID ቅርጽ መቀየሪያ
+  String _toValidUuid(String? rawId, String fallback) {
+    if (rawId == null || rawId.isEmpty || rawId == 'unknown_id') {
+      return fallback;
+    }
+    final uuidRegExp = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    if (uuidRegExp.hasMatch(rawId)) {
+      return rawId;
+    }
+    return fallback;
+  }
+
   Future<void> _verifyAndOpenSettings() async {
     if (!_hasEnteredChatOnce) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -221,28 +233,26 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  /// 📤 መልእክት መላኪያ (Fallback ዩዘር ID ያለው)
+  /// 📤 መልእክት መላኪያ (ከ UUID ማስተካከያ ጋር)
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
-    String? userId = _supabase.auth.currentUser?.id ?? _supabase.auth.currentSession?.user.id;
+    String? rawSenderId = _supabase.auth.currentUser?.id ?? 
+                          _supabase.auth.currentSession?.user.id ?? 
+                          prefs.getString('test_user_id');
 
-    if (userId == null) {
-      userId = prefs.getString('test_user_id');
-      if (userId == null) {
-        userId = '11111111-1111-1111-1111-111111111111';
-        await prefs.setString('test_user_id', userId);
-      }
-    }
+    // 🔒 ሁለቱም IDዎች ወደ ትክክለኛ UUID ይለወጣሉ
+    final validSenderId = _toValidUuid(rawSenderId, '11111111-1111-1111-1111-111111111111');
+    final validReceiverId = _toValidUuid(widget.receiverId, '22222222-2222-2222-2222-222222222222');
 
     _messageController.clear();
 
     try {
       await _supabase.from('messages').insert({
-        'sender_id': userId,
-        'receiver_id': widget.receiverId,
+        'sender_id': validSenderId,
+        'receiver_id': validReceiverId,
         'content': text,
         'is_self_destruct': _isSelfDestruct,
         'created_at': DateTime.now().toIso8601String(),
@@ -329,10 +339,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       future: SharedPreferences.getInstance(),
       builder: (context, prefsSnapshot) {
         final prefs = prefsSnapshot.data;
-        final currentUserId = _supabase.auth.currentUser?.id ?? 
-                              _supabase.auth.currentSession?.user.id ?? 
-                              prefs?.getString('test_user_id') ?? 
-                              '11111111-1111-1111-1111-111111111111';
+        final rawSenderId = _supabase.auth.currentUser?.id ?? 
+                            _supabase.auth.currentSession?.user.id ?? 
+                            prefs?.getString('test_user_id');
+
+        final currentUserId = _toValidUuid(rawSenderId, '11111111-1111-1111-1111-111111111111');
+        final currentReceiverId = _toValidUuid(widget.receiverId, '22222222-2222-2222-2222-222222222222');
 
         return Scaffold(
           backgroundColor: const Color(0xFF18191A),
@@ -392,8 +404,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     final messages = snapshot.data!.where((m) {
                       final sender = m['sender_id']?.toString();
                       final receiver = m['receiver_id']?.toString();
-                      return (sender == currentUserId && receiver == widget.receiverId) ||
-                             (sender == widget.receiverId && receiver == currentUserId);
+                      return (sender == currentUserId && receiver == currentReceiverId) ||
+                             (sender == currentReceiverId && receiver == currentUserId);
                     }).toList();
 
                     if (messages.isEmpty) {
