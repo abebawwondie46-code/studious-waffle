@@ -193,12 +193,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  void _registerTap() {
+  void _handleScreenTap() {
     if (!_isFingerprintPassed) {
-      _authenticateUser();
+      _authenticateUser(); // አሻራ ካላለፈ ዳግመኛ አሻራ ይጠራል
       return;
     }
 
+    // አሻራ ካለፈ የምት ቆጠራውን ይጀምራል
     _tapResetTimer?.cancel();
     _tapResetTimer = Timer(const Duration(milliseconds: 1500), () {
       if (mounted) {
@@ -257,7 +258,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ],
         ),
         body: GestureDetector(
-          onTap: _registerTap, // ስክሪኑን ወይም የአሻራ ምልክቱን ሲነኩ አሻራ ይጠራል/ይቆጠራል
+          onTap: _handleScreenTap, // 👈 አሁን ስክሪኑንም ሆነ የአሻራ ምልክቱን ሲነኩ በአግባቡ ይሰራል።
           behavior: HitTestBehavior.opaque,
           child: Center(
             child: Padding(
@@ -265,27 +266,23 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 👆 ትልቁ የአሻራ ምልክት ብቻ ቀረ (ሰማያዊው አዝራር ሙሉ በሙሉ ተወግዷል)
-                  GestureDetector(
-                    onTap: _authenticateUser,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isFingerprintPassed
-                            ? Colors.cyanAccent.withOpacity(0.15)
-                            : Colors.blueAccent.withOpacity(0.1),
-                        border: Border.all(
-                          color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Icon(
-                        _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
-                        size: 80,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isFingerprintPassed
+                          ? Colors.cyanAccent.withOpacity(0.15)
+                          : Colors.blueAccent.withOpacity(0.1),
+                      border: Border.all(
                         color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                        width: 2,
                       ),
+                    ),
+                    child: Icon(
+                      _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
+                      size: 80,
+                      color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
                     ),
                   ),
                   const SizedBox(height: 25),
@@ -331,7 +328,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ],
         ),
         actions: [
-          // 🛑 ቻቱ ውስጥ ሆኖ ውጭ ለመውጫ የሚያገለግለው ቀይ የሎክ ቁልፍ
           IconButton(
             icon: const Icon(Icons.lock, color: Colors.redAccent),
             onPressed: () {
