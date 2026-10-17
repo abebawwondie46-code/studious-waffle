@@ -195,7 +195,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   }
 
   void _handleScreenTap() {
-    if (_isUnlocked) return; // ቻቱ ከተከፈተ በኋላ ስክሪኑ ሲነካ ዳግመኛ እንዳይረብሽ
+    if (_isUnlocked) return;
 
     if (!_isFingerprintPassed) {
       _authenticateUser();
@@ -272,26 +272,23 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  GestureDetector(
-                    onTap: _authenticateUser,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isFingerprintPassed
-                            ? Colors.cyanAccent.withOpacity(0.15)
-                            : Colors.blueAccent.withOpacity(0.1),
-                        border: Border.all(
-                          color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Icon(
-                        _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
-                        size: 80,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isFingerprintPassed
+                          ? Colors.cyanAccent.withOpacity(0.15)
+                          : Colors.blueAccent.withOpacity(0.1),
+                      border: Border.all(
                         color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                        width: 2,
                       ),
+                    ),
+                    child: Icon(
+                      _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
+                      size: 80,
+                      color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
                     ),
                   ),
                   const SizedBox(height: 25),
