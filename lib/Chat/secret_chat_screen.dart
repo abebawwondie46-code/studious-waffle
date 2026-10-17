@@ -106,7 +106,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'ቻቱን ለመክፈት ስክሪኑን የሚነኩበትን የምት ሚስጥር ይምረጡ:',
+                    'ቻቱን ለመክፈት ስክሪኑን የሚነኩበትን የምት ሚስጥር (እስከ 12) ይምረጡ:',
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
@@ -132,7 +132,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       IconButton(
                         icon: const Icon(Icons.add_circle, color: Colors.blueAccent, size: 32),
                         onPressed: () {
-                          if (tempTaps < 6) {
+                          if (tempTaps < 12) {
                             setDialogState(() => tempTaps++);
                           }
                         },
@@ -195,11 +195,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   void _handleScreenTap() {
     if (!_isFingerprintPassed) {
-      _authenticateUser(); // አሻራ ካላለፈ ዳግመኛ አሻራ ይጠራል
+      _authenticateUser();
       return;
     }
 
-    // አሻራ ካለፈ የምት ቆጠራውን ይጀምራል
     _tapResetTimer?.cancel();
     _tapResetTimer = Timer(const Duration(milliseconds: 1500), () {
       if (mounted) {
@@ -219,22 +218,33 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
+  /// 📤 መልእክት ወደ Supabase መላክ
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    final currentUser = _supabase.auth.currentUser;
+    if (currentUser == null) {
+      debugPrint('No authenticated user found for sending message.');
+      return;
+    }
+
     _messageController.clear();
 
-    final currentUser = _supabase.auth.currentUser;
-    if (currentUser == null) return;
-
-    await _supabase.from('messages').insert({
-      'sender_id': currentUser.id,
-      'receiver_id': widget.receiverId,
-      'content': text,
-      'is_self_destruct': _isSelfDestruct,
-      'created_at': DateTime.now().toIso8601String(),
-    });
+    try {
+      await _supabase.from('messages').insert({
+        'sender_id': currentUser.id,
+        'receiver_id': widget.receiverId,
+        'content': text,
+        'is_self_destruct': _isSelfDestruct,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('መልእክት መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።')),
+      );
+    }
   }
 
   @override
@@ -258,7 +268,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ],
         ),
         body: GestureDetector(
-          onTap: _handleScreenTap, // 👈 አሁን ስክሪኑንም ሆነ የአሻራ ምልክቱን ሲነኩ በአግባቡ ይሰራል።
+          onTap: _handleScreenTap,
           behavior: HitTestBehavior.opaque,
           child: Center(
             child: Padding(
@@ -266,23 +276,26 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isFingerprintPassed
-                          ? Colors.cyanAccent.withOpacity(0.15)
-                          : Colors.blueAccent.withOpacity(0.1),
-                      border: Border.all(
-                        color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
-                        width: 2,
+                  GestureDetector(
+                    onTap: _authenticateUser,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isFingerprintPassed
+                            ? Colors.cyanAccent.withOpacity(0.15)
+                            : Colors.blueAccent.withOpacity(0.1),
+                        border: Border.all(
+                          color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                          width: 2,
+                        ),
                       ),
-                    ),
-                    child: Icon(
-                      _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
-                      size: 80,
-                      color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                      child: Icon(
+                        _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
+                        size: 80,
+                        color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 25),
@@ -349,13 +362,35 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   .stream(primaryKey: ['id'])
                   .order('created_at', ascending: true),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
                 }
 
-                final messages = snapshot.data!.where((m) =>
-                    (m['sender_id'] == currentUserId && m['receiver_id'] == widget.receiverId) ||
-                    (m['sender_id'] == widget.receiverId && m['receiver_id'] == currentUserId)).toList();
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
+                      style: TextStyle(color: Colors.white54, fontSize: 14),
+                    ),
+                  );
+                }
+
+                // 🔄 መልእክቶችን በሁለቱ ተጠቃሚዎች መካከል ብቻ እንዲጣሩ ማድረግ
+                final messages = snapshot.data!.where((m) {
+                  final sender = m['sender_id']?.toString();
+                  final receiver = m['receiver_id']?.toString();
+                  return (sender == currentUserId && receiver == widget.receiverId) ||
+                         (sender == widget.receiverId && receiver == currentUserId);
+                }).toList();
+
+                if (messages.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'እስካሁን የተላከ መልእክት የለም።',
+                      style: TextStyle(color: Colors.white54, fontSize: 14),
+                    ),
+                  );
+                }
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
@@ -365,7 +400,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     final isMe = msg['sender_id'] == currentUserId;
                     final bool isSelfDestruct = msg['is_self_destruct'] ?? false;
 
-                    return _buildMessageBubble(msg['content'], isMe, isSelfDestruct);
+                    return _buildMessageBubble(msg['content'] ?? '', isMe, isSelfDestruct);
                   },
                 );
               },
