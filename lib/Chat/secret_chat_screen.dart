@@ -221,12 +221,18 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
+  /// 📤 መልእክት መላኪያ (ከነ Error ማሳያ ጋር)
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
     final currentUser = _supabase.auth.currentUser;
-    if (currentUser == null) return;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('የተጠቃሚ አካውንት አልተገኘም!')),
+      );
+      return;
+    }
 
     _messageController.clear();
 
@@ -240,6 +246,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       });
     } catch (e) {
       debugPrint('Error sending message: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('መልእክት መላክ አልተቻለም፦ $e')),
+        );
+      }
     }
   }
 
