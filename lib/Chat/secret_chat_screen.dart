@@ -399,7 +399,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   );
                 }
 
-                // 🌟 በዳታቤዙ ውስጥ ያሉትን ሁሉንም መልእክቶች ያለምንም ማጣሪያ በቋሚነት ማሳየት
                 final messages = snapshot.data!;
 
                 return ListView.builder(
@@ -412,7 +411,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
                     return _buildMessageBubble(
                       msg['content'] ?? '', 
-                      true, // ሁልጊዜ በቋሚነት የቀኝ ወገን እንዲሆን
+                      true, 
                       isSelfDestruct,
                       timeStr,
                     );
