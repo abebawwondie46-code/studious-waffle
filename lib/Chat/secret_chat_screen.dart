@@ -24,7 +24,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
-  bool _isSelfDestruct = false; 
   static bool _hasEnteredChatOnce = false; 
 
   int _tapCount = 0; 
@@ -263,7 +262,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'sender_id': validSenderId,
         'receiver_id': validReceiverId,
         'content': text,
-        'is_self_destruct': _isSelfDestruct,
+        'is_self_destruct': false, // 🛑 የሰዓት ተግባር ታግዷል (ሁልጊዜ መደበኛ ነው)
         'created_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
@@ -390,7 +389,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   return const SizedBox.shrink();
                 }
 
-                // 🌟 የሰዓቱ ምልክት ቢበራም ባንበራም ዳታቤዙ ውስጥ ያሉት መልእክቶች በሙሉ በቋሚነት እንዲታዩ ይደረጋል
                 final messages = snapshot.data ?? [];
 
                 if (messages.isEmpty) {
@@ -407,13 +405,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[index];
-                    final bool isSelfDestruct = msg['is_self_destruct'] ?? false;
                     final String timeStr = _formatTime(msg['created_at']?.toString());
 
                     return _buildMessageBubble(
                       msg['content'] ?? '', 
                       true, 
-                      isSelfDestruct,
                       timeStr,
                     );
                   },
@@ -426,21 +422,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             color: const Color(0xFF242526),
             child: Row(
               children: [
+                // 🛑 የሰዓት (Timer) ቁልፍ ሙሉ በሙሉ ታግዷል (ተግባር የለውም)
                 IconButton(
-                  icon: Icon(
-                    Icons.timer,
-                    color: _isSelfDestruct ? Colors.orangeAccent : Colors.white54,
-                  ),
+                  icon: const Icon(Icons.timer, color: Colors.white24),
                   onPressed: () {
-                    setState(() {
-                      _isSelfDestruct = !_isSelfDestruct;
-                    });
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_isSelfDestruct
-                            ? 'ራሱን የሚያጠፋ መልእክት በርቷል 💣'
-                            : 'መደበኛ መልእክት በርቷል'),
-                        duration: const Duration(seconds: 1),
+                      const SnackBar(
+                        content: Text('የሰዓት (Timer) ተግባር ለጊዜው ታግዷል! 🚫'),
+                        duration: Duration(seconds: 1),
                       ),
                     );
                   },
@@ -450,7 +439,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     controller: _messageController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: _isSelfDestruct ? 'የሚጠፋ መልእክት ጻፍ...' : 'መልእክት ጻፍ...',
+                      hintText: 'መልእክት ጻፍ...',
                       hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
                       fillColor: const Color(0xFF3A3B3C),
@@ -478,15 +467,15 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  Widget _buildMessageBubble(String text, bool isMe, bool isSelfDestruct, String time) {
+  Widget _buildMessageBubble(String text, bool isMe, String time) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelfDestruct ? Colors.orange[800] : Colors.blueAccent,
-          borderRadius: const BorderRadius.only(
+        decoration: const BoxDecoration(
+          color: Colors.blueAccent, // ሁልጊዜ መደበኛ ሰማያዊ ከለር ብቻ
+          borderRadius: BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
             bottomLeft: Radius.circular(16),
@@ -497,21 +486,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isSelfDestruct)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 6),
-                    child: Icon(Icons.timer, size: 14, color: Colors.white70),
-                  ),
-                Flexible(
-                  child: Text(
-                    text,
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                ),
-              ],
+            Text(
+              text,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
             ),
             if (time.isNotEmpty) ...[
               const SizedBox(height: 3),
