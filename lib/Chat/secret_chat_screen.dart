@@ -45,7 +45,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    _currentReceiverName = widget.receiverName.isNotEmpty ? widget.receiverName : 'ጎወተፍም ለብታሙ';
+    // ከ Home/Add Friend ገጽ ተልኮ የመጣውን ስምና ፎቶ በቋሚነት መያዝ
+    _currentReceiverName = widget.receiverName.isNotEmpty ? widget.receiverName : 'ተጠቃሚ';
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
     _loadCustomTaps();
@@ -90,36 +91,48 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 ፎቶውን ከ Supabase profiles ቴብል ዋስትና ባለው መንገድ የማምጫ ክፍል
+  // 🌟 የቪዲዮውን ባለቤት ፕሮፋይል ከ Supabase መፈለጊያ (ካገኘው ያሻሽለዋል፤ ካላገኘው የመጀመሪያውን ፎቶ አያጠፋም)
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
-      // 1. መጀመሪያ በ Supabase ውስጥ ያለውን ማንኛውንም የፕሮፋይል ፎቶ መፈለግ
-      final List<dynamic> profiles = await _supabase
-          .from('profiles')
-          .select('full_name, avatar_url, profile_pic, photo_url');
+      Map<String, dynamic>? profileData;
 
-      if (profiles.isNotEmpty) {
-        // avatar_url ያለው የመጀመሪያው ሮው መውሰድ
-        final validProfile = profiles.firstWhere(
-          (p) => (p['avatar_url'] != null && p['avatar_url'].toString().isNotEmpty) ||
-                 (p['profile_pic'] != null && p['profile_pic'].toString().isNotEmpty) ||
-                 (p['photo_url'] != null && p['photo_url'].toString().isNotEmpty),
-          orElse: () => profiles.first,
-        );
-
-        if (validProfile != null && mounted) {
-          final fullName = validProfile['full_name'];
-          final url = validProfile['avatar_url'] ?? validProfile['profile_pic'] ?? validProfile['photo_url'];
-          
-          setState(() {
-            if (fullName != null && fullName.toString().isNotEmpty) {
-              _currentReceiverName = fullName.toString();
-            }
-            if (url != null && url.toString().isNotEmpty) {
-              _fetchedAvatarUrl = url.toString().trim();
-            }
-          });
+      if (widget.receiverId.isNotEmpty) {
+        final parsedId = int.tryParse(widget.receiverId);
+        if (parsedId != null) {
+          profileData = await _supabase
+              .from('profiles')
+              .select()
+              .eq('id', parsedId)
+              .maybeSingle();
+        } else {
+          profileData = await _supabase
+              .from('profiles')
+              .select()
+              .eq('id', widget.receiverId)
+              .maybeSingle();
         }
+      }
+
+      if (profileData == null && widget.receiverName.isNotEmpty) {
+        profileData = await _supabase
+            .from('profiles')
+            .select()
+            .eq('full_name', widget.receiverName)
+            .maybeSingle();
+      }
+
+      if (profileData != null && mounted) {
+        final fullName = profileData['full_name'];
+        final url = profileData['avatar_url'] ?? profileData['profile_pic'] ?? profileData['photo_url'];
+        
+        setState(() {
+          if (fullName != null && fullName.toString().isNotEmpty) {
+            _currentReceiverName = fullName.toString();
+          }
+          if (url != null && url.toString().isNotEmpty) {
+            _fetchedAvatarUrl = url.toString().trim();
+          }
+        });
       }
     } catch (e) {
       debugPrint('Profile fetch error: $e');
