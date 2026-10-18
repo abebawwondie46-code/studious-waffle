@@ -85,21 +85,21 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles ቴብል እና ከ SharedPreferences ጭኖ የሚያመጣው ትክክለኛ ክፍል
+  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles ቴብል እና ከ SharedPreferences በትክክል የሚያመጣው ፈንክሽን
   Future<void> _fetchReceiverProfile() async {
-    // 1. በመጀመሪያ በ widget በኩል የተላከውን ቼክ ማድረግ
-    if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
-      setState(() {
-        _fetchedAvatarUrl = widget.receiverAvatarUrl;
-      });
-      return;
-    }
-
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
+      // 1. በመጀመሪያ በ widget በኩል የተላከውን ቼክ ማድረግ
+      if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
+        setState(() {
+          _fetchedAvatarUrl = widget.receiverAvatarUrl;
+        });
+        return;
+      }
+
       // 2. ከ SharedPreferences በመፈለግ (current_user_avatar ወይም ለዚህ ተጠቃሚ የተቀመጠውን)
-      final savedAvatar = prefs.getString('receiver_avatar_${widget.receiverId}') ?? prefs.getString('current_user_avatar');
+      final prefs = await SharedPreferences.getInstance();
+      final savedAvatar = prefs.getString('current_user_avatar') ?? prefs.getString('receiver_avatar_${widget.receiverId}');
+      
       if (savedAvatar != null && savedAvatar.isNotEmpty) {
         setState(() {
           _fetchedAvatarUrl = savedAvatar;
