@@ -89,12 +89,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን እና ስሙን ከ SharedPreferences እና ከ Supabase (በ id እና user_id) አስተማማኝ በሆነ መንገድ የሚያመጣው ክፍል
+  // 🌟 የፕሮፋይል ፎቶውን እና ስሙን ከ Supabase profiles እና SharedPreferences በትክክል የሚያመጣው ክፍል
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // 1. መጀመሪያ ከ SharedPreferences መፈለግ (ለዚህ ተጠቃሚ የተከማቸ ፎቶ)
+      // 1. መጀመሪያ ከ SharedPreferences መፈለግ
       final String? savedAvatar = prefs.getString('receiver_avatar_${widget.receiverId}') ?? 
                                   prefs.getString('current_user_avatar');
       if (savedAvatar != null && savedAvatar.isNotEmpty) {
@@ -103,25 +103,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         });
       }
 
-      // 2. ከ Supabase profiles ቴብል መፈለግ (በ id ወይም user_id)
-      Map<String, dynamic>? profileData;
-      try {
-        profileData = await _supabase
-            .from('profiles')
-            .select('full_name, avatar_url, profile_pic, photo_url')
-            .eq('id', widget.receiverId)
-            .maybeSingle();
-      } catch (_) {
-        try {
-          profileData = await _supabase
-              .from('profiles')
-              .select('full_name, avatar_url, profile_pic, photo_url')
-              .eq('user_id', widget.receiverId)
-              .maybeSingle();
-        } catch (e2) {
-          debugPrint('Profile query fallback error: $e2');
-        }
-      }
+      // 2. ከ Supabase 'profiles' ቴብል ያለ ማጣሪያ (Filter) የመጀመሪያውን ሮው መውሰድ
+      final profileData = await _supabase
+          .from('profiles')
+          .select('full_name, avatar_url, profile_pic, photo_url')
+          .maybeSingle();
 
       if (profileData != null && mounted) {
         final fullName = profileData['full_name'];
