@@ -330,6 +330,66 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
+  // 🌟 ፎቶውን ትልቅ አድርጎ የሚያሳይ (Zoom / Full View) ፈንክሽን
+  void _showFullProfileImage(ImageProvider? imageProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(color: Colors.black.withOpacity(0.9)),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _currentReceiverName,
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  height: MediaQuery.of(context).size.width * 0.9,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    image: imageProvider != null
+                        ? DecorationImage(image: imageProvider, fit: BoxFit.cover)
+                        : null,
+                    color: Colors.blueAccent,
+                  ),
+                  child: imageProvider == null
+                      ? Center(
+                          child: Text(
+                            _currentReceiverName.isNotEmpty ? _currentReceiverName[0].toUpperCase() : '?',
+                            style: const TextStyle(color: Colors.white, fontSize: 80, fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      : null,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isUnlocked) {
@@ -414,52 +474,61 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         elevation: 1,
         title: Row(
           children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.blueAccent,
-                  backgroundImage: imageProvider,
-                  child: imageProvider == null
-                      ? Text(
-                          _currentReceiverName.isNotEmpty ? _currentReceiverName[0].toUpperCase() : '?',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        )
-                      : null,
-                ),
-                // 🌟 የኦንላይን ሁኔታ አረንጓዴ ነጥብ
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 11,
-                    height: 11,
-                    decoration: BoxDecoration(
-                      color: Colors.greenAccent,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF242526), width: 2),
+            // 🌟 ፎቶውን ሲነኩት ትልቅ ሆኖ እንዲከፈት የተደረገበት
+            GestureDetector(
+              onTap: () => _showFullProfileImage(imageProvider),
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.blueAccent,
+                    backgroundImage: imageProvider,
+                    child: imageProvider == null
+                        ? Text(
+                            _currentReceiverName.isNotEmpty ? _currentReceiverName[0].toUpperCase() : '?',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 11,
+                      height: 11,
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF242526), width: 2),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _currentReceiverName,
-                  style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 2),
-                const Row(
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _showFullProfileImage(imageProvider),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.lock_rounded, size: 10, color: Colors.greenAccent),
-                    SizedBox(width: 4),
-                    Text('ደህንነቱ የተጠበቀ ሚስጥራዊ ቻት', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                    Text(
+                      _currentReceiverName,
+                      style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_rounded, size: 10, color: Colors.greenAccent),
+                        SizedBox(width: 4),
+                        Text('ደህንነቱ የተጠበቀ ሚስጥራዊ ቻት', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
           ],
         ),
@@ -502,7 +571,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.chat_bubble_outline_rounded, size: 50, color: Colors.white24),
+                            const Icon(Icons.chat_bubble_outline_rounded, size: 50, color: Colors.white24),
                             const SizedBox(height: 12),
                             const Text(
                               'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
