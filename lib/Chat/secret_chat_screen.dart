@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -84,7 +85,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles/users ቴብል አምጥቶ ማሳያ ሎጂክ
+  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles ቴብል አምጥቶ ማሳያ ሎጂክ
   Future<void> _fetchReceiverProfile() async {
     if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
       setState(() {
@@ -94,14 +95,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
 
     try {
-      final response = await _supabase
+      final profileData = await _supabase
           .from('profiles')
-          .select('avatar_url, profile_pic, photo_url')
+          .select('full_name, avatar_url, profile_pic, photo_url')
           .eq('id', widget.receiverId)
           .maybeSingle();
 
-      if (response != null && mounted) {
-        final url = response['avatar_url'] ?? response['profile_pic'] ?? response['photo_url'];
+      if (profileData != null && mounted) {
+        final url = profileData['avatar_url'] ?? profileData['profile_pic'] ?? profileData['photo_url'];
         if (url != null && url.toString().isNotEmpty) {
           setState(() {
             _fetchedAvatarUrl = url.toString();
@@ -401,12 +402,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         backgroundColor: const Color(0xFF242526),
         title: Row(
           children: [
-            // 🌟 የፕሮፋይል ፎቶው ልክ በፕሮፋይል ገጹ ላይ እንደሚታየው ፎቶ ሆኖ እንዲወጣ የተደረገበት
+            // 🌟 የፕሮፋይል ፎቶው ከፕሮፋይል ቴብል በመጣው ሊንክ ተስተካክሎ እንዲታይ የተደረገበት ክፍል
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.blueAccent,
               backgroundImage: (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty)
-                  ? NetworkImage(_fetchedAvatarUrl!)
+                  ? (_fetchedAvatarUrl!.startsWith('http://') || _fetchedAvatarUrl!.startsWith('https://')
+                      ? NetworkImage(_fetchedAvatarUrl!)
+                      : FileImage(File(_fetchedAvatarUrl!)) as ImageProvider)
                   : null,
               child: (_fetchedAvatarUrl == null || _fetchedAvatarUrl!.isEmpty)
                   ? Text(
