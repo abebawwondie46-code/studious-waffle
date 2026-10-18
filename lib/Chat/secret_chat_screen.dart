@@ -245,7 +245,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'content': text,
         'created_at': DateTime.now().toIso8601String(),
       });
-      debugPrint('መልእክት በሳካ ሁኔታ ተልኳል!');
+      debugPrint('መልእክት በተሳካ ሁኔታ ተልኳል!');
     } catch (e) {
       debugPrint('SUPABASE INSERT ERROR: $e');
       if (mounted) {
@@ -388,7 +388,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     final msg = messages[index];
                     final content = msg['content']?.toString() ?? '';
                     final timeStr = _formatTime(msg['created_at']?.toString());
-                    // ዴሽቦርዱ ላይ ያሉትን መረጃዎች በቀጥታ እንዲያሳይ
                     final isMe = index % 2 == 0; 
 
                     return _buildMessageBubble(content, isMe, timeStr);
