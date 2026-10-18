@@ -89,12 +89,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 ከ Supabase በቀጥታ avatar_url እና full_name ამოტን የሚያመጣው አስተማማኝ ክፍል
+  // 🌟 የፕሮፋይል ፎቶውን እና ስሙን ከ Supabase profiles ቴብል በቀጥታ የሚያመጣው ክፍል
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
       final profileData = await _supabase
           .from('profiles')
-          .select('full_name, avatar_url, profile_pic, photo_url')
+          .select()
           .maybeSingle();
 
       if (profileData != null && mounted) {
@@ -106,7 +106,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             _currentReceiverName = fullName.toString();
           }
           if (url != null && url.toString().isNotEmpty) {
-            _fetchedAvatarUrl = url.toString();
+            _fetchedAvatarUrl = url.toString().trim();
           }
         });
       }
