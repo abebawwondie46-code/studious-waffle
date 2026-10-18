@@ -150,7 +150,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
       if (mounted) {
         setState(() {
-          // 🌟 ስህተቱ የተስተካከለበት መስመር (ትክክለኛ Dart Type Cast)
           _messages = List<Map<String, dynamic>>.from(response);
           _isLoading = false;
         });
@@ -680,4 +679,29 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           color: isMe ? Colors.blueAccent : const Color(0xFF3A3B3C),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
-            topRight: const Radius.
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isMe ? 16 : 4),
+            bottomRight: Radius.circular(isMe ? 4 : 16),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              text,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
+            ),
+            if (time.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                time,
+                style: const TextStyle(color: Colors.white60, fontSize: 10),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
