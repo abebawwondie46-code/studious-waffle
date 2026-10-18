@@ -44,6 +44,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // መጀመሪያ ከ Home ገጽ የተላከውን ስም እና ፎቶ መያዝ
     _currentReceiverName = widget.receiverName;
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
@@ -89,13 +91,39 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
+  // 🌟 ከተላከው receiverId ወይም receiverName ጋር የሚስማማውን ፕሮፋይል ማለየት
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
-      final profileData = await _supabase
-          .from('profiles')
-          .select()
-          .maybeSingle();
+      Map<String, dynamic>? profileData;
 
+      // 1. በ receiverId መፈለግ (ቁጥር ወይም UUID ከሆነ)
+      if (widget.receiverId.isNotEmpty) {
+        final parsedId = int.tryParse(widget.receiverId);
+        if (parsedId != null) {
+          profileData = await _supabase
+              .from('profiles')
+              .select()
+              .eq('id', parsedId)
+              .maybeSingle();
+        } else {
+          profileData = await _supabase
+              .from('profiles')
+              .select()
+              .eq('id', widget.receiverId)
+              .maybeSingle();
+        }
+      }
+
+      // 2. በ receiverId ካልተገኘ በ full_name መፈለግ
+      if (profileData == null && widget.receiverName.isNotEmpty) {
+        profileData = await _supabase
+            .from('profiles')
+            .select()
+            .eq('full_name', widget.receiverName)
+            .maybeSingle();
+      }
+
+      // 3. ዳታቤዝ ውስጥ ከተገኘ አዲሱን ስም እና ፎቶ መቀየር
       if (profileData != null && mounted) {
         final fullName = profileData['full_name'];
         final url = profileData['avatar_url'] ?? profileData['profile_pic'] ?? profileData['photo_url'];
@@ -151,7 +179,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 ስሙንና ፎቶውን ሲነኩት ወደ ፕሮፋይል ገጽ ወይም የፕሮፋይል ዝርዝር መረጃ የሚወስደው ፈንክሽን
+  // 🌟 የፕሮፋይል ገጽ/ካርድ ማሳያ
   void _navigateToUserProfile() {
     ImageProvider? imageProvider;
     if (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty) {
@@ -480,7 +508,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       appBar: AppBar(
         backgroundColor: const Color(0xFF242526),
         elevation: 1,
-        // 🌟 ስሙ እና ፎቶው ያለበት ሙሉ ክፍል ሲነካ ወደ ፕሮፋይል ገጽ እንዲወስድ የተደረገበት
         title: InkWell(
           onTap: _navigateToUserProfile,
           borderRadius: BorderRadius.circular(8),
