@@ -186,8 +186,20 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     setState(() {
       _isFollowing = newFollowState;
       _followersCount = newFollowersCount;
-      _hidePlusSignPermanently = newFollowState; 
+      _hidePlusSignPermanently = newFollowState;
     });
+  
+ // 🌟 አድ ፍሬንድ / (+) ምልክቱ ሲነካ (የተከተለውም ሆነ ያልተከተለው) በቀጥታ ወደ ሚስጥራዊው ቻት እንዲገባ ማድረግ ከፈለጉ፦
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SecretChatScreen(
+          receiverId: widget.creatorId ?? '',
+          receiverName: widget.userName ?? 'ተጠቃሚ',
+          receiverAvatarUrl: widget.userAvatar,
+        ),
+      ),
+    );
 
     final prefs = await SharedPreferences.getInstance();
     final creatorKey = widget.userName ?? widget.userAvatar ?? 'creator_unknown';
