@@ -7,11 +7,13 @@ import 'package:kuanyngne/Chat/biometric_service.dart';
 class SecretChatScreen extends StatefulWidget {
   final String receiverId;
   final String receiverName;
+  final String? receiverAvatarUrl; // 🌟 የፕሮፋይል ፎቶ ዩአርኤል መቀበያ
 
   const SecretChatScreen({
     Key? key,
     required this.receiverId,
     required this.receiverName,
+    this.receiverAvatarUrl,
   }) : super(key: key);
 
   @override
@@ -275,7 +277,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _messageController.clear();
 
     try {
-      // እርስዎ የላኩት መልእክት በራስዎ መለያ (sender_id) ይመዝገባል
       await _supabase.from('messages').insert({
         'sender_id': '11111111-1111-1111-1111-111111111111',
         'receiver_id': '22222222-2222-2222-2222-222222222222',
@@ -369,9 +370,15 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         backgroundColor: const Color(0xFF242526),
         title: Row(
           children: [
-            const CircleAvatar(
+            // 🌟 የፕሮፋይል ፎቶ ከሊንክ የሚመጣበት (ስቶሬጅ የማይበላ)
+            CircleAvatar(
               backgroundColor: Colors.blueAccent,
-              child: Icon(Icons.person, color: Colors.white),
+              backgroundImage: (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty)
+                  ? NetworkImage(widget.receiverAvatarUrl!) as ImageProvider
+                  : null,
+              child: (widget.receiverAvatarUrl == null || widget.receiverAvatarUrl!.isEmpty)
+                  ? const Icon(Icons.person, color: Colors.white)
+                  : null,
             ),
             const SizedBox(width: 10),
             Column(
@@ -417,7 +424,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                           final senderId = msg['sender_id']?.toString() ?? '';
                           final timeStr = _formatTime(msg['created_at']?.toString());
                           
-                          // 🌟 ልክ እንደ መደበኛ ሜሴንጀር፡ እርስዎ የላኩት ከሆነ በቀኝ (blue)፣ ሌላኛዋ/ሌላኛው ከላኩ በግራ (dark grey)
                           final isMe = (senderId == '11111111-1111-1111-1111-111111111111');
 
                           return _buildMessageBubble(content, isMe, timeStr);
