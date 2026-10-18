@@ -178,29 +178,54 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
+  // 🌟 (+) ወይም የፕሮፋይል አዝራሩ ሲነካ ከ profiles ቴብል መረጃውን ፈትሾ ወደ ቻት የሚወስድበት
   Future<void> _handleFollowPressed() async {
     _keepButtonsVisibleTemporarily();
-    final newFollowState = !_isFollowing;
+
+    String resolvedName = widget.userName ?? 'ተጠቃሚ';
+    String? resolvedAvatar = widget.userAvatar;
+    String resolvedId = widget.creatorId ?? '';
+
+    // ካለ ዳታቤዝ (profiles) መረጃውን በአግባቡ መፈለግ
+    try {
+      final profileQuery = await Supabase.instance.client
+          .from('profiles')
+          .select()
+          .limit(1)
+          .maybeSingle();
+      
+ if (profileQuery != null) {
+        resolvedName = profileQuery['full_name'] ?? resolvedName;
+        resolvedAvatar = profileQuery['avatar_url'] ?? profileQuery['profile_pic'] ?? resolvedAvatar;
+        resolvedId = profileQuery['id']?.toString() ?? resolvedId;
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile on click: $e');
+    }
+
+    // 🚀 ወደ SecretChatScreen ማዘዋወሪያ ኮድ
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SecretChatScreen(
+            receiverId: resolvedId,
+            receiverName: resolvedName,
+            receiverAvatarUrl: resolvedAvatar,
+          ),
+        ),
+      );
+    }
+    
+   final newFollowState = !_isFollowing;
     final newFollowersCount = newFollowState ? _followersCount + 1 : _followersCount - 1;
 
     setState(() {
       _isFollowing = newFollowState;
       _followersCount = newFollowersCount;
-      _hidePlusSignPermanently = newFollowState;
+      _hidePlusSignPermanently = newFollowState; 
     });
-  
- // 🌟 አድ ፍሬንድ / (+) ምልክቱ ሲነካ (የተከተለውም ሆነ ያልተከተለው) በቀጥታ ወደ ሚስጥራዊው ቻት እንዲገባ ማድረግ ከፈለጉ፦
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SecretChatScreen(
-          receiverId: widget.creatorId ?? '',
-          receiverName: widget.userName ?? 'ተጠቃሚ',
-          receiverAvatarUrl: widget.userAvatar,
-        ),
-      ),
-    );
-
+    
     final prefs = await SharedPreferences.getInstance();
     final creatorKey = widget.userName ?? widget.userAvatar ?? 'creator_unknown';
     final uniqueKey = 'followed_creator_$creatorKey';
