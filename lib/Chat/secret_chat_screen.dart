@@ -85,8 +85,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles ቴብል አምጥቶ ማሳያ ሎጂክ
+  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles ቴብል እና ከ SharedPreferences ጭኖ የሚያመጣው ክፍል
   Future<void> _fetchReceiverProfile() async {
+    // 1. በመጀመሪያ በ widget የተላከውን ቼክ ማድረግ
     if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
       setState(() {
         _fetchedAvatarUrl = widget.receiverAvatarUrl;
@@ -95,10 +96,20 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
 
     try {
+      // 2. ከ SharedPreferences መፈለግ (እንደ ኮሜንት ስክሪኑ ሎጂክ)
+      final prefs = await SharedPreferences.getInstance();
+      final savedAvatar = prefs.getString('current_user_avatar') ?? prefs.getString('receiver_avatar_${widget.receiverId}');
+      if (savedAvatar != null && savedAvatar.isNotEmpty) {
+        setState(() {
+          _fetchedAvatarUrl = savedAvatar;
+        });
+        return;
+      }
+
+      // 3. ከ Supabase 'profiles' ቴብል መፈለግ
       final profileData = await _supabase
           .from('profiles')
-          .select('full_name, avatar_url, profile_pic, photo_url')
-          .eq('id', widget.receiverId)
+          .select('avatar_url, profile_pic, photo_url')
           .maybeSingle();
 
       if (profileData != null && mounted) {
@@ -107,6 +118,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           setState(() {
             _fetchedAvatarUrl = url.toString();
           });
+          // ለቀጣይ ጊዜ በፍጥነት እንዲያገኘው ማስቀመጥ
+          await prefs.setString('receiver_avatar_${widget.receiverId}', url.toString());
         }
       }
     } catch (e) {
@@ -402,7 +415,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         backgroundColor: const Color(0xFF242526),
         title: Row(
           children: [
-            // 🌟 የፕሮፋይል ፎቶው ከፕሮፋይል ቴብል በመጣው ሊንክ ተስተካክሎ እንዲታይ የተደረገበት ክፍል
+            // 🌟 የፕሮፋይል ፎቶ ከቅዱስ ዩአርኤል ወይም ፋይል የሚመጣበት እና የሚታይበት ቋሚ አቫታር
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.blueAccent,
