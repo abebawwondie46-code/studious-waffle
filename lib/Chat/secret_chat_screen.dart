@@ -95,7 +95,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'መጀመሪያ ሚስጥራዊውን ቻት መክፈትና ማጠናቀቅ አለብዎት! 🚫',
+            'መጀመሪያ ቻቱን መክፈትና ማጠናቀቅ አለብዎት! 🚫',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.white,
@@ -262,11 +262,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'sender_id': validSenderId,
         'receiver_id': validReceiverId,
         'content': text,
-        'is_self_destruct': false, // 🛑 የሰዓት ተግባር ታግዷል (ሁልጊዜ መደበኛ ነው)
         'created_at': DateTime.now().toIso8601String(),
       });
+      debugPrint('መልእክት በሳካ ሁኔታ ተልኳል!');
     } catch (e) {
-      debugPrint('Error sending message: $e');
+      debugPrint('SUPABASE INSERT ERROR: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('መልእክት መላክ አልተቻለም፦ $e')),
@@ -343,127 +343,147 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF18191A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF242526),
-        title: Row(
-          children: [
-            const CircleAvatar(
-              backgroundColor: Colors.blueAccent,
-              child: Icon(Icons.person, color: Colors.white),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, prefsSnapshot) {
+        final prefs = prefsSnapshot.data;
+        final rawSenderId = _supabase.auth.currentUser?.id ?? 
+                            _supabase.auth.currentSession?.user.id ?? 
+                            prefs?.getString('test_user_id');
+
+        final currentUserId = _toValidUuid(rawSenderId, '11111111-1111-1111-1111-111111111111');
+        final currentReceiverId = _toValidUuid(widget.receiverId, '22222222-2222-2222-2222-222222222222');
+
+        return Scaffold(
+          backgroundColor: const Color(0xFF18191A),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF242526),
+            title: Row(
               children: [
-                Text(widget.receiverName, style: const TextStyle(fontSize: 16, color: Colors.white)),
-                const Text('በአሻራ እና በድብቅ ምት የተጠበቀ', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.lock, color: Colors.redAccent),
-            onPressed: () {
-              setState(() {
-                _isFingerprintPassed = false;
-                _isUnlocked = false;
-                _tapCount = 0;
-              });
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _supabase
-                  .from('messages')
-                  .stream(primaryKey: ['id'])
-                  .order('created_at', ascending: true),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                  return const SizedBox.shrink();
-                }
-
-                final messages = snapshot.data ?? [];
-
-                if (messages.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
-                      style: TextStyle(color: Colors.white54, fontSize: 14),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = messages[index];
-                    final String timeStr = _formatTime(msg['created_at']?.toString());
-
-                    return _buildMessageBubble(
-                      msg['content'] ?? '', 
-                      true, 
-                      timeStr,
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            color: const Color(0xFF242526),
-            child: Row(
-              children: [
-                // 🛑 የሰዓት (Timer) ቁልፍ ሙሉ በሙሉ ታግዷል (ተግባር የለውም)
-                IconButton(
-                  icon: const Icon(Icons.timer, color: Colors.white24),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('የሰዓት (Timer) ተግባር ለጊዜው ታግዷል! 🚫'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'መልእክት ጻፍ...',
-                      hintStyle: const TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: const Color(0xFF3A3B3C),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                CircleAvatar(
+                const CircleAvatar(
                   backgroundColor: Colors.blueAccent,
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white, size: 18),
-                    onPressed: _sendMessage,
-                  ),
+                  child: Icon(Icons.person, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.receiverName, style: const TextStyle(fontSize: 16, color: Colors.white)),
+                    const Text('መደበኛ ቻት', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                  ],
                 ),
               ],
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.lock, color: Colors.redAccent),
+                onPressed: () {
+                  setState(() {
+                    _isFingerprintPassed = false;
+                    _isUnlocked = false;
+                    _tapCount = 0;
+                  });
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+          body: Column(
+            children: [
+              Expanded(
+                child: StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: _supabase
+                      .from('messages')
+                      .stream(primaryKey: ['id'])
+                      .order('created_at', ascending: true),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
+                          style: TextStyle(color: Colors.white54, fontSize: 14),
+                        ),
+                      );
+                    }
+
+                    // 🌟 በሁለቱ ተጠቃሚዎች መካከል የተላኩ መልእክቶችን ብቻ በትክክል ማጣራት
+                    final messages = snapshot.data!.where((m) {
+                      final sender = m['sender_id']?.toString() ?? '';
+                      final receiver = m['receiver_id']?.toString() ?? '';
+
+                      return (sender == currentUserId && receiver == currentReceiverId) ||
+                             (sender == currentReceiverId && receiver == currentUserId) ||
+                             sender == '11111111-1111-1111-1111-111111111111'; // የቴስት አካውንትንም ለማካተት
+                    }).toList();
+
+                    if (messages.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'እስካሁን የተላከ መልእክት የለም።',
+                          style: TextStyle(color: Colors.white54, fontSize: 14),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = messages[index];
+                        final senderId = msg['sender_id']?.toString() ?? '';
+                        final isMe = (senderId == currentUserId || senderId == '11111111-1111-1111-1111-111111111111');
+                        final String timeStr = _formatTime(msg['created_at']?.toString());
+
+                        return _buildMessageBubble(
+                          msg['content'] ?? '', 
+                          isMe, 
+                          timeStr,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                color: const Color(0xFF242526),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'መልእክት ጻፍ...',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          filled: true,
+                          fillColor: const Color(0xFF3A3B3C),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      backgroundColor: Colors.blueAccent,
+                      child: IconButton(
+                        icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                        onPressed: _sendMessage,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -473,13 +493,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: const BoxDecoration(
-          color: Colors.blueAccent, // ሁልጊዜ መደበኛ ሰማያዊ ከለር ብቻ
+        decoration: BoxDecoration(
+          color: isMe ? Colors.blueAccent : const Color(0xFF3A3B3C),
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
-            bottomRight: Radius.circular(2),
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isMe ? 16 : 2),
+            bottomRight: Radius.circular(isMe ? 2 : 16),
           ),
         ),
         child: Column(
