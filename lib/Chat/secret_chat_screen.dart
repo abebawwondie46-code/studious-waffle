@@ -7,7 +7,7 @@ import 'package:kuanyngne/Chat/biometric_service.dart';
 class SecretChatScreen extends StatefulWidget {
   final String receiverId;
   final String receiverName;
-  final String? receiverAvatarUrl; // 🌟 የፕሮፋይል ፎቶ ዩአርኤል መቀበያ
+  final String? receiverAvatarUrl;
 
   const SecretChatScreen({
     Key? key,
@@ -35,12 +35,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
+  String? _fetchedAvatarUrl;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadCustomTaps();
+    _fetchReceiverProfile(); 
     _fetchMessages();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
@@ -80,6 +82,35 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     setState(() {
       _requiredTaps = prefs.getInt('secret_knock_taps') ?? 3;
     });
+  }
+
+  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles/users ቴብል አምጥቶ ማሳያ ሎጂክ
+  Future<void> _fetchReceiverProfile() async {
+    if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
+      setState(() {
+        _fetchedAvatarUrl = widget.receiverAvatarUrl;
+      });
+      return;
+    }
+
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select('avatar_url, profile_pic, photo_url')
+          .eq('id', widget.receiverId)
+          .maybeSingle();
+
+      if (response != null && mounted) {
+        final url = response['avatar_url'] ?? response['profile_pic'] ?? response['photo_url'];
+        if (url != null && url.toString().isNotEmpty) {
+          setState(() {
+            _fetchedAvatarUrl = url.toString();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('PROFILE FETCH ERROR: $e');
+    }
   }
 
   Future<void> _fetchMessages() async {
@@ -370,14 +401,18 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         backgroundColor: const Color(0xFF242526),
         title: Row(
           children: [
-            // 🌟 የፕሮፋይል ፎቶ ከሊንክ የሚመጣበት (ስቶሬጅ የማይበላ)
+            // 🌟 የፕሮፋይል ፎቶው ልክ በፕሮፋይል ገጹ ላይ እንደሚታየው ፎቶ ሆኖ እንዲወጣ የተደረገበት
             CircleAvatar(
+              radius: 20,
               backgroundColor: Colors.blueAccent,
-              backgroundImage: (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty)
-                  ? NetworkImage(widget.receiverAvatarUrl!) as ImageProvider
+              backgroundImage: (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty)
+                  ? NetworkImage(_fetchedAvatarUrl!)
                   : null,
-              child: (widget.receiverAvatarUrl == null || widget.receiverAvatarUrl!.isEmpty)
-                  ? const Icon(Icons.person, color: Colors.white)
+              child: (_fetchedAvatarUrl == null || _fetchedAvatarUrl!.isEmpty)
+                  ? Text(
+                      widget.receiverName.isNotEmpty ? widget.receiverName[0].toUpperCase() : '?',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    )
                   : null,
             ),
             const SizedBox(width: 10),
