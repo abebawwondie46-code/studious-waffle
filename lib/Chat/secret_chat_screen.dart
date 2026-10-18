@@ -386,11 +386,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   .stream(primaryKey: ['id'])
                   .order('created_at', ascending: true),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
+                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                  return const SizedBox.shrink();
                 }
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                // 🌟 የሰዓቱ ምልክት ቢበራም ባንበራም ዳታቤዙ ውስጥ ያሉት መልእክቶች በሙሉ በቋሚነት እንዲታዩ ይደረጋል
+                final messages = snapshot.data ?? [];
+
+                if (messages.isEmpty) {
                   return const Center(
                     child: Text(
                       'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
@@ -398,8 +401,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     ),
                   );
                 }
-
-                final messages = snapshot.data!;
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
