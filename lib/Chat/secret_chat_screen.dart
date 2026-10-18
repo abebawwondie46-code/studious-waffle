@@ -37,16 +37,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
   
-  late String _currentReceiverName;
+  String _currentReceiverName = '';
   String? _fetchedAvatarUrl;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
-    // ከ Home/Add Friend ገጽ ተልኮ የመጣውን ስምና ፎቶ በቋሚነት መያዝ
-    _currentReceiverName = widget.receiverName.isNotEmpty ? widget.receiverName : 'ተጠቃሚ';
+    _currentReceiverName = widget.receiverName;
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
     _loadCustomTaps();
@@ -91,35 +89,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የቪዲዮውን ባለቤት ፕሮፋይል ከ Supabase መፈለጊያ (ካገኘው ያሻሽለዋል፤ ካላገኘው የመጀመሪያውን ፎቶ አያጠፋም)
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
-      Map<String, dynamic>? profileData;
-
-      if (widget.receiverId.isNotEmpty) {
-        final parsedId = int.tryParse(widget.receiverId);
-        if (parsedId != null) {
-          profileData = await _supabase
-              .from('profiles')
-              .select()
-              .eq('id', parsedId)
-              .maybeSingle();
-        } else {
-          profileData = await _supabase
-              .from('profiles')
-              .select()
-              .eq('id', widget.receiverId)
-              .maybeSingle();
-        }
-      }
-
-      if (profileData == null && widget.receiverName.isNotEmpty) {
-        profileData = await _supabase
-            .from('profiles')
-            .select()
-            .eq('full_name', widget.receiverName)
-            .maybeSingle();
-      }
+      final profileData = await _supabase
+          .from('profiles')
+          .select()
+          .maybeSingle();
 
       if (profileData != null && mounted) {
         final fullName = profileData['full_name'];
@@ -176,6 +151,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
+  // 🌟 ስሙንና ፎቶውን ሲነኩት ወደ ፕሮፋይል ገጽ ወይም የፕሮፋይል ዝርዝር መረጃ የሚወስደው ፈንክሽን
   void _navigateToUserProfile() {
     ImageProvider? imageProvider;
     if (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty) {
@@ -405,7 +381,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     try {
       await _supabase.from('messages').insert({
         'sender_id': '11111111-1111-1111-1111-111111111111',
-        'receiver_id': widget.receiverId.isNotEmpty ? widget.receiverId : '22222222-2222-2222-2222-222222222222',
+        'receiver_id': '22222222-2222-2222-2222-222222222222',
         'content': text,
         'created_at': DateTime.now().toIso8601String(),
       });
@@ -504,6 +480,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       appBar: AppBar(
         backgroundColor: const Color(0xFF242526),
         elevation: 1,
+        // 🌟 ስሙ እና ፎቶው ያለበት ሙሉ ክፍል ሲነካ ወደ ፕሮፋይል ገጽ እንዲወስድ የተደረገበት
         title: InkWell(
           onTap: _navigateToUserProfile,
           borderRadius: BorderRadius.circular(8),
