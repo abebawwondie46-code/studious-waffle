@@ -89,21 +89,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን እና ስሙን ከ Supabase profiles እና SharedPreferences በትክክል የሚያመጣው ክፍል
+  // 🌟 ከ Supabase በቀጥታ avatar_url እና full_name ამოტን የሚያመጣው አስተማማኝ ክፍል
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // 1. መጀመሪያ ከ SharedPreferences መፈለግ
-      final String? savedAvatar = prefs.getString('receiver_avatar_${widget.receiverId}') ?? 
-                                  prefs.getString('current_user_avatar');
-      if (savedAvatar != null && savedAvatar.isNotEmpty) {
-        setState(() {
-          _fetchedAvatarUrl = savedAvatar;
-        });
-      }
-
-      // 2. ከ Supabase 'profiles' ቴብል ያለ ማጣሪያ (Filter) የመጀመሪያውን ሮው መውሰድ
       final profileData = await _supabase
           .from('profiles')
           .select('full_name, avatar_url, profile_pic, photo_url')
@@ -119,7 +107,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           }
           if (url != null && url.toString().isNotEmpty) {
             _fetchedAvatarUrl = url.toString();
-            prefs.setString('receiver_avatar_${widget.receiverId}', url.toString());
           }
         });
       }
@@ -412,7 +399,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       );
     }
 
-    // 🌟 አቫታር ፕሮቫይደር (NetworkImage ወይም FileImage)
+    // 🌟 አቫታር ፕሮቫይደር (NetworkImage በትክክል እንዲነበብ የተደረገበት)
     ImageProvider? imageProvider;
     if (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty) {
       if (_fetchedAvatarUrl!.startsWith('http://') || _fetchedAvatarUrl!.startsWith('https://')) {
