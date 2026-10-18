@@ -37,7 +37,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
   
-  String _currentReceiverName = '';
+  late String _currentReceiverName;
   String? _fetchedAvatarUrl;
 
   @override
@@ -45,8 +45,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // መጀመሪያ ከ Home ገጽ የተላከውን ስም እና ፎቶ መያዝ
-    _currentReceiverName = widget.receiverName;
+    // ከ ቪዲዮ ገጽ/Home የተላከውን ስም እና ፎቶ ወዲያውኑ መያዝ (እንዳይጠፋ)
+    _currentReceiverName = widget.receiverName.isNotEmpty ? widget.receiverName : 'ተጠቃሚ';
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
     _loadCustomTaps();
@@ -91,12 +91,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 ከተላከው receiverId ወይም receiverName ጋር የሚስማማውን ፕሮፋይል ማለየት
+  // 🌟 ፎቶ እንዳይጠፋ ማረጋገጫ እና ከ Supabase መረጃ ማምጫ
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
       Map<String, dynamic>? profileData;
 
-      // 1. በ receiverId መፈለግ (ቁጥር ወይም UUID ከሆነ)
       if (widget.receiverId.isNotEmpty) {
         final parsedId = int.tryParse(widget.receiverId);
         if (parsedId != null) {
@@ -114,7 +113,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         }
       }
 
-      // 2. በ receiverId ካልተገኘ በ full_name መፈለግ
       if (profileData == null && widget.receiverName.isNotEmpty) {
         profileData = await _supabase
             .from('profiles')
@@ -123,7 +121,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             .maybeSingle();
       }
 
-      // 3. ዳታቤዝ ውስጥ ከተገኘ አዲሱን ስም እና ፎቶ መቀየር
+      // በ Supabase ካልተገኘ ከ profiles ቴብል የመጀመሪያውን ሮው መውሰድ (Fallback)
+      profileData ??= await _supabase.from('profiles').select().maybeSingle();
+
       if (profileData != null && mounted) {
         final fullName = profileData['full_name'];
         final url = profileData['avatar_url'] ?? profileData['profile_pic'] ?? profileData['photo_url'];
@@ -132,6 +132,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           if (fullName != null && fullName.toString().isNotEmpty) {
             _currentReceiverName = fullName.toString();
           }
+          // አዲስ ፎቶ በዳታቤዝ ከተገኘ ብቻ ይተካዋል፤ ካልሆነ የቀደመውን አይሰርዘውም
           if (url != null && url.toString().isNotEmpty) {
             _fetchedAvatarUrl = url.toString().trim();
           }
@@ -153,7 +154,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
       if (mounted) {
         setState(() {
-          _messages = List<Map<String, dynamic>>.from(response);
+          _messages = List<Map<String, dynamic>>::from(response);
           _isLoading = false;
         });
       }
@@ -179,7 +180,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 የፕሮፋይል ገጽ/ካርድ ማሳያ
   void _navigateToUserProfile() {
     ImageProvider? imageProvider;
     if (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty) {
@@ -409,7 +409,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     try {
       await _supabase.from('messages').insert({
         'sender_id': '11111111-1111-1111-1111-111111111111',
-        'receiver_id': '22222222-2222-2222-2222-222222222222',
+        'receiver_id': widget.receiverId.isNotEmpty ? widget.receiverId : '22222222-2222-2222-2222-222222222222',
         'content': text,
         'created_at': DateTime.now().toIso8601String(),
       });
