@@ -85,7 +85,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን በቀጥታ ከ widget እና ከ SharedPreferences (በመጀመሪያ ከተቀመጠው) የሚያመጣበት አስተማማኝ መንገድ
+  // 🌟 የፕሮፋይል ፎቶውን በ id እና በ user_id አማራጮች በመፈለግ በትክክል የሚያመጣው ክፍል
   Future<void> _fetchReceiverProfile() async {
     // 1. መጀመሪያ ከወደ ውጭ (Widget) የተላለፈውን ፎቶ ሊንክ ማረጋገጥ
     if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
@@ -109,12 +109,25 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         return;
       }
 
-      // 3. ከ Supabase 'profiles' ቴብል የተጠቃሚውን መለያ (id) በመጠቀም መፈለግ
-      final profileData = await _supabase
-          .from('profiles')
-          .select('avatar_url, profile_pic, photo_url')
-          .eq('id', widget.receiverId)
-          .maybeSingle();
+      // 3. ከ Supabase 'profiles' ቴብል በመጀመሪያ በ 'id' ከዛ ካልሰራ በ 'user_id' መፈለግ
+      Map<String, dynamic>? profileData;
+      try {
+        profileData = await _supabase
+            .from('profiles')
+            .select('avatar_url, profile_pic, photo_url')
+            .eq('id', widget.receiverId)
+            .maybeSingle();
+      } catch (_) {
+        try {
+          profileData = await _supabase
+              .from('profiles')
+              .select('avatar_url, profile_pic, photo_url')
+              .eq('user_id', widget.receiverId)
+              .maybeSingle();
+        } catch (e2) {
+          debugPrint('Profile query error: $e2');
+        }
+      }
 
       if (profileData != null && mounted) {
         final url = profileData['avatar_url'] ?? profileData['profile_pic'] ?? profileData['photo_url'];
