@@ -85,21 +85,23 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles ቴብል እና ከ SharedPreferences በትክክል የሚያመጣው ፈንክሽን
+  // 🌟 የፕሮፋይል ፎቶውን በቀጥታ ከ widget እና ከ SharedPreferences (በመጀመሪያ ከተቀመጠው) የሚያመጣበት አስተማማኝ መንገድ
   Future<void> _fetchReceiverProfile() async {
-    try {
-      // 1. በመጀመሪያ በ widget በኩል የተላከውን ቼክ ማድረግ
-      if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
-        setState(() {
-          _fetchedAvatarUrl = widget.receiverAvatarUrl;
-        });
-        return;
-      }
+    // 1. መጀመሪያ ከወደ ውጭ (Widget) የተላለፈውን ፎቶ ሊንክ ማረጋገጥ
+    if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
+      setState(() {
+        _fetchedAvatarUrl = widget.receiverAvatarUrl;
+      });
+      return;
+    }
 
-      // 2. ከ SharedPreferences በመፈለግ (current_user_avatar ወይም ለዚህ ተጠቃሚ የተቀመጠውን)
+    try {
       final prefs = await SharedPreferences.getInstance();
-      final savedAvatar = prefs.getString('current_user_avatar') ?? prefs.getString('receiver_avatar_${widget.receiverId}');
       
+      // 2. በ SharedPreferences ውስጥ ለዚህ ተጠቃሚ የተከማቸ ፎቶ ካለ መውሰድ
+      final String? savedAvatar = prefs.getString('receiver_avatar_${widget.receiverId}') ?? 
+                                  prefs.getString('current_user_avatar');
+
       if (savedAvatar != null && savedAvatar.isNotEmpty) {
         setState(() {
           _fetchedAvatarUrl = savedAvatar;
@@ -107,10 +109,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         return;
       }
 
-      // 3. ከ Supabase 'profiles' ቴብል መፈለግ (እንደ CommentsBottomSheet ሎጂክ)
+      // 3. ከ Supabase 'profiles' ቴብል የተጠቃሚውን መለያ (id) በመጠቀም መፈለግ
       final profileData = await _supabase
           .from('profiles')
-          .select('full_name, avatar_url, profile_pic, photo_url')
+          .select('avatar_url, profile_pic, photo_url')
+          .eq('id', widget.receiverId)
           .maybeSingle();
 
       if (profileData != null && mounted) {
@@ -119,7 +122,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           setState(() {
             _fetchedAvatarUrl = url.toString();
           });
-          // ለቀጣይ ጊዜ በፍጥነት እንዲያገኘው ማስቀመጥ
           await prefs.setString('receiver_avatar_${widget.receiverId}', url.toString());
         }
       }
@@ -410,7 +412,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       );
     }
 
-    // 🌟 የፕሮፋይል ፎቶ አቫታር ፕሮቫይደር (NetworkImage ወይም FileImage)
+    // 🌟 አቫታር ፕሮቫይደርን በትክክል መፍጠር (NetworkImage ወይም FileImage)
     ImageProvider? imageProvider;
     if (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty) {
       if (_fetchedAvatarUrl!.startsWith('http://') || _fetchedAvatarUrl!.startsWith('https://')) {
@@ -426,7 +428,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         backgroundColor: const Color(0xFF242526),
         title: Row(
           children: [
-            // 🌟 የፕሮፋይል ፎቶ በ AppBar ላይ ከሰርቨር ወይም ሎካል ማከማቻ በመጣው ትክክለኛ ምስል እንዲታይ የተደረገበት
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.blueAccent,
