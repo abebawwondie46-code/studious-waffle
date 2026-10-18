@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kuanyngne/Chat/biometric_service.dart';
-import 'screens/profile_screen.dart'; // <--- ትክክለኛው የፕሮፋይል ፋይል አስመጪ
 
 class SecretChatScreen extends StatefulWidget {
   final String receiverId;
@@ -152,13 +151,71 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 ስሙንና ፎቶውን ሲነኩት በቀጥታ ወደ ProfileScreen የሚወስድበት ትክክለኛ ኮድ
+  // 🌟 ስሙንና ፎቶውን ሲነኩት የፕሮፋይል ዝርዝር መረጃ በታች በኩል እንዲወጣ የሚያደርግ ደህንነቱ የተጠበቀ ፈንክሽን
   void _navigateToUserProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ProfileScreen(),
+    ImageProvider? imageProvider;
+    if (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty) {
+      if (_fetchedAvatarUrl!.startsWith('http://') || _fetchedAvatarUrl!.startsWith('https://')) {
+        imageProvider = NetworkImage(_fetchedAvatarUrl!);
+      } else if (File(_fetchedAvatarUrl!).existsSync()) {
+        imageProvider = FileImage(File(_fetchedAvatarUrl!));
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF242526),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              CircleAvatar(
+                radius: 45,
+                backgroundColor: Colors.blueAccent,
+                backgroundImage: imageProvider,
+                child: imageProvider == null
+                    ? Text(
+                        _currentReceiverName.isNotEmpty ? _currentReceiverName[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _currentReceiverName,
+                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'ተጠቃሚ (User Profile)',
+                style: TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: Colors.white12),
+              const ListTile(
+                leading: Icon(Icons.shield, color: Colors.greenAccent),
+                title: Text('ደህንነት', style: TextStyle(color: Colors.white)),
+                subtitle: Text('ይህ ቻት በከፍተኛ ምስጢራዊነት የተቆለፈ ነው', style: TextStyle(color: Colors.white54, fontSize: 12)),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
     );
   }
 
