@@ -29,12 +29,25 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   int _tapCount = 0; 
   int _requiredTaps = 3; 
   Timer? _tapResetTimer; 
+  Timer? _pollingTimer; // 🌟 መልእክቶችን በየሰከንዱ የሚጭን timer
+
+  List<Map<String, dynamic>> _messages = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadCustomTaps();
+    _fetchMessages(); // 🌟 ሲከፈት መልእክቶችን ማምጣት
+
+    // 🌟 በየ 2 ሰከንዱ ዳታቤዙን እያየ አዳዲስ መልእክቶችን በራስክ ሰር የሚያመጣ ፖሊንግ
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_isUnlocked) {
+        _fetchMessages();
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _authenticateUser();
     });
@@ -44,6 +57,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tapResetTimer?.cancel();
+    _pollingTimer?.cancel(); // 🌟 ሰርቪሱን መዝጋት
     _messageController.dispose();
     super.dispose();
   }
@@ -65,6 +79,30 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     setState(() {
       _requiredTaps = prefs.getInt('secret_knock_taps') ?? 3;
     });
+  }
+
+  // 🌟 ከዳታቤዝ መልእክቶችን በቀጥታ የሚጭን ፋንክሽን
+  Future<void> _fetchMessages() async {
+    try {
+      final response = await _supabase
+          .from('messages')
+          .select()
+          .order('created_at', ascending: true);
+
+      if (mounted) {
+        setState(() {
+          _messages = List<Map<String, dynamic>>.from(response);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('FETCH ERROR: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   String _formatTime(String? createdAt) {
@@ -232,6 +270,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
+  // 🌟 መልእክት ሲላክ ወዲያውኑ ወደ ዳታቤዝ አስገብቶ ስክሪኑን ማደስ
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -245,6 +284,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'content': text,
         'created_at': DateTime.now().toIso8601String(),
       });
+      
+      // ልኮ እንደጨረሰ ወዲያውኑ መልእክቶቹን እንደገና መጫን
+      await _fetchMessages();
       debugPrint('መልእክት በተሳካ ሁኔታ ተልኳል!');
     } catch (e) {
       debugPrint('SUPABASE INSERT ERROR: $e');
@@ -339,7 +381,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.receiverName, style: const TextStyle(fontSize: 16, color: Colors.white)),
-                const Text('መደበኛ ቻት', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                const Text('መደበኛ ቻት (በቋሚነት የሚታይ)', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
               ],
             ),
           ],
@@ -360,41 +402,27 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _supabase
-                  .from('messages')
-                  .stream(primaryKey: ['id'])
-                  .order('created_at', ascending: true),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
-                }
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
+                : _messages.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
+                          style: TextStyle(color: Colors.white54, fontSize: 14),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = _messages[index];
+                          final content = msg['content']?.toString() ?? '';
+                          final timeStr = _formatTime(msg['created_at']?.toString());
+                          final isMe = index % 2 == 0; 
 
-                final messages = snapshot.data ?? [];
-
-                if (messages.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
-                      style: TextStyle(color: Colors.white54, fontSize: 14),
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = messages[index];
-                    final content = msg['content']?.toString() ?? '';
-                    final timeStr = _formatTime(msg['created_at']?.toString());
-                    final isMe = index % 2 == 0; 
-
-                    return _buildMessageBubble(content, isMe, timeStr);
-                  },
-                );
-              },
-            ),
+                          return _buildMessageBubble(content, isMe, timeStr);
+                        },
+                      ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
