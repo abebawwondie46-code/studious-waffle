@@ -29,7 +29,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   int _tapCount = 0; 
   int _requiredTaps = 3; 
   Timer? _tapResetTimer; 
-  Timer? _pollingTimer; // 🌟 መልእክቶችን በየሰከንዱ የሚጭን timer
+  Timer? _pollingTimer;
 
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
@@ -39,9 +39,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadCustomTaps();
-    _fetchMessages(); // 🌟 ሲከፈት መልእክቶችን ማምጣት
+    _fetchMessages();
 
-    // 🌟 በየ 2 ሰከንዱ ዳታቤዙን እያየ አዳዲስ መልእክቶችን በራስክ ሰር የሚያመጣ ፖሊንግ
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (_isUnlocked) {
         _fetchMessages();
@@ -57,7 +56,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tapResetTimer?.cancel();
-    _pollingTimer?.cancel(); // 🌟 ሰርቪሱን መዝጋት
+    _pollingTimer?.cancel();
     _messageController.dispose();
     super.dispose();
   }
@@ -81,7 +80,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 ከዳታቤዝ መልእክቶችን በቀጥታ የሚጭን ፋንክሽን
   Future<void> _fetchMessages() async {
     try {
       final response = await _supabase
@@ -270,7 +268,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 መልእክት ሲላክ ወዲያውኑ ወደ ዳታቤዝ አስገብቶ ስክሪኑን ማደስ
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -278,6 +275,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _messageController.clear();
 
     try {
+      // እርስዎ የላኩት መልእክት በራስዎ መለያ (sender_id) ይመዝገባል
       await _supabase.from('messages').insert({
         'sender_id': '11111111-1111-1111-1111-111111111111',
         'receiver_id': '22222222-2222-2222-2222-222222222222',
@@ -285,7 +283,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'created_at': DateTime.now().toIso8601String(),
       });
       
-      // ልኮ እንደጨረሰ ወዲያውኑ መልእክቶቹን እንደገና መጫን
       await _fetchMessages();
       debugPrint('መልእክት በተሳካ ሁኔታ ተልኳል!');
     } catch (e) {
@@ -417,8 +414,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         itemBuilder: (context, index) {
                           final msg = _messages[index];
                           final content = msg['content']?.toString() ?? '';
+                          final senderId = msg['sender_id']?.toString() ?? '';
                           final timeStr = _formatTime(msg['created_at']?.toString());
-                          final isMe = index % 2 == 0; 
+                          
+                          // 🌟 ልክ እንደ መደበኛ ሜሴንጀር፡ እርስዎ የላኩት ከሆነ በቀኝ (blue)፣ ሌላኛዋ/ሌላኛው ከላኩ በግራ (dark grey)
+                          final isMe = (senderId == '11111111-1111-1111-1111-111111111111');
 
                           return _buildMessageBubble(content, isMe, timeStr);
                         },
