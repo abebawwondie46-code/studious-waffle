@@ -37,7 +37,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
   
-  // 🌟 እንደ ExploreFeedScreen ሁሉ ስሙን እና አቫታሩን የሚይዙ ተለዋዋጮች
   String _currentReceiverName = '';
   String? _fetchedAvatarUrl;
 
@@ -90,21 +89,51 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 እንደ ExploreFeedScreen አሰራር ከ Supabase profiles ቴብል በትክክል ስሙን እና ፎቶውን ማምጣት
+  // 🌟 የፕሮፋይል ፎቶውን እና ስሙን ከ SharedPreferences እና ከ Supabase (በ id እና user_id) አስተማማኝ በሆነ መንገድ የሚያመጣው ክፍል
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
-      final profileData = await _supabase
-          .from('profiles')
-          .select('full_name, avatar_url, profile_pic, photo_url')
-          .eq('id', widget.receiverId)
-          .maybeSingle();
+      final prefs = await SharedPreferences.getInstance();
+      
+      // 1. መጀመሪያ ከ SharedPreferences መፈለግ (ለዚህ ተጠቃሚ የተከማቸ ፎቶ)
+      final String? savedAvatar = prefs.getString('receiver_avatar_${widget.receiverId}') ?? 
+                                  prefs.getString('current_user_avatar');
+      if (savedAvatar != null && savedAvatar.isNotEmpty) {
+        setState(() {
+          _fetchedAvatarUrl = savedAvatar;
+        });
+      }
+
+      // 2. ከ Supabase profiles ቴብል መፈለግ (በ id ወይም user_id)
+      Map<String, dynamic>? profileData;
+      try {
+        profileData = await _supabase
+            .from('profiles')
+            .select('full_name, avatar_url, profile_pic, photo_url')
+            .eq('id', widget.receiverId)
+            .maybeSingle();
+      } catch (_) {
+        try {
+          profileData = await _supabase
+              .from('profiles')
+              .select('full_name, avatar_url, profile_pic, photo_url')
+              .eq('user_id', widget.receiverId)
+              .maybeSingle();
+        } catch (e2) {
+          debugPrint('Profile query fallback error: $e2');
+        }
+      }
 
       if (profileData != null && mounted) {
+        final fullName = profileData['full_name'];
         final url = profileData['avatar_url'] ?? profileData['profile_pic'] ?? profileData['photo_url'];
+        
         setState(() {
-          _currentReceiverName = profileData['full_name'] ?? widget.receiverName;
+          if (fullName != null && fullName.toString().isNotEmpty) {
+            _currentReceiverName = fullName.toString();
+          }
           if (url != null && url.toString().isNotEmpty) {
             _fetchedAvatarUrl = url.toString();
+            prefs.setString('receiver_avatar_${widget.receiverId}', url.toString());
           }
         });
       }
