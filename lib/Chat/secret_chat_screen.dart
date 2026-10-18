@@ -36,15 +36,20 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
+  
+  // 🌟 እንደ ExploreFeedScreen ሁሉ ስሙን እና አቫታሩን የሚይዙ ተለዋዋጮች
+  String _currentReceiverName = '';
   String? _fetchedAvatarUrl;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _currentReceiverName = widget.receiverName;
+    _fetchedAvatarUrl = widget.receiverAvatarUrl;
+    
     _loadCustomTaps();
-    _fetchReceiverProfile(); 
-    _fetchMessages();
+    _fetchReceiverProfileAndMessages(); 
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (_isUnlocked) {
@@ -85,62 +90,29 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን በ id እና በ user_id አማራጮች በመፈለግ በትክክል የሚያመጣው ክፍል
-  Future<void> _fetchReceiverProfile() async {
-    // 1. መጀመሪያ ከወደ ውጭ (Widget) የተላለፈውን ፎቶ ሊንክ ማረጋገጥ
-    if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
-      setState(() {
-        _fetchedAvatarUrl = widget.receiverAvatarUrl;
-      });
-      return;
-    }
-
+  // 🌟 እንደ ExploreFeedScreen አሰራር ከ Supabase profiles ቴብል በትክክል ስሙን እና ፎቶውን ማምጣት
+  Future<void> _fetchReceiverProfileAndMessages() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // 2. በ SharedPreferences ውስጥ ለዚህ ተጠቃሚ የተከማቸ ፎቶ ካለ መውሰድ
-      final String? savedAvatar = prefs.getString('receiver_avatar_${widget.receiverId}') ?? 
-                                  prefs.getString('current_user_avatar');
-
-      if (savedAvatar != null && savedAvatar.isNotEmpty) {
-        setState(() {
-          _fetchedAvatarUrl = savedAvatar;
-        });
-        return;
-      }
-
-      // 3. ከ Supabase 'profiles' ቴብል በመጀመሪያ በ 'id' ከዛ ካልሰራ በ 'user_id' መፈለግ
-      Map<String, dynamic>? profileData;
-      try {
-        profileData = await _supabase
-            .from('profiles')
-            .select('avatar_url, profile_pic, photo_url')
-            .eq('id', widget.receiverId)
-            .maybeSingle();
-      } catch (_) {
-        try {
-          profileData = await _supabase
-              .from('profiles')
-              .select('avatar_url, profile_pic, photo_url')
-              .eq('user_id', widget.receiverId)
-              .maybeSingle();
-        } catch (e2) {
-          debugPrint('Profile query error: $e2');
-        }
-      }
+      final profileData = await _supabase
+          .from('profiles')
+          .select('full_name, avatar_url, profile_pic, photo_url')
+          .eq('id', widget.receiverId)
+          .maybeSingle();
 
       if (profileData != null && mounted) {
         final url = profileData['avatar_url'] ?? profileData['profile_pic'] ?? profileData['photo_url'];
-        if (url != null && url.toString().isNotEmpty) {
-          setState(() {
+        setState(() {
+          _currentReceiverName = profileData['full_name'] ?? widget.receiverName;
+          if (url != null && url.toString().isNotEmpty) {
             _fetchedAvatarUrl = url.toString();
-          });
-          await prefs.setString('receiver_avatar_${widget.receiverId}', url.toString());
-        }
+          }
+        });
       }
     } catch (e) {
-      debugPrint('PROFILE FETCH ERROR: $e');
+      debugPrint('Profile fetch error: $e');
     }
+
+    await _fetchMessages();
   }
 
   Future<void> _fetchMessages() async {
@@ -425,7 +397,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       );
     }
 
-    // 🌟 አቫታር ፕሮቫይደርን በትክክል መፍጠር (NetworkImage ወይም FileImage)
+    // 🌟 አቫታር ፕሮቫይደር (NetworkImage ወይም FileImage)
     ImageProvider? imageProvider;
     if (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty) {
       if (_fetchedAvatarUrl!.startsWith('http://') || _fetchedAvatarUrl!.startsWith('https://')) {
@@ -447,7 +419,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               backgroundImage: imageProvider,
               child: imageProvider == null
                   ? Text(
-                      widget.receiverName.isNotEmpty ? widget.receiverName[0].toUpperCase() : '?',
+                      _currentReceiverName.isNotEmpty ? _currentReceiverName[0].toUpperCase() : '?',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     )
                   : null,
@@ -456,7 +428,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.receiverName, style: const TextStyle(fontSize: 16, color: Colors.white)),
+                Text(_currentReceiverName, style: const TextStyle(fontSize: 16, color: Colors.white)),
                 const Text('መደበኛ ቻት (በቋሚነት የሚታይ)', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
               ],
             ),
