@@ -85,9 +85,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles ቴብል እና ከ SharedPreferences ጭኖ የሚያመጣው ክፍል
+  // 🌟 የፕሮፋይል ፎቶውን ከ Supabase profiles ቴብል እና ከ SharedPreferences ጭኖ የሚያመጣው ትክክለኛ ክፍል
   Future<void> _fetchReceiverProfile() async {
-    // 1. በመጀመሪያ በ widget የተላከውን ቼክ ማድረግ
+    // 1. በመጀመሪያ በ widget በኩል የተላከውን ቼክ ማድረግ
     if (widget.receiverAvatarUrl != null && widget.receiverAvatarUrl!.isNotEmpty) {
       setState(() {
         _fetchedAvatarUrl = widget.receiverAvatarUrl;
@@ -96,9 +96,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
 
     try {
-      // 2. ከ SharedPreferences መፈለግ (እንደ ኮሜንት ስክሪኑ ሎጂክ)
       final prefs = await SharedPreferences.getInstance();
-      final savedAvatar = prefs.getString('current_user_avatar') ?? prefs.getString('receiver_avatar_${widget.receiverId}');
+      
+      // 2. ከ SharedPreferences በመፈለግ (current_user_avatar ወይም ለዚህ ተጠቃሚ የተቀመጠውን)
+      final savedAvatar = prefs.getString('receiver_avatar_${widget.receiverId}') ?? prefs.getString('current_user_avatar');
       if (savedAvatar != null && savedAvatar.isNotEmpty) {
         setState(() {
           _fetchedAvatarUrl = savedAvatar;
@@ -106,10 +107,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         return;
       }
 
-      // 3. ከ Supabase 'profiles' ቴብል መፈለግ
+      // 3. ከ Supabase 'profiles' ቴብል መፈለግ (እንደ CommentsBottomSheet ሎጂክ)
       final profileData = await _supabase
           .from('profiles')
-          .select('avatar_url, profile_pic, photo_url')
+          .select('full_name, avatar_url, profile_pic, photo_url')
           .maybeSingle();
 
       if (profileData != null && mounted) {
@@ -409,22 +410,28 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       );
     }
 
+    // 🌟 የፕሮፋይል ፎቶ አቫታር ፕሮቫይደር (NetworkImage ወይም FileImage)
+    ImageProvider? imageProvider;
+    if (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty) {
+      if (_fetchedAvatarUrl!.startsWith('http://') || _fetchedAvatarUrl!.startsWith('https://')) {
+        imageProvider = NetworkImage(_fetchedAvatarUrl!);
+      } else if (File(_fetchedAvatarUrl!).existsSync()) {
+        imageProvider = FileImage(File(_fetchedAvatarUrl!));
+      }
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF18191A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF242526),
         title: Row(
           children: [
-            // 🌟 የፕሮፋይል ፎቶ ከቅዱስ ዩአርኤል ወይም ፋይል የሚመጣበት እና የሚታይበት ቋሚ አቫታር
+            // 🌟 የፕሮፋይል ፎቶ በ AppBar ላይ ከሰርቨር ወይም ሎካል ማከማቻ በመጣው ትክክለኛ ምስል እንዲታይ የተደረገበት
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.blueAccent,
-              backgroundImage: (_fetchedAvatarUrl != null && _fetchedAvatarUrl!.isNotEmpty)
-                  ? (_fetchedAvatarUrl!.startsWith('http://') || _fetchedAvatarUrl!.startsWith('https://')
-                      ? NetworkImage(_fetchedAvatarUrl!)
-                      : FileImage(File(_fetchedAvatarUrl!)) as ImageProvider)
-                  : null,
-              child: (_fetchedAvatarUrl == null || _fetchedAvatarUrl!.isEmpty)
+              backgroundImage: imageProvider,
+              child: imageProvider == null
                   ? Text(
                       widget.receiverName.isNotEmpty ? widget.receiverName[0].toUpperCase() : '?',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
