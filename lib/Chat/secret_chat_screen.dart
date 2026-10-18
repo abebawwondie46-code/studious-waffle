@@ -45,7 +45,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // ከ ቪዲዮ ገጽ/Home የተላከውን ስም እና ፎቶ ወዲያውኑ መያዝ (እንዳይጠፋ)
     _currentReceiverName = widget.receiverName.isNotEmpty ? widget.receiverName : 'ተጠቃሚ';
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
@@ -91,7 +90,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 ፎቶ እንዳይጠፋ ማረጋገጫ እና ከ Supabase መረጃ ማምጫ
   Future<void> _fetchReceiverProfileAndMessages() async {
     try {
       Map<String, dynamic>? profileData;
@@ -121,7 +119,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             .maybeSingle();
       }
 
-      // በ Supabase ካልተገኘ ከ profiles ቴብል የመጀመሪያውን ሮው መውሰድ (Fallback)
       profileData ??= await _supabase.from('profiles').select().maybeSingle();
 
       if (profileData != null && mounted) {
@@ -132,7 +129,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           if (fullName != null && fullName.toString().isNotEmpty) {
             _currentReceiverName = fullName.toString();
           }
-          // አዲስ ፎቶ በዳታቤዝ ከተገኘ ብቻ ይተካዋል፤ ካልሆነ የቀደመውን አይሰርዘውም
           if (url != null && url.toString().isNotEmpty) {
             _fetchedAvatarUrl = url.toString().trim();
           }
@@ -154,7 +150,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
       if (mounted) {
         setState(() {
-          _messages = List<Map<String, dynamic>>::from(response);
+          // 🌟 ስህተቱ የተስተካከለበት መስመር (ትክክለኛ Dart Type Cast)
+          _messages = List<Map<String, dynamic>>.from(response);
           _isLoading = false;
         });
       }
@@ -683,29 +680,4 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           color: isMe ? Colors.blueAccent : const Color(0xFF3A3B3C),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              text,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
-            ),
-            if (time.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                time,
-                style: const TextStyle(color: Colors.white60, fontSize: 10),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
+            topRight: const Radius.
