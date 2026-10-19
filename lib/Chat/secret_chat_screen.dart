@@ -186,33 +186,17 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     setState(() {
       if (_addedUserIds.contains(targetUserId)) {
         _addedUserIds.remove(targetUserId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ተጠቃሚው ከዝርዝር ጠፍቷል (Removed) 🗑️'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
-          ),
-        );
       } else {
         _addedUserIds.add(targetUserId);
         _currentReceiverName = targetName; 
         _fetchedAvatarUrl = targetAvatar; 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$targetName ጓደኛ ሆኗል! (Added) 🤝'),
-            backgroundColor: Colors.blueAccent,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
       }
     });
 
     await prefs.setStringList('added_friends_list', _addedUserIds.toList());
   }
 
-  // 🌟 መልእክት የመሰረዣ (Delete Message) ፈንክሽን
+  // 🌟 መልእክት ከዳታቤዝ የሚያጠፋ ፈንክሽን
   Future<void> _deleteMessage(dynamic messageId) async {
     try {
       await _supabase
@@ -221,62 +205,67 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           .eq('id', messageId);
 
       await _fetchMessages();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('መልእክቱ ተሰርዟል! 🗑️'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 1500),
-          ),
-        );
-      }
     } catch (e) {
       debugPrint('DELETE ERROR: $e');
     }
   }
 
-  // 🌟 መልእክት ላይ ጫን ሲባል ሰርዝ አዶ እንዲመጣ የሚያደርግ ዳይሎግ (Delete Dialog)
-  void _showMessageOptions(Map<String, dynamic> msg) {
+  // 🌟 በስክሪንሾቱ መሰረት በትክክል "Delete Message" የሚል ዳይሎግ የሚያሳይ ፈንክሽን
+  void _confirmDeleteMessage(Map<String, dynamic> msg) {
     final messageId = msg['id'];
-    final content = msg['content']?.toString() ?? '';
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: const Color(0xFF1E1F22),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'መልእክት: "$content"',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2B2B2E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Delete Message',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to delete this message?',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+          actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const Divider(color: Colors.white24, height: 1),
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                title: const Text('ይህንን መልእክት ሰርዝ (Delete)', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _deleteMessage(messageId);
-                },
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteMessage(messageId);
+              },
+              child: const Text(
+                'Delete',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              ListTile(
-                leading: const Icon(Icons.close_rounded, color: Colors.white70),
-                title: const Text('ይቅር (Cancel)', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -398,17 +387,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   _tapCount = 0;
                 });
                 Navigator.pop(context);
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'የድብቅ ምት ወደ $tempTaps ጊዜ ተቀይሯል! 🔒',
-                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                    ),
-                    backgroundColor: Colors.white,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
               },
               child: const Text('አስቀምጥ', style: TextStyle(color: Colors.white)),
             ),
@@ -802,16 +780,16 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             
                             final isMe = (senderId == '11111111-1111-1111-1111-111111111111');
 
-                            // 🌟 መልእክቱ ላይ ጫን (Long Press) ሲደረግ _showMessageOptions እንዲጠራ ተደርጓል
+                            // 🌟 መልእክት ላይ ጫን (Long Press) ሲደረግ _confirmDeleteMessage ይጠራል
                             return GestureDetector(
-                              onLongPress: () => _showMessageOptions(msg),
+                              onLongPress: () => _confirmDeleteMessage(msg),
                               child: _buildMessageBubble(content, isMe, timeStr),
                             );
                           },
                         ),
             ),
 
-            // 💌 ፅዱና ውብ የሆነ የመልእክት መጻፊያ ሳጥን
+            // 💌 የመልእክት መጻፊያ ሳጥን
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: const BoxDecoration(
