@@ -30,6 +30,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
   static bool _hasEnteredChatOnce = false; 
+  bool _isFirstTimeUser = true; // 🌟 የመጀመሪያ ጊዜ መሆኑን መከታተያ
 
   int _tapCount = 0; 
   int _requiredTaps = 3; 
@@ -53,6 +54,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _currentReceiverName = widget.receiverName;
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
+    _checkFirstTimeStatus();
     _loadCustomTaps();
     _loadAddedFriends(); 
     _fetchReceiverProfileAndMessages(); 
@@ -80,7 +82,33 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.dispose();
   }
 
-  // 🌐 Robust Internet Connection Check without dependency conflict
+  // 🌟 አፑ የመጀመሪያ ጊዜ መከፈቱን በ SharedPreferences ማረጋገጫ
+  Future<void> _checkFirstTimeStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool hasCompletedFirstEntry = prefs.getBool('has_completed_first_secret_entry') ?? false;
+    if (mounted) {
+      setState(() {
+        _isFirstTimeUser = !hasCompletedFirstEntry;
+        if (hasCompletedFirstEntry) {
+          _hasEnteredChatOnce = true;
+        }
+      });
+    }
+  }
+
+  // 🌟 አፑን ለመጀመሪያ ጊዜ በተሳካ ሁኔታ ሲከፍተው ሁኔታውን መመዝገቢያ
+  Future<void> _markFirstTimeCompleted() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_completed_first_secret_entry', true);
+    if (mounted) {
+      setState(() {
+        _isFirstTimeUser = false;
+        _hasEnteredChatOnce = true;
+      });
+    }
+  }
+
+  // 🌐 Internet Check
   void _initInternetCheck() {
     _connectivityTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       try {
@@ -341,11 +369,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   }
 
   Future<void> _verifyAndOpenSettings() async {
-    if (!_hasEnteredChatOnce) {
+    // 🌟 የመጀመሪያ ጊዜ ተጠቃሚ ከሆነ ወይም አንዴ ከገባ ሴቲንግ መክፈት ይችላል
+    if (!_hasEnteredChatOnce && !_isFirstTimeUser) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'You must open and complete the chat first! 🚫',
+            'You must unlock and complete the chat first! 🚫',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.white,
@@ -480,9 +509,49 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       if (_tapCount >= _requiredTaps) {
         _tapResetTimer?.cancel();
         _isUnlocked = true; 
-        _hasEnteredChatOnce = true; 
+        _markFirstTimeCompleted(); // 🌟 ለመጀመሪያ ጊዜ መግባቱን ይመዝግቡ
       }
     });
+  }
+
+  // 🌟 የመጀመሪያ ጊዜ የመግቢያ ፍንጭ ማሳያ ዳያሎግ (First Time Entry Guide)
+  void _showFirstTimeGuide() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E3F),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.lightbulb_rounded, color: Colors.amberAccent, size: 28),
+            SizedBox(width: 10),
+            Text('First Time Entrance Hint', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'To open this Secret Chat:\n\n'
+              '1. Authenticate with Fingerprint.\n'
+              '2. Tap the screen secretly $_requiredTaps times rapidly.\n\n'
+              'This hint will disappear forever after your first successful entry!',
+              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0072FF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it! 👌', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _sendMessage() async {
@@ -518,6 +587,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
+            // 🌟 አፑ ገና አዲስ ዳውንሎድ ሲደረግ ብቻ የሚታይ የፍንጭ (First-Time Hint) አዝራር
+            if (_isFirstTimeUser)
+              IconButton(
+                icon: const Icon(Icons.help_outline_rounded, color: Colors.amberAccent, size: 24),
+                onPressed: _showFirstTimeGuide,
+                tooltip: 'First Time Entrance Hint',
+              ),
             IconButton(
               icon: const Icon(Icons.settings_outlined, color: Colors.white70),
               onPressed: _verifyAndOpenSettings,
@@ -578,6 +654,30 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     ),
                     textAlign: TextAlign.center,
                   ),
+
+                  // 🌟 አፑ አዲስ በሆነበት ጊዜ ብቻ በስክሪኑ ግርጌ የመግቢያ ፍንጭ ማብራሪያ
+                  if (_isFirstTimeUser && _isFingerprintPassed) ...[
+                    const SizedBox(height: 25),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.amberAccent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.amberAccent.withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.info_outline, color: Colors.amberAccent, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'First time hint: Tap screen $_requiredTaps times rapidly!',
+                            style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
