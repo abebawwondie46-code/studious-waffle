@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:kuanyngne/Chat/biometric_service.dart';
 import 'package:kuanyngne/screens/profile_screen.dart';
 
@@ -36,7 +35,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   int _requiredTaps = 3; 
   Timer? _tapResetTimer; 
   Timer? _pollingTimer;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  Timer? _connectivityTimer;
 
   List<Map<String, dynamic>> _messages = [];
   List<Map<String, dynamic>> _searchResults = [];
@@ -57,7 +56,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _loadCustomTaps();
     _loadAddedFriends(); 
     _fetchReceiverProfileAndMessages(); 
-    _initConnectivityListener();
+    _initInternetCheck();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (_isUnlocked) {
@@ -75,30 +74,40 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _tapResetTimer?.cancel();
     _pollingTimer?.cancel();
-    _connectivitySubscription?.cancel();
+    _connectivityTimer?.cancel();
     _messageController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  // 🌐 Internet Connection Listener (Toast Notification when offline)
-  void _initConnectivityListener() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
-      final bool isOffline = results.contains(ConnectivityResult.none) || results.isEmpty;
-      if (isOffline && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No Internet Connection! ⚠️',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 3),
-          ),
-        );
+  // 🌐 Robust Internet Connection Check without dependency conflict
+  void _initInternetCheck() {
+    _connectivityTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      try {
+        final result = await InternetAddress.lookup('google.com');
+        if (result.isEmpty || result[0].rawAddress.isEmpty) {
+          _showOfflineToast();
+        }
+      } on SocketException catch (_) {
+        _showOfflineToast();
       }
     });
+  }
+
+  void _showOfflineToast() {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No Internet Connection! ⚠️',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
@@ -229,7 +238,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 : '$targetName has been removed from friends! 🗑️',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          backgroundColor: !isCurrentlyAdded ? const Color(0xFF00C6FF) : Colors.redAccent.shade700,
+          backgroundColor: !isCurrentlyAdded ? const Color(0xFF7B2CBF) : Colors.redAccent.shade700,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
