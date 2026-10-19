@@ -180,13 +180,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 አድ ወይም ዴሊት (Toggle Add/Remove Friend)
   Future<void> _toggleFriend(String targetUserId, String targetName, String? targetAvatar) async {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
       if (_addedUserIds.contains(targetUserId)) {
-        _addedUserIds.remove(targetUserId); // ከጠፉ ዴሊት/ሪሙቭ ያደርጋል
+        _addedUserIds.remove(targetUserId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ተጠቃሚው ከዝርዝር ጠፍቷል (Removed) 🗑️'),
@@ -196,7 +195,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ),
         );
       } else {
-        _addedUserIds.add(targetUserId); // አድ ያደርጋል
+        _addedUserIds.add(targetUserId);
         _currentReceiverName = targetName; 
         _fetchedAvatarUrl = targetAvatar; 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -211,6 +210,76 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
 
     await prefs.setStringList('added_friends_list', _addedUserIds.toList());
+  }
+
+  // 🌟 መልእክት የመሰረዣ (Delete Message) ፈንክሽን
+  Future<void> _deleteMessage(dynamic messageId) async {
+    try {
+      await _supabase
+          .from('messages')
+          .delete()
+          .eq('id', messageId);
+
+      await _fetchMessages();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('መልእክቱ ተሰርዟል! 🗑️'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 1500),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('DELETE ERROR: $e');
+    }
+  }
+
+  // 🌟 መልእክት ላይ ጫን ሲባል ሰርዝ አዶ እንዲመጣ የሚያደርግ ዳይሎግ (Delete Dialog)
+  void _showMessageOptions(Map<String, dynamic> msg) {
+    final messageId = msg['id'];
+    final content = msg['content']?.toString() ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1F22),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'መልእክት: "$content"',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Divider(color: Colors.white24, height: 1),
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                title: const Text('ይህንን መልእክት ሰርዝ (Delete)', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteMessage(messageId);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.close_rounded, color: Colors.white70),
+                title: const Text('ይቅር (Cancel)', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   String _formatTime(String? createdAt) {
@@ -733,14 +802,18 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             
                             final isMe = (senderId == '11111111-1111-1111-1111-111111111111');
 
-                            return _buildMessageBubble(content, isMe, timeStr);
+                            // 🌟 መልእክቱ ላይ ጫን (Long Press) ሲደረግ _showMessageOptions እንዲጠራ ተደርጓል
+                            return GestureDetector(
+                              onLongPress: () => _showMessageOptions(msg),
+                              child: _buildMessageBubble(content, isMe, timeStr),
+                            );
                           },
                         ),
             ),
 
-            // 💌 ማራኪ የመልእክት መጻፊያ ሳጥን (ከኢሞጂ እና ፋይል አባሪ ጋር)
+            // 💌 ፅዱና ውብ የሆነ የመልእክት መጻፊያ ሳጥን
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: const BoxDecoration(
                 color: Color(0xFF1E1F22),
                 boxShadow: [
@@ -749,50 +822,25 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               ),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.white70, size: 22),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ኢሞጂ መምረጫ ይከፈታል 😊'), duration: Duration(milliseconds: 1000)),
-                      );
-                    },
-                    tooltip: 'ኢሞጂ',
-                  ),
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFF2B2D31),
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _messageController,
-                              style: const TextStyle(color: Colors.white, fontSize: 14),
-                              decoration: const InputDecoration(
-                                hintText: 'መልእክት ጻፍ...',
-                                hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.attach_file_rounded, color: Colors.white70, size: 20),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('ፋይል ወይም ፎቶ ማያያዣ 📎'), duration: Duration(milliseconds: 1000)),
-                              );
-                            },
-                            tooltip: 'ፋይል አያይዝ',
-                          ),
-                        ],
+                      child: TextField(
+                        controller: _messageController,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        decoration: const InputDecoration(
+                          hintText: 'መልእክት ጻፍ...',
+                          hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
