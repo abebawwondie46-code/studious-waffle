@@ -82,36 +82,32 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.dispose();
   }
 
-  // 🔒 አፑ አዲስ መሆኑንና በፊት መቀየሩን ማረጋገጫ
+  // 🌟 አፑ የመጀመሪያ ጊዜ መሆኑን መፈተሻ
   Future<void> _checkFirstTimeStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    bool hasConfiguredSettings = prefs.getBool('has_configured_secret_knock') ?? false;
+    bool hasCompletedFirstEntry = prefs.getBool('has_completed_first_secret_entry') ?? false;
     if (mounted) {
       setState(() {
-        _isFirstTimeUser = !hasConfiguredSettings;
-        if (hasConfiguredSettings) {
+        _isFirstTimeUser = !hasCompletedFirstEntry;
+        if (hasCompletedFirstEntry) {
           _hasEnteredChatOnce = true;
         }
       });
     }
   }
 
-  // 🔒 ሴቲንግ ከተቀየረ በኋላ ለዘላለም መቆለፍያና First Time Hint መዝጊያ
-  Future<void> _markSettingsConfigured() async {
+  // 🌟 አንዴ ቻቱ ከተከፈተ ሄንቱን ለዘላለም ማጥፊያ
+  Future<void> _markFirstTimeCompleted() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_configured_secret_knock', true);
+    await prefs.setBool('has_completed_first_secret_entry', true);
     if (mounted) {
       setState(() {
         _isFirstTimeUser = false;
         _hasEnteredChatOnce = true;
-        _isUnlocked = false; // 🔒 ሴቲንግ እንደተቀየረ አፑ ወዲያውኑ ይቆልፋል!
-        _isFingerprintPassed = false;
-        _tapCount = 0;
       });
     }
   }
 
-  // 🌐 Internet Connection Check
   void _initInternetCheck() {
     _connectivityTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       try {
@@ -376,7 +372,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'You must unlock the chat first! 🚫',
+            'You must open and complete the chat first! 🚫',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.white,
@@ -396,7 +392,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // ⚙️ የሴቲንግ ማስተካከያ እና ወዲያውኑ የመቆለፊያ ሲስተም
   Future<void> _changeKnockSettings() async {
     int tempTaps = _requiredTaps;
     await showDialog(
@@ -464,21 +459,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 await prefs.setInt('secret_knock_taps', tempTaps);
                 setState(() {
                   _requiredTaps = tempTaps;
+                  _tapCount = 0;
                 });
                 Navigator.pop(context);
-                
-                // 🔒 ሴቲንግ እንደተቀየረ ሄንቱን ዘግቶ አፑን ወዲያውኑ ይቆልፋል!
-                await _markSettingsConfigured();
-
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Settings Saved! Use secret knock tap $_requiredTaps times to unlock.'),
-                      backgroundColor: Colors.green,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
               },
               child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
@@ -524,10 +507,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       if (_tapCount >= _requiredTaps) {
         _tapResetTimer?.cancel();
         _isUnlocked = true; 
+        _markFirstTimeCompleted(); // 🌟 የመጀመሪያ ጊዜ መግባቱን ይመዝግቡ እና ሄንቱን ለዘላለም ይዝጉ
       }
     });
   }
 
+  // 🌟 የመጀመሪያ ጊዜ መግቢያ ፍንጭ ማሳያ
   void _showFirstTimeGuide() {
     showDialog(
       context: context,
@@ -545,10 +530,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Welcome! To set up your secret entrance:\n\n'
-              '1. Click the top Settings icon ⚙️\n'
-              '2. Set your custom secret knock taps number.\n'
-              '3. Save! The chat will permanently lock and require your new secret knock to enter.',
+              'Welcome! To open this Secret Chat for the first time:\n\n'
+              '1. Authenticate with Fingerprint.\n'
+              '2. Tap the screen secretly $_requiredTaps times rapidly.\n\n'
+              'This hint will permanently disappear after you enter!',
               style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
             ),
           ],
@@ -668,7 +653,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     textAlign: TextAlign.center,
                   ),
 
-                  // 🌟 የመጀመሪያ ጊዜ ተጠቃሚ ከሆነ ብቻ የሚታይ ፍንጭ
+                  // 🌟 የመጀመሪያ ጊዜ ተጠቃሚ ከሆነ ብቻ በስክሪኑ ግርጌ የሚታይ አጭር ማሳሰቢያ
                   if (_isFirstTimeUser && _isFingerprintPassed) ...[
                     const SizedBox(height: 25),
                     Container(
@@ -678,14 +663,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.amberAccent.withOpacity(0.4)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.info_outline, color: Colors.amberAccent, size: 18),
-                          SizedBox(width: 8),
+                          const Icon(Icons.info_outline, color: Colors.amberAccent, size: 18),
+                          const SizedBox(width: 8),
                           Text(
-                            'First time: Tap top ⚙️ icon to setup your secret knock!',
-                            style: TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.w600),
+                            'First time hint: Tap screen $_requiredTaps times rapidly!',
+                            style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
