@@ -81,6 +81,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.dispose();
   }
 
+  // 🌐 Internet Connection Listener (Toast Notification when offline)
   void _initConnectivityListener() {
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
       final bool isOffline = results.contains(ConnectivityResult.none) || results.isEmpty;
@@ -228,8 +229,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 : '$targetName has been removed from friends! 🗑️',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          // 🌟 የSnackBar ከለር ወደ ሐምራዊ/ሮዝ (Purple/Magenta) ተቀይሯል[cite: 16]
-          backgroundColor: !isCurrentlyAdded ? const Color(0xFF7B2CBF) : Colors.redAccent.shade700,
+          backgroundColor: !isCurrentlyAdded ? const Color(0xFF00C6FF) : Colors.redAccent.shade700,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
