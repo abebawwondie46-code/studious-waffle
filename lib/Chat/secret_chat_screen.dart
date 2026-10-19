@@ -180,7 +180,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 አድ ፍሬንድ (Add Friend) የማድረግ ፈንክሽን - መጀመሪያ እንደነበረው
+  // 🌟 ጓደኛ ሲጨመር የሚወጣው ቶስት ከለር ወደ አረንጓዴ/ቲል (Teal/Green) ተቀይሯል[cite: 16]
   Future<void> _addFriend(String targetUserId, String targetName, String? targetAvatar) async {
     final prefs = await SharedPreferences.getInstance();
     
@@ -195,8 +195,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$targetName ጓደኛ ሆኗል! (Added) 🤝'),
-          backgroundColor: Colors.blueAccent,
+          content: Text(
+            '$targetName ጓደኛ ሆኗል! (Added) 🤝',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.teal.shade700, // 🌟 ግልጽ እና ውብ የሆነ አረንጓዴ/ቲል ከለር[cite: 16]
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -726,7 +729,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                                   : null,
                             ),
                             title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-                            // 🌟 መጀመሪያ የነበረው Added ✔️ አዝራር ስታይል
                             trailing: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isAdded ? Colors.grey.shade800 : Colors.blueAccent,
