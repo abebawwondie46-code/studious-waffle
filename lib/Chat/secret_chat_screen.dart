@@ -205,7 +205,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 : '$targetName ከጓደኝነት ተወግዷል! 🗑️',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          backgroundColor: !isCurrentlyAdded ? const Color(0xFF2481CC) : Colors.redAccent.shade700,
+          backgroundColor: !isCurrentlyAdded ? const Color(0xFF00C6FF) : Colors.redAccent.shade700,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -233,7 +233,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF17212B),
+          backgroundColor: const Color(0xFF1E1E3F),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -259,7 +259,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               child: const Text(
                 'Cancel',
                 style: TextStyle(
-                  color: Color(0xFF53A3F1),
+                  color: Color(0xFF00C6FF),
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
@@ -338,7 +338,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF17212B),
+          backgroundColor: const Color(0xFF1E1E3F),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('የድብቅ ምት ብዛት ማቀናበሪያ', style: TextStyle(color: Colors.white)),
           content: StatefulBuilder(
@@ -356,7 +356,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Color(0xFF2481CC), size: 32),
+                        icon: const Icon(Icons.remove_circle, color: Color(0xFF00C6FF), size: 32),
                         onPressed: () {
                           if (tempTaps > 2) {
                             setDialogState(() => tempTaps--);
@@ -371,7 +371,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.add_circle, color: Color(0xFF2481CC), size: 32),
+                        icon: const Icon(Icons.add_circle, color: Color(0xFF00C6FF), size: 32),
                         onPressed: () {
                           if (tempTaps < 12) {
                             setDialogState(() => tempTaps++);
@@ -391,7 +391,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2481CC),
+                backgroundColor: const Color(0xFF0072FF),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () async {
@@ -476,7 +476,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   Widget build(BuildContext context) {
     if (!_isUnlocked) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0E1621),
+        backgroundColor: const Color(0xFF0C0F1D),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -508,20 +508,20 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         colors: [
-                          _isFingerprintPassed ? Colors.cyanAccent.withOpacity(0.2) : const Color(0xFF2481CC).withOpacity(0.2),
-                          const Color(0xFF17212B),
+                          _isFingerprintPassed ? Colors.cyanAccent.withOpacity(0.3) : const Color(0xFF00C6FF).withOpacity(0.3),
+                          const Color(0xFF1E1E3F),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       border: Border.all(
-                        color: _isFingerprintPassed ? Colors.cyanAccent : const Color(0xFF2481CC),
+                        color: _isFingerprintPassed ? Colors.cyanAccent : const Color(0xFF00C6FF),
                         width: 2,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: (_isFingerprintPassed ? Colors.cyanAccent : const Color(0xFF2481CC)).withOpacity(0.3),
-                          blurRadius: 20,
+                          color: (_isFingerprintPassed ? Colors.cyanAccent : const Color(0xFF00C6FF)).withOpacity(0.4),
+                          blurRadius: 25,
                           spreadRadius: 5,
                         ),
                       ],
@@ -529,7 +529,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     child: Icon(
                       _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
                       size: 70,
-                      color: _isFingerprintPassed ? Colors.cyanAccent : const Color(0xFF2481CC),
+                      color: _isFingerprintPassed ? Colors.cyanAccent : const Color(0xFF00C6FF),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -563,13 +563,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0E1621),
+      backgroundColor: const Color(0xFF0C0F1D), // 🌟 ድምቅ ያለ የኒዮን ዳርክ ዳራ
       appBar: AppBar(
-        backgroundColor: const Color(0xFF17212B),
-        elevation: 1,
+        backgroundColor: const Color(0xFF161A30), // 🌟 ሕያውና ድምቅ ያለ አፕባር
+        elevation: 2,
         leadingWidth: 35,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70, size: 18),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         title: _isSearching
@@ -595,7 +595,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         children: [
                           CircleAvatar(
                             radius: 18,
-                            backgroundColor: const Color(0xFF2481CC),
+                            backgroundColor: const Color(0xFF0072FF),
                             backgroundImage: imageProvider,
                             child: imageProvider == null
                                 ? Text(
@@ -613,7 +613,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                               decoration: BoxDecoration(
                                 color: Colors.greenAccent,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: const Color(0xFF17212B), width: 2),
+                                border: Border.all(color: const Color(0xFF161A30), width: 2),
                               ),
                             ),
                           ),
@@ -632,9 +632,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             const SizedBox(height: 1),
                             Row(
                               children: const [
-                                Icon(Icons.lock_rounded, size: 10, color: Colors.greenAccent),
+                                Icon(Icons.lock_rounded, size: 10, color: Colors.cyanAccent),
                                 SizedBox(width: 3),
-                                Text('ሚስጥራዊ ቻት', style: TextStyle(fontSize: 10, color: Colors.greenAccent)),
+                                Text('ሚስጥራዊ ቻት', style: TextStyle(fontSize: 10, color: Colors.cyanAccent)),
                               ],
                             ),
                           ],
@@ -660,7 +660,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
-            color: const Color(0xFF17212B),
+            color: const Color(0xFF161A30),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             onSelected: (value) {
               if (value == 'lock') {
@@ -688,7 +688,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ),
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF0E1621),
+          // 🌟 የሰማያዊና የሐምራዊ ውብ ድምቅ ግራዲየንት ዳራ (Vibrant Background Gradient)
+          gradient: LinearGradient(
+            colors: [Color(0xFF0C0F1D), Color(0xFF141A33), Color(0xFF1A1333)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
         child: Column(
           children: [
@@ -697,10 +702,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 margin: const EdgeInsets.all(12),
                 constraints: const BoxConstraints(maxHeight: 250),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF17212B),
+                  color: const Color(0xFF1E2340),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    BoxShadow(color: Colors.black54, blurRadius: 10, offset: const Offset(0, 4)),
+                    BoxShadow(color: Colors.black54, blurRadius: 12, offset: const Offset(0, 5)),
                   ],
                 ),
                 child: _searchResults.isEmpty
@@ -733,7 +738,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
                             trailing: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isAdded ? const Color(0xFF242F3D) : const Color(0xFF2481CC),
+                                backgroundColor: isAdded ? const Color(0xFF273053) : const Color(0xFF0072FF),
                                 minimumSize: const Size(95, 34),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -757,7 +762,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             // የቻት መልእክቶች ዝርዝር
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF2481CC)))
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF00C6FF)))
                   : _messages.isEmpty
                       ? Center(
                           child: Column(
@@ -766,15 +771,15 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                               Container(
                                 padding: const EdgeInsets.all(20),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF2481CC).withOpacity(0.1),
+                                  color: const Color(0xFF00C6FF).withOpacity(0.15),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.favorite_rounded, size: 40, color: Color(0xFF2481CC)),
+                                child: const Icon(Icons.favorite_rounded, size: 40, color: Color(0xFF00C6FF)),
                               ),
                               const SizedBox(height: 16),
                               const Text(
                                 'እስካሁን ምንም መልእክት የለም።\nውይይት ይጀምሩ! 💬',
-                                style: TextStyle(color: Colors.white54, fontSize: 14, height: 1.4),
+                                style: TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -799,13 +804,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         ),
             ),
 
-            // 💌 ለስላሳና ማራኪ የፈጠራ የመላኪያ አዝራር ያለው የቻት መጻፊያ ክፍል
+            // 💌 ድምቅ ያለና ማራኪ የፈጠራ የመላኪያ አዝራር ያለው የቻት መጻፊያ ክፍል
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: const BoxDecoration(
-                color: Color(0xFF17212B),
+              decoration: BoxDecoration(
+                color: const Color(0xFF161A30),
                 boxShadow: [
-                  BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, -2)),
+                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, -2)),
                 ],
               ),
               child: Row(
@@ -813,8 +818,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF242F3D),
+                        color: const Color(0xFF222845),
                         borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white10, width: 1),
                       ),
                       child: TextField(
                         controller: _messageController,
@@ -830,18 +836,18 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   ),
                   const SizedBox(width: 10),
 
-                  // 🌸 💖 ለስላሳና ማራኪ የፈጠራ የመላኪያ አዝራር (Smooth Soft Glow Heart Button)
+                  // 💖 🚀 እጅግ ድምቅ ያለ፣ ሕያውና ለስላሳ የፈጠራ የመላኪያ አዝራር (Vibrant Neon Glow Heart Button)
                   GestureDetector(
                     onTap: _sendMessage,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(11),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [
-                            Color(0xFFEC407A), // 🌸 ለስላሳ ሮዝ/ፒንክ (Soft Pink/Rose)
-                            Color(0xFFAB47BC), // 💜 ለስላሳ ሐምራዊ (Soft Purple)
-                            Color(0xFF26A69A), // 🍃 ለስላሳ ቲል/ሰማያዊ (Soft Teal/Blue)
+                            Color(0xFFFF2A85), // 💖 ድምቅ ያለ ሮዝ/ማጀንታ (Vibrant Pink)
+                            Color(0xFF7B2CBF), // 💜 ንቁ ሐምራዊ (Electric Purple)
+                            Color(0xFF00C6FF), // 💙 ድምቅ ያለ ሰማያዊ (Neon Cyan)
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -849,23 +855,21 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFEC407A).withOpacity(0.3),
-                            blurRadius: 10,
+                            color: const Color(0xFFFF2A85).withOpacity(0.5),
+                            blurRadius: 14,
                             spreadRadius: 2,
-                            offset: const Offset(0, 2),
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
                       child: const Stack(
                         alignment: Alignment.center,
                         children: [
-                          // ለስላሳ የልብ አዶ
                           Icon(
                             Icons.favorite_rounded,
                             color: Colors.white,
                             size: 22,
                           ),
-                          // በልቧ አጠገብ ያለች የሰማይ ከለር የመላክ ምልክት
                           Positioned(
                             right: 0,
                             top: 0,
@@ -896,7 +900,15 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF2B5278) : const Color(0xFF182533),
+          // 🌟 የኔ መልእክት: ድምቅ ያለ ሰማያዊ/ሳይያን ግራዲየንት፤ የሌላው: ሕያው ጥቁር ሰማያዊ
+          gradient: isMe 
+              ? const LinearGradient(
+                  colors: [Color(0xFF0072FF), Color(0xFF00C6FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isMe ? null : const Color(0xFF1E2340),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -905,9 +917,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -926,11 +938,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 children: [
                   Text(
                     time,
-                    style: const TextStyle(color: Colors.white60, fontSize: 9),
+                    style: const TextStyle(color: Colors.white70, fontSize: 9),
                   ),
                   if (isMe) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.done_all, size: 12, color: Color(0xFF53A3F1)),
+                    const Icon(Icons.done_all, size: 12, color: Colors.cyanAccent),
                   ],
                 ],
               ),
