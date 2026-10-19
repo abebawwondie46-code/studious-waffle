@@ -563,9 +563,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0E1621), // 🌟 Telegram Dark Background
+      backgroundColor: const Color(0xFF0E1621),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF17212B), // 🌟 Telegram Header Background
+        backgroundColor: const Color(0xFF17212B),
         elevation: 1,
         leadingWidth: 35,
         leading: IconButton(
@@ -688,7 +688,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ),
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF0E1621), // 🌟 Telegram chat canvas background
+          color: Color(0xFF0E1621),
         ),
         child: Column(
           children: [
@@ -769,7 +769,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                                   color: const Color(0xFF2481CC).withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.chat_bubble_outline_rounded, size: 40, color: Color(0xFF2481CC)),
+                                child: const Icon(Icons.favorite_border_rounded, size: 40, color: Color(0xFF2481CC)),
                               ),
                               const SizedBox(height: 16),
                               const Text(
@@ -799,11 +799,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         ),
             ),
 
-            // 💌 ቴሌግራም-ስታይል ሉኪንግ የሆነ የመልእክት መጻፊያ ሳጥን
+            // 💌 አዲስ የፈጠራ የመላኪያ አዝራር ያለው የቻት መጻፊያ ክፍል (Innovative Send Button Design)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: const BoxDecoration(
-                color: Color(0xFF17212B), // 🌟 Telegram input bar background
+                color: Color(0xFF17212B),
                 boxShadow: [
                   BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, -2)),
                 ],
@@ -813,7 +813,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF242F3D), // 🌟 Telegram textfield box
+                        color: const Color(0xFF242F3D),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: TextField(
@@ -829,14 +829,53 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2481CC), // 🌟 Telegram Send Button Blue
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                      onPressed: _sendMessage,
+
+                  // 💖 🚀 አዲስ የፈጠራ የመላኪያ አዝራር (Creative Message & Heart Combo Button)
+                  GestureDetector(
+                    onTap: _sendMessage,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(11),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFE53935), // 💖 የፍቅር ቀይ
+                            Color(0xFF8E24AA), // 💜 ማራኪ ቫዮሌት
+                            Color(0xFF1E88E5), // 💙 ሰማያዊ ግራዲየንት
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE53935).withOpacity(0.4),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // የፍቅርና መልእክት ምልክት ውህደት
+                          Icon(
+                            Icons.favorite_rounded, // 💖 የፍቅር ልብ
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Icon(
+                              Icons.send_rounded, // 🚀 የመላክ አነስተኛ ምልክት
+                              color: Colors.cyanAccent,
+                              size: 11,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -856,7 +895,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          // 🌟 ቴሌግራም መልእክት ከለር (የእኔ: ሰማያዊ #2B5278፣ የሌላው: ጥቁር ሰማያዊ #182533)
           color: isMe ? const Color(0xFF2B5278) : const Color(0xFF182533),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
