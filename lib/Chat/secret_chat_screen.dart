@@ -180,23 +180,23 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 አድ ወይም ዲሊት (Toggle Add/Remove Friend) የሚያደርግ ፈንክሽን
+  // 🌟 አድ ወይም ዴሊት (Toggle Add/Remove Friend)
   Future<void> _toggleFriend(String targetUserId, String targetName, String? targetAvatar) async {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
       if (_addedUserIds.contains(targetUserId)) {
-        _addedUserIds.remove(targetUserId); // ከተጫነ ከዝርዝር ውስጥ ያጠፋዋል (Delete/Unfriend)
+        _addedUserIds.remove(targetUserId); // ከጠፉ ዴሊት/ሪሙቭ ያደርጋል
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('ጓደኛ ከዝርዝር ጠፍቷል (Removed) 🗑️'),
+            content: Text('ተጠቃሚው ከዝርዝር ጠፍቷል (Removed) 🗑️'),
             backgroundColor: Colors.redAccent,
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
           ),
         );
       } else {
-        _addedUserIds.add(targetUserId); // አድ ያደርገዋል
+        _addedUserIds.add(targetUserId); // አድ ያደርጋል
         _currentReceiverName = targetName; 
         _fetchedAvatarUrl = targetAvatar; 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -675,7 +675,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
                             trailing: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isAdded ? Colors.red.shade800 : Colors.blueAccent, // 🌟 Added ከሆነ ጠቅ ሲደረግ Delete እንዲሆን በቀይ ከለር
+                                backgroundColor: isAdded ? Colors.red.shade700 : Colors.blueAccent,
                                 minimumSize: const Size(90, 32),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -686,7 +686,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                                 color: Colors.white,
                               ),
                               label: Text(
-                                isAdded ? 'Remove' : 'Add', // 🌟 አድ ከሆነ ሲጫኑ እንዲጠፋ Remove ይላል
+                                isAdded ? 'Remove' : 'Add',
                                 style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                               ),
                               onPressed: () => _toggleFriend(userId, name, avatar),
@@ -738,9 +738,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         ),
             ),
 
-            // 💌 ፅዱና ሕያው የሆነ የመልእክት መጻፊያ ሳጥን (Modern & Engaging Input Box with Icons)
+            // 💌 ማራኪ የመልእክት መጻፊያ ሳጥን (ከኢሞጂ እና ፋይል አባሪ ጋር)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: const BoxDecoration(
                 color: Color(0xFF1E1F22),
                 boxShadow: [
@@ -750,8 +750,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.white54, size: 22),
-                    onPressed: () {},
+                    icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.white70, size: 22),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('ኢሞጂ መምረጫ ይከፈታል 😊'), duration: Duration(milliseconds: 1000)),
+                      );
+                    },
+                    tooltip: 'ኢሞጂ',
                   ),
                   Expanded(
                     child: Container(
@@ -775,8 +780,13 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.attach_file_rounded, color: Colors.white54, size: 20),
-                            onPressed: () {},
+                            icon: const Icon(Icons.attach_file_rounded, color: Colors.white70, size: 20),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('ፋይል ወይም ፎቶ ማያያዣ 📎'), duration: Duration(milliseconds: 1000)),
+                              );
+                            },
+                            tooltip: 'ፋይል አያይዝ',
                           ),
                         ],
                       ),
