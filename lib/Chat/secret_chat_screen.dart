@@ -40,7 +40,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   List<Map<String, dynamic>> _searchResults = [];
   Set<String> _addedUserIds = {}; 
   bool _isLoading = true;
-  bool _isSearching = false;
+  bool _isSearching = false; // 🔍 ሰርች ሞድ ላይ መሆን አለመሆኑን ለመቆጣጠር
   
   String _currentReceiverName = '';
   String? _fetchedAvatarUrl;
@@ -160,14 +160,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     if (query.trim().isEmpty) {
       setState(() {
         _searchResults = [];
-        _isSearching = false;
       });
       return;
     }
-
-    setState(() {
-      _isSearching = true;
-    });
 
     try {
       final response = await _supabase
@@ -210,9 +205,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     Timer(const Duration(milliseconds: 1200), () {
       if (mounted) {
         setState(() {
+          _isSearching = false; // ሰርች ባሩን መዝጋት
           _searchController.clear();
           _searchResults = [];
-          _isSearching = false;
         });
       }
     });
@@ -510,72 +505,99 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E1F22),
         elevation: 2,
-        leadingWidth: 30,
+        leadingWidth: 35,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: InkWell(
-          onTap: _navigateToUserProfile,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
-            child: Row(
-              children: [
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.blueAccent.shade700,
-                      backgroundImage: imageProvider,
-                      child: imageProvider == null
-                          ? Text(
-                              _currentReceiverName.isNotEmpty ? _currentReceiverName[0].toUpperCase() : '?',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            )
-                          : null,
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: Colors.greenAccent,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1E1F22), width: 2.5),
-                        ),
-                      ),
-                    ),
-                  ],
+        // 🌟 አዶውን ሲጫኑ ሰርች ባር በአፕባር ላይ ብቅ እንዲል (Pop-up Search Bar in AppBar)
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white, fontSize: 15),
+                decoration: InputDecoration(
+                  hintText: 'ተጠቃሚዎችን ፈልግ...',
+                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 15),
+                  border: InputBorder.none,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                onChanged: _searchUsers,
+              )
+            : InkWell(
+                onTap: _navigateToUserProfile,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
+                  child: Row(
                     children: [
-                      Text(
-                        _currentReceiverName,
-                        style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: const [
-                          Icon(Icons.lock_rounded, size: 11, color: Colors.greenAccent),
-                          SizedBox(width: 4),
-                          Text('ሚስጥራዊ የደህንነት ቻት', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.blueAccent.shade700,
+                            backgroundImage: imageProvider,
+                            child: imageProvider == null
+                                ? Text(
+                                    _currentReceiverName.isNotEmpty ? _currentReceiverName[0].toUpperCase() : '?',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: Colors.greenAccent,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xFF1E1F22), width: 2),
+                              ),
+                            ),
+                          ),
                         ],
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _currentReceiverName,
+                              style: const TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 1),
+                            Row(
+                              children: const [
+                                Icon(Icons.lock_rounded, size: 10, color: Colors.greenAccent),
+                                SizedBox(width: 3),
+                                Text('ሚስጥራዊ ቻት', style: TextStyle(fontSize: 10, color: Colors.greenAccent)),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              ),
         actions: [
+          // 🔍 የሰርች አዶ (Search Icon) - ሲጫኑ ሰርቹ ይከፈታል ወይም ይዘጋል
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.white70),
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchController.clear();
+                  _searchResults = [];
+                }
+              });
+            },
+            tooltip: 'ተጠቃሚ መፈለጊያ',
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
             color: const Color(0xFF1E1F22),
@@ -614,50 +636,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         ),
         child: Column(
           children: [
-            // 🔍 ማራኪ የሰርች ባር (Sleek Search Bar)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E1F22),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'ተጠቃሚዎችን በስም ፈልግ (Search friends)...',
-                    hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search, color: Colors.blueAccent, size: 20),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.white54, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              _searchUsers('');
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  ),
-                  onChanged: _searchUsers,
-                ),
-              ),
-            ),
-
-            // 🔍 የሰርች ውጤቶች ዝርዝር
-            if (_isSearching)
+            // 🔍 ሰርች በሚደረግበት ጊዜ ብቻ ከላይ ብቅ የሚሉ የፍለጋ ውጤቶች ዝርዝር (Pop-up Results Overlay)
+            if (_isSearching && _searchController.text.isNotEmpty)
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                constraints: const BoxConstraints(maxHeight: 220),
+                margin: const EdgeInsets.all(12),
+                constraints: const BoxConstraints(maxHeight: 250),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E1F22),
                   borderRadius: BorderRadius.circular(16),
@@ -742,20 +725,20 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             ],
                           ),
                         )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = _messages[index];
-                          final content = msg['content']?.toString() ?? '';
-                          final senderId = msg['sender_id']?.toString() ?? '';
-                          final timeStr = _formatTime(msg['created_at']?.toString());
-                          
-                          final isMe = (senderId == '11111111-1111-1111-1111-111111111111');
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = _messages[index];
+                            final content = msg['content']?.toString() ?? '';
+                            final senderId = msg['sender_id']?.toString() ?? '';
+                            final timeStr = _formatTime(msg['created_at']?.toString());
+                            
+                            final isMe = (senderId == '11111111-1111-1111-1111-111111111111');
 
-                          return _buildMessageBubble(content, isMe, timeStr);
-                        },
-                      ),
+                            return _buildMessageBubble(content, isMe, timeStr);
+                          },
+                        ),
             ),
 
             // 💌 ማራኪ የመልእክት መጻፊያ ሳጥን (Modern Message Input Box)
