@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart0:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -38,7 +38,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   List<Map<String, dynamic>> _messages = [];
   List<Map<String, dynamic>> _searchResults = [];
-  final Set<String> _addedUserIds = {}; // 🌟 አድ የተደረጉ ተጠቃሚዎችን መያዣ Set
+  Set<String> _addedUserIds = {}; // 🌟 አድ የተደረጉ ተጠቃሚዎች ID መያዣ
   bool _isLoading = true;
   bool _isSearching = false;
   
@@ -53,6 +53,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
     _loadCustomTaps();
+    _loadAddedFriends(); // 🌟 አፑ ሲከፈት በቋሚነት የተቀመጡ ጓደኞችን ማንበቢያ
     _fetchReceiverProfileAndMessages(); 
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
@@ -85,6 +86,17 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           _tapCount = 0;
         });
       }
+    }
+  }
+
+  // 🌟 በቋሚነት የተመዘገቡ አድ የተደረጉ ጓደኞችን ከ SharedPreferences ማንበቢያ
+  Future<void> _loadAddedFriends() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? savedFriends = prefs.getStringList('added_friends_list');
+    if (savedFriends != null && mounted) {
+      setState(() {
+        _addedUserIds = savedFriends.toSet();
+      });
     }
   }
 
@@ -174,24 +186,30 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 አድ ፍሬንድ ሲደረግ «Added» ሆኖ እንዲቀየርና የላይኛው ስም እንዲተካ የሚያደርገው ፈንክሽን
+  // 🌟 አድ ፍሬንድ ሲደረግ በቋሚነት በ SharedPreferences የሚያስቀምጥ ፈንክሽን
   Future<void> _addFriend(String targetUserId, String targetName, String? targetAvatar) async {
+    final prefs = await SharedPreferences.getInstance();
+    
     setState(() {
-      _addedUserIds.add(targetUserId); // የተመረጠውን ተጠቃሚ 'Added' ዝርዝር ውስጥ ማስገባት
-      _currentReceiverName = targetName; // የላይኛውን አፕባር ስም መቀየር
-      _fetchedAvatarUrl = targetAvatar; // የላይኛውን አፕባር ፎቶ መቀየር
+      _addedUserIds.add(targetUserId); // 'Added' ዝርዝር ውስጥ መጨመር
+      _currentReceiverName = targetName; 
+      _fetchedAvatarUrl = targetAvatar; 
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$targetName ጓደኛ ሆኗል! (Added) 🤝'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // 💾 በስልኩ ማስታወሻ ውስጥ በቋሚነት ማስቀመጥ (Permanently Save)
+    await prefs.setStringList('added_friends_list', _addedUserIds.toList());
 
-    // ከ 1.5 ሰከንድ በኋላ ሰርች ባሩን በራሱ እንዲዘጋና ቻቱ እንዲታይ ማድረግ
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$targetName ጓደኛ ሆኗል! (Added) 🤝'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
     Timer(const Duration(milliseconds: 1500), () {
       if (mounted) {
         setState(() {
@@ -626,7 +644,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         final name = user['full_name'] ?? 'ስም የሌለው';
                         final avatar = user['avatar_url'] ?? user['profile_pic'];
                         final userId = user['id']?.toString() ?? '$index';
-                        final bool isAdded = _addedUserIds.contains(userId);
+                        final bool isAdded = _addedUserIds.contains(userId); // 🌟 በቋሚነት Added መሆኑን ማረጋገጫ
 
                         return ListTile(
                           leading: CircleAvatar(
@@ -650,7 +668,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                               color: Colors.white,
                             ),
                             label: Text(
-                              isAdded ? 'Added' : 'Add',
+                              isAdded ? 'Added' : 'Add', // 🌟 አድ ከተደረገ በቋሚነት 'Added' ሆኖ ይቀጥላል
                               style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                             onPressed: isAdded ? null : () => _addFriend(userId, name, avatar),
