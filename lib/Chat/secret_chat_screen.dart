@@ -38,7 +38,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   List<Map<String, dynamic>> _messages = [];
   List<Map<String, dynamic>> _searchResults = [];
-  Set<String> _addedUserIds = {}; // 🌟 አድ የተደረጉ ተጠቃሚዎችን ID መያዣ Set
+  final Set<String> _addedUserIds = {}; // 🌟 አድ የተደረጉ ተጠቃሚዎችን መያዣ Set
   bool _isLoading = true;
   bool _isSearching = false;
   
@@ -174,7 +174,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 አድ ፍሬንድ ሲደረግ «Added» ሆኖ እንዲቀየርና የላይኛው ስም እንዲተካ ያደረገው ፈንክሽን
+  // 🌟 አድ ፍሬንድ ሲደረግ «Added» ሆኖ እንዲቀየርና የላይኛው ስም እንዲተካ የሚያደርገው ፈንክሽን
   Future<void> _addFriend(String targetUserId, String targetName, String? targetAvatar) async {
     setState(() {
       _addedUserIds.add(targetUserId); // የተመረጠውን ተጠቃሚ 'Added' ዝርዝር ውስጥ ማስገባት
@@ -626,7 +626,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         final name = user['full_name'] ?? 'ስም የሌለው';
                         final avatar = user['avatar_url'] ?? user['profile_pic'];
                         final userId = user['id']?.toString() ?? '$index';
-                        final bool isAdded = _addedUserIds.contains(userId); // 🌟 ተጠቃሚው 'Added' መሆኑን ማረጋገጫ
+                        final bool isAdded = _addedUserIds.contains(userId);
 
                         return ListTile(
                           leading: CircleAvatar(
@@ -640,7 +640,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                           title: Text(name, style: const TextStyle(color: Colors.white)),
                           trailing: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isAdded ? Colors.grey[700] : Colors.blueAccent, // Added ከሆነ ቀለሙ ይቀየራል
+                              backgroundColor: isAdded ? Colors.grey[700] : Colors.blueAccent,
                               minimumSize: const Size(90, 34),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                             ),
@@ -650,11 +650,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                               color: Colors.white,
                             ),
                             label: Text(
-                              isAdded ? 'Added' : 'Add', // 🌟 አዝራሩ አድ ሲደረግ 'Added' ይሆናል
+                              isAdded ? 'Added' : 'Add',
                               style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                             onPressed: isAdded ? null : () => _addFriend(userId, name, avatar),
-                          );
+                          ),
+                        );
                       },
                     ),
             ),
