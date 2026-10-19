@@ -180,23 +180,30 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  Future<void> _toggleFriend(String targetUserId, String targetName, String? targetAvatar) async {
+  // 🌟 አድ ፍሬንድ (Add Friend) የማድረግ ፈንክሽን - መጀመሪያ እንደነበረው
+  Future<void> _addFriend(String targetUserId, String targetName, String? targetAvatar) async {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      if (_addedUserIds.contains(targetUserId)) {
-        _addedUserIds.remove(targetUserId);
-      } else {
-        _addedUserIds.add(targetUserId);
-        _currentReceiverName = targetName; 
-        _fetchedAvatarUrl = targetAvatar; 
-      }
+      _addedUserIds.add(targetUserId);
+      _currentReceiverName = targetName; 
+      _fetchedAvatarUrl = targetAvatar; 
     });
 
     await prefs.setStringList('added_friends_list', _addedUserIds.toList());
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$targetName ጓደኛ ሆኗል! (Added) 🤝'),
+          backgroundColor: Colors.blueAccent,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
-  // 🌟 መልእክት ከዳታቤዝ የሚያጠፋ ፈንክሽን
   Future<void> _deleteMessage(dynamic messageId) async {
     try {
       await _supabase
@@ -210,7 +217,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 በስክሪንሾቱ መሰረት በትክክል "Delete Message" የሚል ዳይሎግ የሚያሳይ ፈንክሽን
   void _confirmDeleteMessage(Map<String, dynamic> msg) {
     final messageId = msg['id'];
 
@@ -720,23 +726,24 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                                   : null,
                             ),
                             title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                            // 🌟 መጀመሪያ የነበረው Added ✔️ አዝራር ስታይል
                             trailing: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isAdded ? Colors.red.shade700 : Colors.blueAccent,
+                                backgroundColor: isAdded ? Colors.grey.shade800 : Colors.blueAccent,
                                 minimumSize: const Size(90, 32),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
                               icon: Icon(
-                                isAdded ? Icons.delete_outline_rounded : Icons.person_add_rounded,
+                                isAdded ? Icons.check_rounded : Icons.person_add_rounded,
                                 size: 14,
                                 color: Colors.white,
                               ),
                               label: Text(
-                                isAdded ? 'Remove' : 'Add',
+                                isAdded ? 'Added' : 'Add',
                                 style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                               ),
-                              onPressed: () => _toggleFriend(userId, name, avatar),
+                              onPressed: isAdded ? null : () => _addFriend(userId, name, avatar),
                             ),
                           );
                         },
@@ -780,7 +787,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             
                             final isMe = (senderId == '11111111-1111-1111-1111-111111111111');
 
-                            // 🌟 መልእክት ላይ ጫን (Long Press) ሲደረግ _confirmDeleteMessage ይጠራል
                             return GestureDetector(
                               onLongPress: () => _confirmDeleteMessage(msg),
                               child: _buildMessageBubble(content, isMe, timeStr),
