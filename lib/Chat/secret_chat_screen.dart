@@ -30,7 +30,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
   static bool _hasEnteredChatOnce = false; 
-  bool _isFirstTimeUser = true;
 
   int _tapCount = 0; 
   int _requiredTaps = 3; 
@@ -54,7 +53,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _currentReceiverName = widget.receiverName;
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
-    _checkFirstTimeStatus();
     _loadCustomTaps();
     _loadAddedFriends(); 
     _fetchReceiverProfileAndMessages(); 
@@ -82,32 +80,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.dispose();
   }
 
-  // 🌟 አፑ የመጀመሪያ ጊዜ መሆኑን መፈተሻ
-  Future<void> _checkFirstTimeStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    bool hasCompletedFirstEntry = prefs.getBool('has_completed_first_secret_entry') ?? false;
-    if (mounted) {
-      setState(() {
-        _isFirstTimeUser = !hasCompletedFirstEntry;
-        if (hasCompletedFirstEntry) {
-          _hasEnteredChatOnce = true;
-        }
-      });
-    }
-  }
-
-  // 🌟 አንዴ ቻቱ ከተከፈተ ሄንቱን ለዘላለም ማጥፊያ
-  Future<void> _markFirstTimeCompleted() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_completed_first_secret_entry', true);
-    if (mounted) {
-      setState(() {
-        _isFirstTimeUser = false;
-        _hasEnteredChatOnce = true;
-      });
-    }
-  }
-
+  // 🌐 Robust Internet Connection Check without dependency conflict
   void _initInternetCheck() {
     _connectivityTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       try {
@@ -368,7 +341,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   }
 
   Future<void> _verifyAndOpenSettings() async {
-    if (!_hasEnteredChatOnce && !_isFirstTimeUser) {
+    if (!_hasEnteredChatOnce) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -507,49 +480,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       if (_tapCount >= _requiredTaps) {
         _tapResetTimer?.cancel();
         _isUnlocked = true; 
-        _markFirstTimeCompleted(); // 🌟 የመጀመሪያ ጊዜ መግባቱን ይመዝግቡ እና ሄንቱን ለዘላለም ይዝጉ
+        _hasEnteredChatOnce = true; 
       }
     });
-  }
-
-  // 🌟 የመጀመሪያ ጊዜ መግቢያ ፍንጭ ማሳያ
-  void _showFirstTimeGuide() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E3F),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.lightbulb_rounded, color: Colors.amberAccent, size: 28),
-            SizedBox(width: 10),
-            Text('First Time Entrance Hint', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Welcome! To open this Secret Chat for the first time:\n\n'
-              '1. Authenticate with Fingerprint.\n'
-              '2. Tap the screen secretly $_requiredTaps times rapidly.\n\n'
-              'This hint will permanently disappear after you enter!',
-              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0072FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it! 👌', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _sendMessage() async {
@@ -585,13 +518,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
-            // 🌟 አፑ አዲስ በሆነበት ጊዜ ብቻ የሚታይ የፍንጭ (Hint) አዝራር
-            if (_isFirstTimeUser)
-              IconButton(
-                icon: const Icon(Icons.help_outline_rounded, color: Colors.amberAccent, size: 24),
-                onPressed: _showFirstTimeGuide,
-                tooltip: 'First Time Entrance Hint',
-              ),
             IconButton(
               icon: const Icon(Icons.settings_outlined, color: Colors.white70),
               onPressed: _verifyAndOpenSettings,
@@ -652,30 +578,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     ),
                     textAlign: TextAlign.center,
                   ),
-
-                  // 🌟 የመጀመሪያ ጊዜ ተጠቃሚ ከሆነ ብቻ በስክሪኑ ግርጌ የሚታይ አጭር ማሳሰቢያ
-                  if (_isFirstTimeUser && _isFingerprintPassed) ...[
-                    const SizedBox(height: 25),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.amberAccent.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.amberAccent.withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.info_outline, color: Colors.amberAccent, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            'First time hint: Tap screen $_requiredTaps times rapidly!',
-                            style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
