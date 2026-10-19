@@ -38,7 +38,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   List<Map<String, dynamic>> _messages = [];
   List<Map<String, dynamic>> _searchResults = [];
-  Set<String> _addedUserIds = {}; // 🌟 አድ የተደረጉ ተጠቃሚዎች ID መያዣ
+  Set<String> _addedUserIds = {}; 
   bool _isLoading = true;
   bool _isSearching = false;
   
@@ -53,7 +53,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
     _loadCustomTaps();
-    _loadAddedFriends(); // 🌟 አፑ ሲከፈት በቋሚነት የተቀመጡ ጓደኞችን ማንበቢያ
+    _loadAddedFriends(); 
     _fetchReceiverProfileAndMessages(); 
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
@@ -89,7 +89,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 በቋሚነት የተመዘገቡ አድ የተደረጉ ጓደኞችን ከ SharedPreferences ማንበቢያ
   Future<void> _loadAddedFriends() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedFriends = prefs.getStringList('added_friends_list');
@@ -186,31 +185,29 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 አድ ፍሬንድ ሲደረግ በቋሚነት በ SharedPreferences የሚያስቀምጥ ፈንክሽን
   Future<void> _addFriend(String targetUserId, String targetName, String? targetAvatar) async {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      _addedUserIds.add(targetUserId); // 'Added' ዝርዝር ውስጥ መጨመር
+      _addedUserIds.add(targetUserId); 
       _currentReceiverName = targetName; 
       _fetchedAvatarUrl = targetAvatar; 
     });
 
-    // 💾 በስልኩ ማስታወሻ ውስጥ በቋሚነት ማስቀመጥ (Permanently Save)
     await prefs.setStringList('added_friends_list', _addedUserIds.toList());
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$targetName ጓደኛ ሆኗል! (Added) 🤝'),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.blueAccent,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
       );
     }
 
-    Timer(const Duration(milliseconds: 1500), () {
+    Timer(const Duration(milliseconds: 1200), () {
       if (mounted) {
         setState(() {
           _searchController.clear();
@@ -273,7 +270,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF242526),
+          backgroundColor: const Color(0xFF1E1F22),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('የድብቅ ምት ብዛት ማቀናበሪያ', style: TextStyle(color: Colors.white)),
           content: StatefulBuilder(
             builder: (context, setDialogState) {
@@ -297,11 +295,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                           }
                         },
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'ምስጢራዊ ምት',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          '$tempTaps',
+                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                         ),
                       ),
                       IconButton(
@@ -324,7 +322,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               child: const Text('ይቅር', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               onPressed: () async {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setInt('secret_knock_taps', tempTaps);
@@ -342,7 +343,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     ),
                     backgroundColor: Colors.white,
                     behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 2),
                   ),
                 );
               },
@@ -410,14 +410,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       });
       
       await _fetchMessages();
-      debugPrint('መልእክት በተሳካ ሁኔታ ተልኳል!');
     } catch (e) {
       debugPrint('SUPABASE INSERT ERROR: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('መልእክት መላክ አልተቻለም፦ $e')),
-        );
-      }
     }
   }
 
@@ -425,17 +419,17 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   Widget build(BuildContext context) {
     if (!_isUnlocked) {
       return Scaffold(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFF0F1012),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.settings, color: Colors.white70),
+              icon: const Icon(Icons.settings_outlined, color: Colors.white70),
               onPressed: _verifyAndOpenSettings,
               tooltip: 'የድብቅ ምት ማስተካከያ',
             ),
@@ -452,32 +446,45 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 children: [
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _isFingerprintPassed
-                          ? Colors.cyanAccent.withOpacity(0.15)
-                          : Colors.blueAccent.withOpacity(0.1),
+                      gradient: LinearGradient(
+                        colors: [
+                          _isFingerprintPassed ? Colors.cyanAccent.withOpacity(0.2) : Colors.blueAccent.withOpacity(0.2),
+                          const Color(0xFF1E1F22),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       border: Border.all(
                         color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
                         width: 2,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (_isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent).withOpacity(0.3),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
                     ),
                     child: Icon(
                       _isFingerprintPassed ? Icons.vibration : Icons.fingerprint,
-                      size: 80,
+                      size: 70,
                       color: _isFingerprintPassed ? Colors.cyanAccent : Colors.blueAccent,
                     ),
                   ),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 30),
                   Text(
                     !_isFingerprintPassed
-                        ? 'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው'
+                        ? 'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው 🔒'
                         : 'ሚስጥራዊውን ምት በድብቅ ያንኳኩት...',
                     style: TextStyle(
                       color: _isFingerprintPassed ? Colors.cyanAccent : Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -499,22 +506,27 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF18191A),
+      backgroundColor: const Color(0xFF121316),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF242526),
-        elevation: 1,
+        backgroundColor: const Color(0xFF1E1F22),
+        elevation: 2,
+        leadingWidth: 30,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: InkWell(
           onTap: _navigateToUserProfile,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
             child: Row(
               children: [
                 Stack(
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: Colors.blueAccent.shade700,
                       backgroundImage: imageProvider,
                       child: imageProvider == null
                           ? Text(
@@ -527,12 +539,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       bottom: 0,
                       right: 0,
                       child: Container(
-                        width: 11,
-                        height: 11,
+                        width: 12,
+                        height: 12,
                         decoration: BoxDecoration(
                           color: Colors.greenAccent,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF242526), width: 2),
+                          border: Border.all(color: const Color(0xFF1E1F22), width: 2.5),
                         ),
                       ),
                     ),
@@ -549,11 +561,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      const Row(
-                        children: [
-                          Icon(Icons.lock_rounded, size: 10, color: Colors.greenAccent),
+                      Row(
+                        children: const [
+                          Icon(Icons.lock_rounded, size: 11, color: Colors.greenAccent),
                           SizedBox(width: 4),
-                          Text('ደህንነቱ የተጠበቀ ሚስጥራዊ ቻት', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
+                          Text('ሚስጥራዊ የደህንነት ቻት', style: TextStyle(fontSize: 11, color: Colors.greenAccent)),
                         ],
                       ),
                     ],
@@ -566,8 +578,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
-            color: const Color(0xFF242526),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            color: const Color(0xFF1E1F22),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             onSelected: (value) {
               if (value == 'lock') {
                 setState(() {
@@ -583,8 +595,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 child: Row(
                   children: [
                     Icon(Icons.lock_outline, color: Colors.redAccent, size: 20),
-                    SizedBox(width: 10),
-                    Text('እንደገና ቆልፍ', style: TextStyle(color: Colors.white)),
+                    SizedBox(width: 12),
+                    Text('እንደገና ቆልፍ', style: TextStyle(color: Colors.white, fontSize: 14)),
                   ],
                 ),
               ),
@@ -592,112 +604,146 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // 🔍 ሰርች ባር (Search Bar)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: const Color(0xFF242526),
-            child: TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'ተጠቃሚዎችን በስም ፈልግ (Search friends)...',
-                hintStyle: const TextStyle(color: Colors.white54),
-                prefixIcon: const Icon(Icons.search, color: Colors.blueAccent),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.white54),
-                        onPressed: () {
-                          _searchController.clear();
-                          _searchUsers('');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: const Color(0xFF3A3B3C),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF121316), Color(0xFF181A20)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Column(
+          children: [
+            // 🔍 ማራኪ የሰርች ባር (Sleek Search Bar)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1F22),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'ተጠቃሚዎችን በስም ፈልግ (Search friends)...',
+                    hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
+                    prefixIcon: const Icon(Icons.search, color: Colors.blueAccent, size: 20),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.white54, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              _searchUsers('');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  ),
+                  onChanged: _searchUsers,
                 ),
               ),
-              onChanged: _searchUsers,
-            ),
-          ),
-
-          // 🔍 የሰርች ውጤቶችና የ «Add» / «Added» አዝራር ማሳያ
-          if (_isSearching)
-            Container(
-              constraints: const BoxConstraints(maxHeight: 220),
-              color: const Color(0xFF242526),
-              child: _searchResults.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text('ምንም ተጠቃሚ አልተገኘም', style: TextStyle(color: Colors.white54)),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) {
-                        final user = _searchResults[index];
-                        final name = user['full_name'] ?? 'ስም የሌለው';
-                        final avatar = user['avatar_url'] ?? user['profile_pic'];
-                        final userId = user['id']?.toString() ?? '$index';
-                        final bool isAdded = _addedUserIds.contains(userId); // 🌟 በቋሚነት Added መሆኑን ማረጋገጫ
-
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: (avatar != null && avatar.toString().isNotEmpty)
-                                ? NetworkImage(avatar)
-                                : null,
-                            child: (avatar == null || avatar.toString().isEmpty)
-                                ? Text(name[0].toUpperCase())
-                                : null,
-                          ),
-                          title: Text(name, style: const TextStyle(color: Colors.white)),
-                          trailing: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isAdded ? Colors.grey[700] : Colors.blueAccent,
-                              minimumSize: const Size(90, 34),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                            ),
-                            icon: Icon(
-                              isAdded ? Icons.check : Icons.person_add,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              isAdded ? 'Added' : 'Add', // 🌟 አድ ከተደረገ በቋሚነት 'Added' ሆኖ ይቀጥላል
-                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                            onPressed: isAdded ? null : () => _addFriend(userId, name, avatar),
-                          ),
-                        );
-                      },
-                    ),
             ),
 
-          // የርዕስ መልእክቶች ዝርዝር
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
-                : _messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.chat_bubble_outline_rounded, size: 50, color: Colors.white24),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'ምንም መልእክት የለም። ውይይት ይጀምሩ!',
-                              style: TextStyle(color: Colors.white54, fontSize: 14),
-                            ),
-                          ],
+            // 🔍 የሰርች ውጤቶች ዝርዝር
+            if (_isSearching)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                constraints: const BoxConstraints(maxHeight: 220),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1F22),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black54, blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: _searchResults.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Center(
+                          child: Text('ምንም ተጠቃሚ አልተገኘም 🔍', style: TextStyle(color: Colors.white54)),
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        shrinkWrap: true,
+                        itemCount: _searchResults.length,
+                        itemBuilder: (context, index) {
+                          final user = _searchResults[index];
+                          final name = user['full_name'] ?? 'ስም የሌለው';
+                          final avatar = user['avatar_url'] ?? user['profile_pic'];
+                          final userId = user['id']?.toString() ?? '$index';
+                          final bool isAdded = _addedUserIds.contains(userId);
+
+                          return ListTile(
+                            leading: CircleAvatar(
+                              radius: 18,
+                              backgroundImage: (avatar != null && avatar.toString().isNotEmpty)
+                                  ? NetworkImage(avatar)
+                                  : null,
+                              child: (avatar == null || avatar.toString().isEmpty)
+                                  ? Text(name[0].toUpperCase(), style: const TextStyle(fontSize: 14))
+                                  : null,
+                            ),
+                            title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                            trailing: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isAdded ? Colors.grey.shade800 : Colors.blueAccent,
+                                minimumSize: const Size(85, 32),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              icon: Icon(
+                                isAdded ? Icons.check_rounded : Icons.person_add_rounded,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                              label: Text(
+                                isAdded ? 'Added' : 'Add',
+                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              onPressed: isAdded ? null : () => _addFriend(userId, name, avatar),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+
+            // የቻት መልእክቶች ዝርዝር
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
+                  : _messages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.chat_bubble_outline_rounded, size: 40, color: Colors.blueAccent),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'እስካሁን ምንም መልእክት የለም።\nውይይት ይጀምሩ! 💬',
+                                style: TextStyle(color: Colors.white54, fontSize: 14, height: 1.4),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final msg = _messages[index];
@@ -710,46 +756,60 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                           return _buildMessageBubble(content, isMe, timeStr);
                         },
                       ),
-          ),
+            ),
 
-          // የመልእክት መጻፊያ ሳጥን
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            color: const Color(0xFF242526),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'መልእክት ጻፍ...',
-                      hintStyle: const TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: const Color(0xFF3A3B3C),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide.none,
+            // 💌 ማራኪ የመልእክት መጻፊያ ሳጥን (Modern Message Input Box)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E1F22),
+                boxShadow: [
+                  BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, -2)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2B2D31),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        decoration: const InputDecoration(
+                          hintText: 'መልእክት ጻፍ...',
+                          hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.blueAccent,
-                    shape: BoxShape.circle,
+                  const SizedBox(width: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.blueAccent, Colors.blue.shade700],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                      onPressed: _sendMessage,
+                    ),
                   ),
-                  child: IconButton(
-                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                    onPressed: _sendMessage,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -758,17 +818,24 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 5),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: isMe ? Colors.blueAccent : const Color(0xFF3A3B3C),
+          color: isMe ? Colors.blueAccent : const Color(0xFF2B2D31),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
             bottomLeft: Radius.circular(isMe ? 16 : 4),
             bottomRight: Radius.circular(isMe ? 4 : 16),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -776,13 +843,22 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           children: [
             Text(
               text,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
+              style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.3),
             ),
             if (time.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(
-                time,
-                style: const TextStyle(color: Colors.white60, fontSize: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    time,
+                    style: const TextStyle(color: Colors.white60, fontSize: 9),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.done_all, size: 12, color: Colors.cyanAccent),
+                  ],
+                ],
               ),
             ],
           ],
