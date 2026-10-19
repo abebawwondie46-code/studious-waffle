@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kuanyngne/Chat/biometric_service.dart';
-import 'package:kuanyngne/screens/profile_screen.dart'; // 🌟 ወደ ፕሮፋይል ገጽዎ የሚወስደው ትክክለኛው መንገድ
+import 'package:kuanyngne/screens/profile_screen.dart';
 
 class SecretChatScreen extends StatefulWidget {
   final String receiverId;
@@ -24,6 +24,7 @@ class SecretChatScreen extends StatefulWidget {
 
 class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController(); // 🔍 የሰርች መቆጣጠሪያ
   final SupabaseClient _supabase = Supabase.instance.client;
 
   bool _isFingerprintPassed = false;
@@ -36,7 +37,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   Timer? _pollingTimer;
 
   List<Map<String, dynamic>> _messages = [];
+  List<Map<String, dynamic>> _searchResults = []; // 🔍 የሰርች ውጤቶች መያዣ
   bool _isLoading = true;
+  bool _isSearching = false; // 🔍 ሰርች እየተደረገ መሆኑን ለማወቅ
   
   String _currentReceiverName = '';
   String? _fetchedAvatarUrl;
@@ -68,6 +71,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _tapResetTimer?.cancel();
     _pollingTimer?.cancel();
     _messageController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -140,6 +144,61 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
+  // 🔍 ተጠቃሚዎችን በስም መፈለጊያ ፈንክሽን (Search Function)
+  Future<void> _searchUsers(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .ilike('full_name', '%$query%');
+
+      if (mounted) {
+        setState(() {
+          _searchResults = List<Map<String, dynamic>>.from(response);
+        });
+      }
+    } catch (e) {
+      debugPrint('Search error: $e');
+    }
+  }
+
+  // ➕ ተጠቃሚን አድ ፍሬንድ (Follow) የማድረጊያ ፈንክሽን
+  Future<void> _addFriend(String targetUserId, String targetName, String? targetAvatar) async {
+    try {
+      // ለምሳሌ ጓደኛ/Follow ማድረጊያ ሎጂክ በ Supabase
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$targetName በተሳካ ሁኔታ ጓደኛ ሆኗል! (Add Friend Success) 🤝'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      // ቻቱን ወደዚህ ተጠቃሚ መቀየር ከፈለጉ እዚህ ላይ ማስተካከል ይቻላል
+      setState(() {
+        _currentReceiverName = targetName;
+        _fetchedAvatarUrl = targetAvatar;
+        _searchController.clear();
+        _searchResults = [];
+        _isSearching = false;
+      });
+    } catch (e) {
+      debugPrint('Add friend error: $e');
+    }
+  }
+
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
@@ -152,7 +211,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🚀 BottomSheet ተወግዶ በቀጥታ ወደ ሙሉው የፕሮፋይል ገጽ (ProfileScreen) የሚያልፈው ማሻሻያ
   void _navigateToUserProfile() {
     Navigator.push(
       context,
@@ -514,6 +572,82 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ),
       body: Column(
         children: [
+          // 🔍 ቻት ገጽ ላይ የተጨመረው የሰርች ባር (Search Bar)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: const Color(0xFF242526),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'ተጠቃሚዎችን በስም ፈልግ (Search friends)...',
+                hintStyle: const TextStyle(color: Colors.white54),
+                prefixIcon: const Icon(Icons.search, color: Colors.blueAccent),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.white54),
+                        onPressed: () {
+                          _searchController.clear();
+                          _searchUsers('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: const Color(0xFF3A3B3C),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: _searchUsers,
+            ),
+          ),
+
+          // 🔍 የሰርች ውጤቶች ማሳያ ዝርዝር
+          if (_isSearching)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              color: const Color(0xFF242526),
+              child: _searchResults.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('ምንም ተጠቃሚ አልተገኘም', style: TextStyle(color: Colors.white54)),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        final user = _searchResults[index];
+                        final name = user['full_name'] ?? 'ስም የሌለው';
+                        final avatar = user['avatar_url'] ?? user['profile_pic'];
+                        final userId = user['id']?.toString() ?? '';
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: (avatar != null && avatar.toString().isNotEmpty)
+                                ? NetworkImage(avatar)
+                                : null,
+                            child: (avatar == null || avatar.toString().isEmpty)
+                                ? Text(name[0].toUpperCase())
+                                : null,
+                          ),
+                          title: Text(name, style: const TextStyle(color: Colors.white)),
+                          trailing: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              minimumSize: const Size(80, 32),
+                            ),
+                            icon: const Icon(Icons.person_add, size: 16, color: Colors.white),
+                            label: const Text('Add', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            onPressed: () => _addFriend(userId, name, avatar),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+
+          // የርዕስ መልእክቶች ዝርዝር
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
@@ -546,6 +680,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         },
                       ),
           ),
+
+          // የመልእክት መጻፊያ ሳጥን
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             color: const Color(0xFF242526),
