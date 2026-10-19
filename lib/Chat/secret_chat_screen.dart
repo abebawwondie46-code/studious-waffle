@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:kuanyngne/Chat/biometric_service.dart';
 import 'package:kuanyngne/screens/profile_screen.dart';
 
@@ -35,6 +36,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   int _requiredTaps = 3; 
   Timer? _tapResetTimer; 
   Timer? _pollingTimer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   List<Map<String, dynamic>> _messages = [];
   List<Map<String, dynamic>> _searchResults = [];
@@ -55,6 +57,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _loadCustomTaps();
     _loadAddedFriends(); 
     _fetchReceiverProfileAndMessages(); 
+    _initConnectivityListener();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (_isUnlocked) {
@@ -72,9 +75,29 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _tapResetTimer?.cancel();
     _pollingTimer?.cancel();
+    _connectivitySubscription?.cancel();
     _messageController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _initConnectivityListener() {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      final bool isOffline = results.contains(ConnectivityResult.none) || results.isEmpty;
+      if (isOffline && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No Internet Connection! ⚠️',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    });
   }
 
   @override
@@ -201,11 +224,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         SnackBar(
           content: Text(
             !isCurrentlyAdded 
-                ? '$targetName ጓደኛ ሆኗል! (Added) 🤝' 
-                : '$targetName ከጓደኝነት ተወግዷል! 🗑️',
+                ? '$targetName is now added as a friend! 🤝' 
+                : '$targetName has been removed from friends! 🗑️',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          backgroundColor: !isCurrentlyAdded ? const Color(0xFF00C6FF) : Colors.redAccent.shade700,
+          // 🌟 የSnackBar ከለር ወደ ሐምራዊ/ሮዝ (Purple/Magenta) ተቀይሯል[cite: 16]
+          backgroundColor: !isCurrentlyAdded ? const Color(0xFF7B2CBF) : Colors.redAccent.shade700,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -312,7 +336,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'መጀመሪያ ቻቱን መክፈትና ማጠናቀቅ አለብዎት! 🚫',
+            'You must open and complete the chat first! 🚫',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.white,
@@ -327,7 +351,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       _changeKnockSettings();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('የባለቤቱ ማረጋገጫ ስላልተሳካ ቅንብሮቹን መክፈት አልተቻለም! 🚫')),
+        const SnackBar(content: Text('Authentication failed, cannot open settings! 🚫')),
       );
     }
   }
@@ -340,14 +364,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         return AlertDialog(
           backgroundColor: const Color(0xFF1E1E3F),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('የድብቅ ምት ብዛት ማቀናበሪያ', style: TextStyle(color: Colors.white)),
+          title: const Text('Secret Knock Taps Settings', style: TextStyle(color: Colors.white)),
           content: StatefulBuilder(
             builder: (context, setDialogState) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'ቻቱን ለመክፈት ስክሪኑን የሚነኩበትን የምት ሚስጥር (እስከ 12) ይምረጡ:',
+                    'Select the number of secret screen taps required to unlock (up to 12):',
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
@@ -387,7 +411,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('ይቅር', style: TextStyle(color: Colors.grey)),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -403,7 +427,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 });
                 Navigator.pop(context);
               },
-              child: const Text('አስቀምጥ', style: TextStyle(color: Colors.white)),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -488,7 +512,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
             IconButton(
               icon: const Icon(Icons.settings_outlined, color: Colors.white70),
               onPressed: _verifyAndOpenSettings,
-              tooltip: 'የድብቅ ምት ማስተካከያ',
+              tooltip: 'Secret Knock Settings',
             ),
           ],
         ),
@@ -535,8 +559,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   const SizedBox(height: 30),
                   Text(
                     !_isFingerprintPassed
-                        ? 'ይህ የሜሴጅ ገጽ በአሻራ የተቆለፈ ነው 🔒'
-                        : 'ሚስጥራዊውን ምት በድብቅ ያንኳኩት...',
+                        ? 'This chat page is locked with fingerprint 🔒'
+                        : 'Tap the screen secretly to knock...',
                     style: TextStyle(
                       color: _isFingerprintPassed ? Colors.cyanAccent : Colors.white,
                       fontSize: 16,
@@ -563,9 +587,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0C0F1D), // 🌟 ድምቅ ያለ የኒዮን ዳርክ ዳራ
+      backgroundColor: const Color(0xFF0C0F1D),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161A30), // 🌟 ሕያውና ድምቅ ያለ አፕባር
+        backgroundColor: const Color(0xFF161A30),
         elevation: 2,
         leadingWidth: 35,
         leading: IconButton(
@@ -578,7 +602,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 autofocus: true,
                 style: const TextStyle(color: Colors.white, fontSize: 15),
                 decoration: const InputDecoration(
-                  hintText: 'ተጠቃሚዎችን ፈልግ...',
+                  hintText: 'Search users...',
                   hintStyle: TextStyle(color: Colors.white38, fontSize: 15),
                   border: InputBorder.none,
                 ),
@@ -634,7 +658,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                               children: const [
                                 Icon(Icons.lock_rounded, size: 10, color: Colors.cyanAccent),
                                 SizedBox(width: 3),
-                                Text('ሚስጥራዊ ቻት', style: TextStyle(fontSize: 10, color: Colors.cyanAccent)),
+                                Text('Secret Chat', style: TextStyle(fontSize: 10, color: Colors.cyanAccent)),
                               ],
                             ),
                           ],
@@ -656,7 +680,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 }
               });
             },
-            tooltip: 'ተጠቃሚ መፈለጊያ',
+            tooltip: 'Search user',
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
@@ -678,7 +702,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   children: [
                     Icon(Icons.lock_outline, color: Colors.redAccent, size: 20),
                     SizedBox(width: 12),
-                    Text('እንደገና ቆልፍ', style: TextStyle(color: Colors.white, fontSize: 14)),
+                    Text('Lock Again', style: TextStyle(color: Colors.white, fontSize: 14)),
                   ],
                 ),
               ),
@@ -688,7 +712,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ),
       body: Container(
         decoration: const BoxDecoration(
-          // 🌟 የሰማያዊና የሐምራዊ ውብ ድምቅ ግራዲየንት ዳራ (Vibrant Background Gradient)
           gradient: LinearGradient(
             colors: [Color(0xFF0C0F1D), Color(0xFF141A33), Color(0xFF1A1333)],
             begin: Alignment.topCenter,
@@ -712,7 +735,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     ? const Padding(
                         padding: EdgeInsets.all(20.0),
                         child: Center(
-                          child: Text('ምንም ተጠቃሚ አልተገኘም 🔍', style: TextStyle(color: Colors.white54)),
+                          child: Text('No users found 🔍', style: TextStyle(color: Colors.white54)),
                         ),
                       )
                     : ListView.builder(
@@ -720,7 +743,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         itemCount: _searchResults.length,
                         itemBuilder: (context, index) {
                           final user = _searchResults[index];
-                          final name = user['full_name'] ?? 'ስም የሌለው';
+                          final name = user['full_name'] ?? 'Unnamed';
                           final avatar = user['avatar_url'] ?? user['profile_pic'];
                           final userId = user['id']?.toString() ?? '$index';
                           final bool isAdded = _addedUserIds.contains(userId);
@@ -759,7 +782,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       ),
               ),
 
-            // የቻት መልእክቶች ዝርዝር
+            // Messages List
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator(color: Color(0xFF00C6FF)))
@@ -778,7 +801,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                               ),
                               const SizedBox(height: 16),
                               const Text(
-                                'እስካሁን ምንም መልእክት የለም።\nውይይት ይጀምሩ! 💬',
+                                'No messages yet.\nStart a conversation! 💬',
                                 style: TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
                                 textAlign: TextAlign.center,
                               ),
@@ -804,7 +827,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         ),
             ),
 
-            // 💌 ድምቅ ያለና ማራኪ የፈጠራ የመላኪያ አዝራር ያለው የቻት መጻፊያ ክፍል
+            // Message Input Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
@@ -826,7 +849,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         controller: _messageController,
                         style: const TextStyle(color: Colors.white, fontSize: 14),
                         decoration: const InputDecoration(
-                          hintText: 'መልእክት ጻፍ...',
+                          hintText: 'Type a message...',
                           hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -836,7 +859,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   ),
                   const SizedBox(width: 10),
 
-                  // 💖 🚀 እጅግ ድምቅ ያለ፣ ሕያውና ለስላሳ የፈጠራ የመላኪያ አዝራር (Vibrant Neon Glow Heart Button)
+                  // Vibrant Neon Glow Heart Button
                   GestureDetector(
                     onTap: _sendMessage,
                     child: AnimatedContainer(
@@ -845,9 +868,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [
-                            Color(0xFFFF2A85), // 💖 ድምቅ ያለ ሮዝ/ማጀንታ (Vibrant Pink)
-                            Color(0xFF7B2CBF), // 💜 ንቁ ሐምራዊ (Electric Purple)
-                            Color(0xFF00C6FF), // 💙 ድምቅ ያለ ሰማያዊ (Neon Cyan)
+                            Color(0xFFFF2A85),
+                            Color(0xFF7B2CBF),
+                            Color(0xFF00C6FF),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -900,7 +923,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          // 🌟 የኔ መልእክት: ድምቅ ያለ ሰማያዊ/ሳይያን ግራዲየንት፤ የሌላው: ሕያው ጥቁር ሰማያዊ
           gradient: isMe 
               ? const LinearGradient(
                   colors: [Color(0xFF0072FF), Color(0xFF00C6FF)],
