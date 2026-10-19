@@ -769,7 +769,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                                   color: const Color(0xFF2481CC).withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.favorite_border_rounded, size: 40, color: Color(0xFF2481CC)),
+                                child: const Icon(Icons.favorite_rounded, size: 40, color: Color(0xFF2481CC)),
                               ),
                               const SizedBox(height: 16),
                               const Text(
@@ -799,7 +799,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         ),
             ),
 
-            // 💌 አዲስ የፈጠራ የመላኪያ አዝራር ያለው የቻት መጻፊያ ክፍል (Innovative Send Button Design)
+            // 💌 ለስላሳና ማራኪ የፈጠራ የመላኪያ አዝራር ያለው የቻት መጻፊያ ክፍል
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: const BoxDecoration(
@@ -830,18 +830,18 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   ),
                   const SizedBox(width: 10),
 
-                  // 💖 🚀 አዲስ የፈጠራ የመላኪያ አዝራር (Creative Message & Heart Combo Button)
+                  // 🌸 💖 ለስላሳና ማራኪ የፈጠራ የመላኪያ አዝራር (Smooth Soft Glow Heart Button)
                   GestureDetector(
                     onTap: _sendMessage,
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.all(11),
+                      duration: const Duration(milliseconds: 250),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [
-                            Color(0xFFE53935), // 💖 የፍቅር ቀይ
-                            Color(0xFF8E24AA), // 💜 ማራኪ ቫዮሌት
-                            Color(0xFF1E88E5), // 💙 ሰማያዊ ግራዲየንት
+                            Color(0xFFEC407A), // 🌸 ለስላሳ ሮዝ/ፒንክ (Soft Pink/Rose)
+                            Color(0xFFAB47BC), // 💜 ለስላሳ ሐምራዊ (Soft Purple)
+                            Color(0xFF26A69A), // 🍃 ለስላሳ ቲል/ሰማያዊ (Soft Teal/Blue)
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -849,28 +849,29 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE53935).withOpacity(0.4),
-                            blurRadius: 12,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 3),
+                            color: const Color(0xFFEC407A).withOpacity(0.3),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
                       child: const Stack(
                         alignment: Alignment.center,
                         children: [
-                          // የፍቅርና መልእክት ምልክት ውህደት
+                          // ለስላሳ የልብ አዶ
                           Icon(
-                            Icons.favorite_rounded, // 💖 የፍቅር ልብ
+                            Icons.favorite_rounded,
                             color: Colors.white,
                             size: 22,
                           ),
+                          // በልቧ አጠገብ ያለች የሰማይ ከለር የመላክ ምልክት
                           Positioned(
                             right: 0,
                             top: 0,
                             child: Icon(
-                              Icons.send_rounded, // 🚀 የመላክ አነስተኛ ምልክት
-                              color: Colors.cyanAccent,
+                              Icons.send_rounded,
+                              color: Color(0xFFE0F7FA),
                               size: 11,
                             ),
                           ),
