@@ -40,7 +40,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   List<Map<String, dynamic>> _searchResults = [];
   Set<String> _addedUserIds = {}; 
   bool _isLoading = true;
-  bool _isSearching = false; // 🔍 ሰርች ሞድ ላይ መሆን አለመሆኑን ለመቆጣጠር
+  bool _isSearching = false;
   
   String _currentReceiverName = '';
   String? _fetchedAvatarUrl;
@@ -180,37 +180,37 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  Future<void> _addFriend(String targetUserId, String targetName, String? targetAvatar) async {
+  // 🌟 አድ ወይም ዲሊት (Toggle Add/Remove Friend) የሚያደርግ ፈንክሽን
+  Future<void> _toggleFriend(String targetUserId, String targetName, String? targetAvatar) async {
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      _addedUserIds.add(targetUserId); 
-      _currentReceiverName = targetName; 
-      _fetchedAvatarUrl = targetAvatar; 
+      if (_addedUserIds.contains(targetUserId)) {
+        _addedUserIds.remove(targetUserId); // ከተጫነ ከዝርዝር ውስጥ ያጠፋዋል (Delete/Unfriend)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ጓደኛ ከዝርዝር ጠፍቷል (Removed) 🗑️'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        _addedUserIds.add(targetUserId); // አድ ያደርገዋል
+        _currentReceiverName = targetName; 
+        _fetchedAvatarUrl = targetAvatar; 
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$targetName ጓደኛ ሆኗል! (Added) 🤝'),
+            backgroundColor: Colors.blueAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     });
 
     await prefs.setStringList('added_friends_list', _addedUserIds.toList());
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$targetName ጓደኛ ሆኗል! (Added) 🤝'),
-          backgroundColor: Colors.blueAccent,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-
-    Timer(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        setState(() {
-          _isSearching = false; // ሰርች ባሩን መዝጋት
-          _searchController.clear();
-          _searchResults = [];
-        });
-      }
-    });
   }
 
   String _formatTime(String? createdAt) {
@@ -510,15 +510,14 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        // 🌟 አዶውን ሲጫኑ ሰርች ባር በአፕባር ላይ ብቅ እንዲል (Pop-up Search Bar in AppBar)
         title: _isSearching
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
                 style: const TextStyle(color: Colors.white, fontSize: 15),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'ተጠቃሚዎችን ፈልግ...',
-                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 15),
+                  hintStyle: TextStyle(color: Colors.white38, fontSize: 15),
                   border: InputBorder.none,
                 ),
                 onChanged: _searchUsers,
@@ -584,7 +583,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                 ),
               ),
         actions: [
-          // 🔍 የሰርች አዶ (Search Icon) - ሲጫኑ ሰርቹ ይከፈታል ወይም ይዘጋል
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.white70),
             onPressed: () {
@@ -636,7 +634,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         ),
         child: Column(
           children: [
-            // 🔍 ሰርች በሚደረግበት ጊዜ ብቻ ከላይ ብቅ የሚሉ የፍለጋ ውጤቶች ዝርዝር (Pop-up Results Overlay)
             if (_isSearching && _searchController.text.isNotEmpty)
               Container(
                 margin: const EdgeInsets.all(12),
@@ -678,21 +675,21 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                             title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
                             trailing: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isAdded ? Colors.grey.shade800 : Colors.blueAccent,
-                                minimumSize: const Size(85, 32),
+                                backgroundColor: isAdded ? Colors.red.shade800 : Colors.blueAccent, // 🌟 Added ከሆነ ጠቅ ሲደረግ Delete እንዲሆን በቀይ ከለር
+                                minimumSize: const Size(90, 32),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
                               icon: Icon(
-                                isAdded ? Icons.check_rounded : Icons.person_add_rounded,
+                                isAdded ? Icons.delete_outline_rounded : Icons.person_add_rounded,
                                 size: 14,
                                 color: Colors.white,
                               ),
                               label: Text(
-                                isAdded ? 'Added' : 'Add',
+                                isAdded ? 'Remove' : 'Add', // 🌟 አድ ከሆነ ሲጫኑ እንዲጠፋ Remove ይላል
                                 style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                               ),
-                              onPressed: isAdded ? null : () => _addFriend(userId, name, avatar),
+                              onPressed: () => _toggleFriend(userId, name, avatar),
                             ),
                           );
                         },
@@ -741,9 +738,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                         ),
             ),
 
-            // 💌 ማራኪ የመልእክት መጻፊያ ሳጥን (Modern Message Input Box)
+            // 💌 ፅዱና ሕያው የሆነ የመልእክት መጻፊያ ሳጥን (Modern & Engaging Input Box with Icons)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: const BoxDecoration(
                 color: Color(0xFF1E1F22),
                 boxShadow: [
@@ -752,25 +749,40 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
               ),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.white54, size: 22),
+                    onPressed: () {},
+                  ),
                   Expanded(
                     child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFF2B2D31),
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      child: TextField(
-                        controller: _messageController,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
-                        decoration: const InputDecoration(
-                          hintText: 'መልእክት ጻፍ...',
-                          hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                        ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _messageController,
+                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                              decoration: const InputDecoration(
+                                hintText: 'መልእክት ጻፍ...',
+                                hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.attach_file_rounded, color: Colors.white54, size: 20),
+                            onPressed: () {},
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
