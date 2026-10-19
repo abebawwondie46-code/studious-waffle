@@ -180,14 +180,19 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     }
   }
 
-  // 🌟 ጓደኛ ሲጨመር የሚወጣው ቶስት ከለር ወደ አረንጓዴ/ቲል (Teal/Green) ተቀይሯል[cite: 16]
-  Future<void> _addFriend(String targetUserId, String targetName, String? targetAvatar) async {
+  // 🌟 አድ/ሪሙቭ ፈንክሽን (Toggle: ሲጫኑት Add ይሆናል፤ እንደገና ሲጫኑት ወደ መጀመሪያው + Add ይመለሳል)
+  Future<void> _toggleFriend(String targetUserId, String targetName, String? targetAvatar) async {
     final prefs = await SharedPreferences.getInstance();
-    
+    bool isCurrentlyAdded = _addedUserIds.contains(targetUserId);
+
     setState(() {
-      _addedUserIds.add(targetUserId);
-      _currentReceiverName = targetName; 
-      _fetchedAvatarUrl = targetAvatar; 
+      if (isCurrentlyAdded) {
+        _addedUserIds.remove(targetUserId);
+      } else {
+        _addedUserIds.add(targetUserId);
+        _currentReceiverName = targetName; 
+        _fetchedAvatarUrl = targetAvatar; 
+      }
     });
 
     await prefs.setStringList('added_friends_list', _addedUserIds.toList());
@@ -196,10 +201,12 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '$targetName ጓደኛ ሆኗል! (Added) 🤝',
+            !isCurrentlyAdded 
+                ? '$targetName ጓደኛ ሆኗል! (Added) 🤝' 
+                : '$targetName ከጓደኝነት ተወግዷል! 🗑️',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          backgroundColor: Colors.teal.shade700, // 🌟 ግልጽ እና ውብ የሆነ አረንጓዴ/ቲል ከለር[cite: 16]
+          backgroundColor: !isCurrentlyAdded ? Colors.teal.shade700 : Colors.redAccent.shade700,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -729,23 +736,24 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                                   : null,
                             ),
                             title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                            // 🌟 በትክክል የስክሪንሾቶቹን ዲዛይን የያዘ አዝራር (Toggle Add / Added)
                             trailing: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isAdded ? Colors.grey.shade800 : Colors.blueAccent,
-                                minimumSize: const Size(90, 32),
+                                backgroundColor: isAdded ? const Color(0xFF2C2D30) : const Color(0xFF1A80E5),
+                                minimumSize: const Size(95, 34),
                                 elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                               ),
                               icon: Icon(
                                 isAdded ? Icons.check_rounded : Icons.person_add_rounded,
-                                size: 14,
+                                size: 16,
                                 color: Colors.white,
                               ),
                               label: Text(
                                 isAdded ? 'Added' : 'Add',
-                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
                               ),
-                              onPressed: isAdded ? null : () => _addFriend(userId, name, avatar),
+                              onPressed: () => _toggleFriend(userId, name, avatar),
                             ),
                           );
                         },
