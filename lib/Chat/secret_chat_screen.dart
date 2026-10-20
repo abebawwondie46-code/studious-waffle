@@ -318,18 +318,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 ሰዓቱን በትክክል ከስልኩ የአካባቢ ሰዓት ጋር ለማስተካከል
+  // 🌟 ሰዓቱን በትክክል ከስልኩ ሎካል ሰዓት ጋር ለማስተካከል
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
-      DateTime dateTime = DateTime.parse(createdAt);
-      // ሰዓቱ ዩቲሲ (UTC) ከሆነ ወደ ሎካል ሰዓት መቀየር
-      if (!createdAt.endsWith('Z') && !createdAt.contains('+')) {
-        dateTime = DateTime.parse('${createdAt}Z').toLocal();
-      } else {
-        dateTime = dateTime.toLocal();
-      }
-      
+      final dateTime = DateTime.parse(createdAt).toLocal();
       final hour = dateTime.hour.toString().padLeft(2, '0');
       final minute = dateTime.minute.toString().padLeft(2, '0');
       return '$hour:$minute';
@@ -492,7 +485,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 መልእክት ሲላክ ትክክለኛውን የስልኩን የአካባቢ ሰዓት (Local Time) ወደ ዳታቤዝ መላክ
+  // 🌟 ትክክለኛውን የዩቲሲ ሰዓት ወደ ዳታቤዝ ለመላክ
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -504,7 +497,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'sender_id': '11111111-1111-1111-1111-111111111111',
         'receiver_id': '22222222-2222-2222-2222-222222222222',
         'content': text,
-        'created_at': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toUtc().toIso8601String(),
       });
       
       await _fetchMessages();
