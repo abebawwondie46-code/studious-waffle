@@ -346,11 +346,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 የተስተካከለው የሰዓት አቀራረብ
+  // 🌟 የስልኩን ትክክለኛ ሰዓት በቀጥታ እንዲያሳይ የተስተካከለ (ለጊዜ ልዩነት ዋስትና የሚሆን)
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
-      final dateTime = DateTime.parse(createdAt).toLocal();
+      final dateTime = DateTime.parse(createdAt);
       final hour = dateTime.hour.toString().padLeft(2, '0');
       final minute = dateTime.minute.toString().padLeft(2, '0');
       return '$hour:$minute';
@@ -588,7 +588,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 መልእክቱ ሲላክ በ UTC እንዲሆን የተስተካከለ
+  // 🌟 መልእክቱ ልክ እንደ ስልኩ ሰዓት በትክክል እንዲቀመጥ ተደርጓል
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -600,7 +600,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'sender_id': '11111111-1111-1111-1111-111111111111',
         'receiver_id': '22222222-2222-2222-2222-222222222222',
         'content': text,
-        'created_at': DateTime.now().toUtc().toIso8601String(), // 🌟 toUtc() ተጨምሯል
+        'created_at': DateTime.now().toIso8601String(),
       });
       
       await _fetchMessages();
