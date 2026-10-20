@@ -547,9 +547,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   hintStyle: const TextStyle(color: Colors.white24, fontSize: 20, letterSpacing: 8),
                   filled: true,
                   fillColor: const Color(0xFF2B3252),
-                  border: RoundedRectangleBorder(
+                  border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide.none, // 🌟 borderSide የተባለው ወደ side ተቀይሯል
+                    borderSide: BorderSide.none,
                   ),
                 ),
               ),
