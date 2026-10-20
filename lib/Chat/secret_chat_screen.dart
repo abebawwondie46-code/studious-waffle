@@ -30,9 +30,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
-  
-  // 🌟 አፑ ተዘግቶ ሲከፈትም እንዳይጠፋ በ SharedPreferences የሚቀመጥ state
-  bool _hasEnteredChatOnce = false;
 
   int _tapCount = 0; 
   int _requiredTaps = 3; 
@@ -56,7 +53,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _currentReceiverName = widget.receiverName;
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
-    _loadChatEntryStatus();
     _loadCustomTaps();
     _loadAddedFriends(); 
     _fetchReceiverProfileAndMessages(); 
@@ -85,26 +81,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.dispose();
   }
 
-  // 🌟 አፑ ሲከፈት ከዚህ ቀደም ቻት ገጽ መግባቱን ከ SharedPreferences ሎድ የሚያደርግ
-  Future<void> _loadChatEntryStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    bool hasEntered = prefs.getBool('has_entered_secret_chat_once') ?? false;
-    if (mounted) {
-      setState(() {
-        _hasEnteredChatOnce = hasEntered;
-      });
-    }
-  }
-
-  // 🌟 ቻቱ የተከፈተ መሆኑን በ SharedPreferences ቋሚ የሚያደርግ
+  // 🌟 ቻቱ መከፈቱን በ SharedPreferences ቋሚ የሚያደርግ
   Future<void> _markChatEntered() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_entered_secret_chat_once', true);
-    if (mounted) {
-      setState(() {
-        _hasEnteredChatOnce = true;
-      });
-    }
   }
 
   void _initInternetCheck() {
@@ -366,19 +346,24 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 ተጠቃሚው ወደ ቻት ገጽ ገብቶ ካላወቀ Settings እንዳይከፈት የሚያደርግ
+  // 🌟 ሴቲንጉ ሲነካ በቀጥታ በሰዓቱ ከ SharedPreferences እውነት መሆኑን እያረጋገጠ እንዲከፍት የተደረገ
   Future<void> _verifyAndOpenSettings() async {
-    if (!_hasEnteredChatOnce) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'You must open and complete the chat first! 🚫',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+    final prefs = await SharedPreferences.getInstance();
+    bool hasEntered = prefs.getBool('has_entered_secret_chat_once') ?? false;
+
+    if (!hasEntered) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'You must open and complete the chat first! 🚫',
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: Colors.white,
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor: Colors.white,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+        );
+      }
       return;
     }
 
@@ -386,9 +371,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     if (authenticated && mounted) {
       _changeKnockSettings();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Authentication failed, cannot open settings! 🚫')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Authentication failed, cannot open settings! 🚫')),
+        );
+      }
     }
   }
 
@@ -507,8 +494,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       if (_tapCount >= _requiredTaps) {
         _tapResetTimer?.cancel();
         _isUnlocked = true; 
-        
-        // 🌟 አንድ ጊዜ ሚስጥራዊ በሩ ከተከፈተ በኋላ በ SharedPreferences ይመዘገባል
         _markChatEntered();
       }
     });
@@ -686,26 +671,34 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     textAlign: TextAlign.center,
                   ),
 
-                  // 🌟 ከዚህ ቀደም ቻቱ ውስጥ ያልገባ ሰው ከሆነ ብቻ የ 1-Time Passcode Button ይታያል
-                  if (!_hasEnteredChatOnce && _isFingerprintPassed) ...[
+                  if (_isFingerprintPassed) ...[
                     const SizedBox(height: 25),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amberAccent.withOpacity(0.2),
-                        foregroundColor: Colors.amberAccent,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
-                          side: const BorderSide(color: Colors.amberAccent, width: 1.5),
-                        ),
-                        elevation: 4,
-                      ),
-                      icon: const Icon(Icons.key_rounded, size: 20, color: Colors.amberAccent),
-                      label: const Text(
-                        '1-Time Passcode Hint (012)',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                      ),
-                      onPressed: _showOneTimePasscodeDialog,
+                    FutureBuilder<SharedPreferences>(
+                      future: SharedPreferences.getInstance(),
+                      builder: (context, snapshot) {
+                        bool entered = snapshot.hasData ? (snapshot.data!.getBool('has_entered_secret_chat_once') ?? false) : false;
+                        if (!entered) {
+                          return ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amberAccent.withOpacity(0.2),
+                              foregroundColor: Colors.amberAccent,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                side: const BorderSide(color: Colors.amberAccent, width: 1.5),
+                              ),
+                              elevation: 4,
+                            ),
+                            icon: const Icon(Icons.key_rounded, size: 20, color: Colors.amberAccent),
+                            label: const Text(
+                              '1-Time Passcode Hint (012)',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                            ),
+                            onPressed: _showOneTimePasscodeDialog,
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
                     ),
                   ],
                 ],
