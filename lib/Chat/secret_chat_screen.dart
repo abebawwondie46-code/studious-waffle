@@ -318,14 +318,17 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 ሰዓቱን በትክክል ከስልኩ ሎካል ሰዓት ጋር ለማስተካከል
+  // 🌟 ሰዓቱን ከስልኩ ጋር ለማመሳሰል ወደ 12 ሰዓት አቆጣጠር (12-hour format) ማስተካከያ
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
       final dateTime = DateTime.parse(createdAt).toLocal();
-      final hour = dateTime.hour.toString().padLeft(2, '0');
+      int hour = dateTime.hour;
+      int hour12 = hour % 12;
+      if (hour12 == 0) hour12 = 12;
+      
       final minute = dateTime.minute.toString().padLeft(2, '0');
-      return '$hour:$minute';
+      return '$hour12:$minute';
     } catch (_) {
       return '';
     }
@@ -485,7 +488,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
-  // 🌟 ትክክለኛውን የዩቲሲ ሰዓት ወደ ዳታቤዝ ለመላክ
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -497,7 +499,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'sender_id': '11111111-1111-1111-1111-111111111111',
         'receiver_id': '22222222-2222-2222-2222-222222222222',
         'content': text,
-        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
       });
       
       await _fetchMessages();
