@@ -570,7 +570,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     !_isFingerprintPassed
                         ? 'This chat page is locked with fingerprint 🔒'
                         : 'Tap the screen secretly to knock...',
-                         '1-Time Passcode Hint (12)',
+                        : '1-Time Passcode Hint (12)',
                     style: TextStyle(
                       color: _isFingerprintPassed ? Colors.cyanAccent : Colors.white,
                       fontSize: 16,
