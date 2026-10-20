@@ -80,7 +80,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.dispose();
   }
 
-  // 🌐 Robust Internet Connection Check without dependency conflict
   void _initInternetCheck() {
     _connectivityTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       try {
@@ -319,6 +318,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
+  // 🌟 ሰዓቱን ከተጠቃሚው ስልክ የአካባቢ ሰዓት (Local Time Zone) ጋር በትክክል ማስተካከያ
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
@@ -485,6 +485,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     });
   }
 
+  // 🌟 መልእክት ሲላክ የአሁኑን የ UTC ሰዓት በ ISO8601 ፎርማት ወደ Supabase ይልካል
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -496,7 +497,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'sender_id': '11111111-1111-1111-1111-111111111111',
         'receiver_id': '22222222-2222-2222-2222-222222222222',
         'content': text,
-        'created_at': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toUtc().toIso8601String(),
       });
       
       await _fetchMessages();
