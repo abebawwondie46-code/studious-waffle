@@ -318,11 +318,11 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 ሰዓቱን ከስልኩ ጋር ለማመሳሰል ወደ 12 ሰዓት አቆጣጠር (12-hour format) ማስተካከያ
+  // 🌟 ከስልኩ ሰዓት ጋር በትክክል እንዲመሳሰል ከ `.toLocal()` ውጭ የተስተካከለ
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
-      final dateTime = DateTime.parse(createdAt).toLocal();
+      final dateTime = DateTime.parse(createdAt);
       int hour = dateTime.hour;
       int hour12 = hour % 12;
       if (hour12 == 0) hour12 = 12;
