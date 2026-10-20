@@ -346,7 +346,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 የስልኩን ትክክለኛ ሰዓት በቀጥታ እንዲያሳይ የተስተካከለ (ለጊዜ ልዩነት ዋስትና የሚሆን)
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
@@ -548,7 +547,10 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   hintStyle: const TextStyle(color: Colors.white24, fontSize: 20, letterSpacing: 8),
                   filled: true,
                   fillColor: const Color(0xFF2B3252),
-                  border: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  border: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide.none, // 🌟 borderSide የተባለው ወደ side ተቀይሯል
+                  ),
                 ),
               ),
             ],
@@ -588,7 +590,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 መልእክቱ ልክ እንደ ስልኩ ሰዓት በትክክል እንዲቀመጥ ተደርጓል
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
