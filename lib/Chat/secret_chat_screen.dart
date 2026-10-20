@@ -30,8 +30,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
 
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
-  static bool _hasEnteredChatOnce = false; 
-  bool _isFirstTimeUser = true;
+  
+  // 🌟 አፑ ተዘግቶ ሲከፈትም እንዳይጠፋ በ SharedPreferences የሚቀመጥ state
+  bool _hasEnteredChatOnce = false;
 
   int _tapCount = 0; 
   int _requiredTaps = 3; 
@@ -55,7 +56,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     _currentReceiverName = widget.receiverName;
     _fetchedAvatarUrl = widget.receiverAvatarUrl;
     
-    _checkFirstTimeStatus();
+    _loadChatEntryStatus();
     _loadCustomTaps();
     _loadAddedFriends(); 
     _fetchReceiverProfileAndMessages(); 
@@ -84,25 +85,23 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     super.dispose();
   }
 
-  Future<void> _checkFirstTimeStatus() async {
+  // 🌟 አፑ ሲከፈት ከዚህ ቀደም ቻት ገጽ መግባቱን ከ SharedPreferences ሎድ የሚያደርግ
+  Future<void> _loadChatEntryStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    bool hasCompletedFirstEntry = prefs.getBool('has_completed_first_secret_entry') ?? false;
+    bool hasEntered = prefs.getBool('has_entered_secret_chat_once') ?? false;
     if (mounted) {
       setState(() {
-        _isFirstTimeUser = !hasCompletedFirstEntry;
-        if (hasCompletedFirstEntry) {
-          _hasEnteredChatOnce = true;
-        }
+        _hasEnteredChatOnce = hasEntered;
       });
     }
   }
 
-  Future<void> _markFirstTimeCompleted() async {
+  // 🌟 ቻቱ የተከፈተ መሆኑን በ SharedPreferences ቋሚ የሚያደርግ
+  Future<void> _markChatEntered() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_completed_first_secret_entry', true);
+    await prefs.setBool('has_entered_secret_chat_once', true);
     if (mounted) {
       setState(() {
-        _isFirstTimeUser = false;
         _hasEnteredChatOnce = true;
       });
     }
@@ -367,8 +366,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
+  // 🌟 ተጠቃሚው ወደ ቻት ገጽ ገብቶ ካላወቀ Settings እንዳይከፈት የሚያደርግ
   Future<void> _verifyAndOpenSettings() async {
-    if (!_hasEnteredChatOnce && !_isFirstTimeUser) {
+    if (!_hasEnteredChatOnce) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -507,7 +507,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
       if (_tapCount >= _requiredTaps) {
         _tapResetTimer?.cancel();
         _isUnlocked = true; 
-        _markFirstTimeCompleted();
+        
+        // 🌟 አንድ ጊዜ ሚስጥራዊ በሩ ከተከፈተ በኋላ በ SharedPreferences ይመዘገባል
+        _markChatEntered();
       }
     });
   }
@@ -571,7 +573,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                   setState(() {
                     _isUnlocked = true;
                   });
-                  await _markFirstTimeCompleted();
+                  await _markChatEntered();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -684,7 +686,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                     textAlign: TextAlign.center,
                   ),
 
-                  if (_isFirstTimeUser && _isFingerprintPassed) ...[
+                  // 🌟 ከዚህ ቀደም ቻቱ ውስጥ ያልገባ ሰው ከሆነ ብቻ የ 1-Time Passcode Button ይታያል
+                  if (!_hasEnteredChatOnce && _isFingerprintPassed) ...[
                     const SizedBox(height: 25),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
