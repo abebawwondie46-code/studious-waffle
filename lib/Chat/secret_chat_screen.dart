@@ -322,7 +322,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
-      final dateTime = DateTime.parse(createdAt).toLocal();
+      // 🌟 የሰዓት ልዩነቱን ለማስተካከል 3 ሰዓት (180 ደቂቃ) ተጨምሮ Local ሰዓት እንዲሆን ተደርጓል
+      final dateTime = DateTime.parse(createdAt).toLocal().add(const Duration(hours: 3));
       final hour = dateTime.hour.toString().padLeft(2, '0');
       final minute = dateTime.minute.toString().padLeft(2, '0');
       return '$hour:$minute';
