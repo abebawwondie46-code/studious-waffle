@@ -32,7 +32,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   static bool _hasEnteredChatOnce = false; 
 
   int _tapCount = 0; 
-  int _requiredTaps = 3; 
+  int _requiredTaps = 1; // 🌟 ነባሪው (default) 3 የነበረው ወደ 1 ተቀይሯል
   Timer? _tapResetTimer; 
   Timer? _pollingTimer;
   Timer? _connectivityTimer;
@@ -134,7 +134,8 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   Future<void> _loadCustomTaps() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _requiredTaps = prefs.getInt('secret_knock_taps') ?? 3;
+      // 🌟 ከተቀመጠው ዋጋ ካለ ውሰድ፣ ካልሆነ ግን 1 አድርገው
+      _requiredTaps = prefs.getInt('secret_knock_taps') ?? 1;
     });
   }
 
@@ -318,7 +319,6 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
     );
   }
 
-  // 🌟 ከስልኩ ሰዓት ጋር በትክክል እንዲመሳሰል ከ `.toLocal()` ውጭ የተስተካከለ
   String _formatTime(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return '';
     try {
@@ -394,7 +394,7 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
                       IconButton(
                         icon: const Icon(Icons.remove_circle, color: Color(0xFF00C6FF), size: 32),
                         onPressed: () {
-                          if (tempTaps > 2) {
+                          if (tempTaps > 1) { // ዝቅተኛው 1 እንዲሆን ተደርጓል
                             setDialogState(() => tempTaps--);
                           }
                         },
