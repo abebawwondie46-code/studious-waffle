@@ -8,11 +8,10 @@ import 'admin/admin_service.dart'; // <--- አዲሱን የአድሚን ሰር�
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // የሱፓቤስ ማገናኛ ቁልፎችዎ በትክክል ተካትተዋል
+  // አዲሶቹ የሱፓቤስ ማገናኛ ቁልፎችዎ በትክክል ተካትተዋል
   await Supabase.initialize(
-    url: 'https://jhwjfnzqxfxbnzdvqrovk.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impod2pmenF4ZnhibnpkdnFyb3ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2NTg3MTMsImV4cCI6MjEwODIzNDcxM30.yN7SWaJCuMEnGTSaSa4jf5eItuLUahyKKR2N3mjiYYk',
+    url: 'https://jhwjfzqxfxbnzdvqrovk.supabase.co',
+    anonKey: 'sb_publishable_56iB7uF1-mwh6NcObNv1PA_t4uTnOdG',
   );
 
   runApp(const MyApp());
