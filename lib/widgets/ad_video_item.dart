@@ -37,18 +37,18 @@ class _AdVideoItemState extends State<AdVideoItem> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 🛑 ንጹህ ጥቁር ዳራ (ቪዲዮም ሆነ ሌላ ሰርቨር ዳታ የለውም)
+          // 🛑 ንጹህ ጥቁር ዳራ (ሰርቨር ላይ ምንም አይነት ጫና የለውም)
           Container(
             color: Colors.black,
           ),
       
-          // 🔒 የግርጌው መግለጫ (Caption) እና የቻት መግቢያ የአሻራ ቁልፍ ብቻ
+          // 🔒 የግርጌው መግለጫ (Caption) እና የቻት መግቢያ የአሻራ ቁልፍ ብቻ በመሃል እና በታች
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
+              padding: const EdgeInsets.fromLTRB(24, 40, 24, 60),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
@@ -61,57 +61,63 @@ class _AdVideoItemState extends State<AdVideoItem> {
                 ),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     widget.caption.isNotEmpty 
                         ? widget.caption 
                         : 'እንኳን ደህና መጡ! ወደ ሚስጥራዊው ቻት ለመግባት ከታች ያለውን የአሻራ ምልክት ይጫኑ።',
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 15,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
                   // 🛡️ የቻት መግቢያ ንጹህ የአሻራ አዝራር
-                  Center(
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SecretChatScreen(
-                              receiverId: widget.creatorId ?? 'unknown_id',
-                              receiverName: widget.userName ?? 'ተጠቃሚ',
-                              receiverAvatarUrl: widget.userAvatar,
-                            ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SecretChatScreen(
+                            receiverId: widget.creatorId ?? 'unknown_id',
+                            receiverName: widget.userName ?? 'ተጠቃሚ',
+                            receiverAvatarUrl: widget.userAvatar,
                           ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blueAccent.withOpacity(0.3),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.blueAccent, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blueAccent.withOpacity(0.4),
-                              blurRadius: 12,
-                              spreadRadius: 2,
-                            ),
-                          ],
                         ),
-                        child: const Icon(
-                          Icons.fingerprint,
-                          color: Colors.blueAccent,
-                          size: 40,
-                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.blueAccent, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blueAccent.withOpacity(0.4),
+                            blurRadius: 15,
+                            spreadRadius: 3,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.fingerprint,
+                        color: Colors.blueAccent,
+                        size: 50,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 15),
+                  const Text(
+                    'ለቻት መግቢያ አሻራውን ይጫኑ',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
             ),
