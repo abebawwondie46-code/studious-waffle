@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/ad_video_item.dart';
@@ -30,8 +29,11 @@ class _FeedScreenState extends State<FeedScreen> {
     _fetchProfileAndAds();
   }
 
+  // 1. መጀመሪያ የፕሮፋይሉን ስም እና ፎቶ ከ profiles ቴብል እናመጣለን
+  // 2. ከዚያም የቪዲዮ ዝርዝሮችን ከ videos ቴብል እንጭናለን
   Future<void> _fetchProfileAndAds() async {
     try {
+      // የፕሮፋይል መረጃ ማምጣት
       try {
         final profileRes = await supabase
             .from('profiles')
@@ -46,38 +48,15 @@ class _FeedScreenState extends State<FeedScreen> {
         }
       } catch (_) {}
 
-      // የቪዲዮዎች ዝርዝር ከሰርቨር ማምጣት
+      // የቪዲዮዎች ዝርዝር ማምጣት
       final response = await supabase.from('videos').select();
       
-      List<Map<String, dynamic>> fetchedAds = List<Map<String, dynamic>>.from(response);
-
-      // 🛑 ዳታቤዙ ባዶ ከሆነ (ቪዲዮ ከሌለ) አፑ እንዳይዘጋ 1 ነባር (Static) ዱሚ ካርድ እንፈጥራለን
-      if (fetchedAds.isEmpty) {
-        fetchedAds = [
-          {
-            'id': 'dummy_chat_card',
-            'caption': 'እንኳን ደህና መጡ! ወደ ቻት ለመግባት በግራ በኩል ያለውን የአሻራ ቁልፍ ይጫኑ።',
-            'video_url': '',
-            'template_json': {},
-          }
-        ];
-      }
-
       setState(() {
-        _ads = fetchedAds;
+        _ads = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
     } catch (e) {
-      // ስህተት ቢኖርም እንኳን ዱሚ ካርዱን በመፍጠር አፑ እንዳይበላሽ እናደርጋለን
       setState(() {
-        _ads = [
-          {
-            'id': 'dummy_chat_card',
-            'caption': 'ወደ ቻት ለመግባት በግራ በኩል ያለውን የአሻራ ቁልፍ ይጫኑ።',
-            'video_url': '',
-            'template_json': {},
-          }
-        ];
         _isLoading = false;
       });
       debugPrint('Failed to load data: $e');
@@ -225,6 +204,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       videoUrl: ad['video_url'] ?? '',
                       templateJson: ad['template_json'] ?? {},
                       videoId: ad['id']?.toString(),
+                      // የፕሮፋይል ፎቶውን እና ስሙን በቀጥታ እናልፋለን
                       userAvatar: _profileAvatar,
                       userName: _profileName,
                     );
