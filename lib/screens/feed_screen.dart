@@ -1,73 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:kuanyngne/Chat/secret_chat_screen.dart';
+import '../widgets/ad_video_item.dart';
 
-class AdVideoItem extends StatelessWidget {
-  final String? userAvatar; 
-  final String? userName;    
-  final String? creatorId;
+class FeedScreen extends StatefulWidget {
+  const FeedScreen({super.key});
 
-  const AdVideoItem({
-    super.key,
-    this.userAvatar,
-    this.userName,
-    this.creatorId,
-  });
+  @override
+  State<FeedScreen> createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends State<FeedScreen> {
+  final String _profileName = 'Community Creator';
+  final String _profileAvatar = '';
+  final String _creatorId = '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 🛡️ የቻት መግቢያ ንጹህ የአሻራ አዝራር
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SecretChatScreen(
-                      receiverId: creatorId ?? 'unknown_id',
-                      receiverName: userName ?? 'ተጠቃሚ',
-                      receiverAvatarUrl: userAvatar,
-                    ),
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.blueAccent, width: 2.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blueAccent.withOpacity(0.5),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.fingerprint,
-                  color: Colors.blueAccent,
-                  size: 70,
-                ),
-              ),
-            ),
-            const SizedBox(height: 25),
-            // 📝 አጭር ገላጭ ጽሑፍ
-            const Text(
-              'ወደ ሚስጥራዊው ቻት ለመግባት አሻራውን ይጫኑ',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'kuanyngne',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        centerTitle: true,
+        actions: const [],
+      ),
+      body: AdVideoItem(
+        userAvatar: _profileAvatar,
+        userName: _profileName,
+        creatorId: _creatorId,
       ),
     );
   }
