@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/ad_video_item.dart';
@@ -19,9 +20,10 @@ class _FeedScreenState extends State<FeedScreen> {
   bool _isSearchActive = false;
   final TextEditingController _searchController = TextEditingController();
 
-  // የአሁኑ ተጠቃሚ ፕሮፋይል መረጃ (ፎቶ እና ስም)
+  // የአሁኑ ተጠቃሚ ፕሮፋይል መረጃ
   String _profileName = 'Community Creator';
   String _profileAvatar = '';
+  String _creatorId = '';
 
   @override
   void initState() {
@@ -29,34 +31,47 @@ class _FeedScreenState extends State<FeedScreen> {
     _fetchProfileAndAds();
   }
 
-  // 1. መጀመሪያ የፕሮፋይሉን ስም እና ፎቶ ከ profiles ቴብል እናመጣለን
-  // 2. ከዚያም የቪዲዮ ዝርዝሮችን ከ videos ቴብል እንጭናለን
   Future<void> _fetchProfileAndAds() async {
     try {
-      // የፕሮፋይል መረጃ ማምጣት
       try {
         final profileRes = await supabase
             .from('profiles')
-            .select('full_name, avatar_url')
+            .select('id, full_name, avatar_url')
             .maybeSingle();
         
         if (profileRes != null) {
           setState(() {
+            _creatorId = profileRes['id']?.toString() ?? '';
             _profileName = profileRes['full_name'] ?? 'Community Creator';
             _profileAvatar = profileRes['avatar_url'] ?? '';
           });
         }
       } catch (_) {}
 
-      // የቪዲዮዎች ዝርዝር ማምጣት
       final response = await supabase.from('videos').select();
       
+      List<Map<String, dynamic>> fetchedAds = List<Map<String, dynamic>>.from(response);
+
+      // ዳታቤዙ ባዶ ከሆነ 1 ካርድ እንፈጥራለን
+      if (fetchedAds.isEmpty) {
+        fetchedAds = [
+          {
+            'id': 'dummy_chat_card',
+          }
+        ];
+      }
+
       setState(() {
-        _ads = List<Map<String, dynamic>>.from(response);
+        _ads = fetchedAds;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
+        _ads = [
+          {
+            'id': 'dummy_chat_card',
+          }
+        ];
         _isLoading = false;
       });
       debugPrint('Failed to load data: $e');
@@ -186,27 +201,19 @@ class _FeedScreenState extends State<FeedScreen> {
               child: CircularProgressIndicator(color: Colors.redAccent),
             )
           : displayList.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No found.',
-                    style: TextStyle(color: Colors.white70),
-                  ),
+              ? AdVideoItem(
+                  userAvatar: _profileAvatar,
+                  userName: _profileName,
+                  creatorId: _creatorId,
                 )
               : PageView.builder(
                   scrollDirection: Axis.vertical,
                   itemCount: displayList.length,
                   itemBuilder: (context, index) {
-                    final ad = displayList[index];
-
                     return AdVideoItem(
-                      key: ValueKey(ad['id'] ?? index),
-                      caption: ad['caption'] ?? '',
-                      videoUrl: ad['video_url'] ?? '',
-                      templateJson: ad['template_json'] ?? {},
-                      videoId: ad['id']?.toString(),
-                      // የፕሮፋይል ፎቶውን እና ስሙን በቀጥታ እናልፋለን
                       userAvatar: _profileAvatar,
                       userName: _profileName,
+                      creatorId: _creatorId,
                     );
                   },
                 ),
