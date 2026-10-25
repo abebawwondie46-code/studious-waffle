@@ -34,7 +34,6 @@ class AdVideoItem extends StatefulWidget {
 }
 
 class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
-  // 🔒 ቪዲዮው ስለተዘጋ ኮንለሩ ለጊዜው አያስፈልግም (ሰርቨር እንዳይከብድ)
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   bool _showPlayIcon = false;
@@ -62,9 +61,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       duration: const Duration(seconds: 4),
       vsync: this,
     )..repeat();
-    
-    // 🛑 ቪዲዮ እንዳይጫን ሰርቨር የሚጠራው _initializeVideo() ተዘግቷል (ዳታ ዜሮ ነው)
-    // _initializeVideo(); 
     
     _loadVideoSpecificData();
     _startSmartTimer();
@@ -119,6 +115,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     }
   }
 
+  // 🛑 ሰርቨር ዳታ እንዳይጠይቅ ሙሉ በሙሉ ታግዷል (ዳታ ዜሮ ነው)
   Future<void> _loadVideoSpecificData() async {
     setState(() {
       _isFollowing = false;
@@ -137,46 +134,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       });
     }
 
-    await _fetchEngagementData();
-  }
-
-  Future<void> _fetchEngagementData() async {
-    try {
-      final query = Supabase.instance.client
-          .from('videos')
-          .select('likes_count, comments_count, shares_count, followers_count, is_following');
-
-      final response = widget.videoId != null
-          ? await query.eq('id', widget.videoId!).maybeSingle()
-          : await query.eq('video_url', widget.videoUrl).maybeSingle();
-
-      if (response != null && mounted) {
-        final prefs = await SharedPreferences.getInstance();
-        final creatorKey = widget.userName ?? widget.userAvatar ?? 'creator_unknown';
-        final uniqueKey = 'followed_creator_$creatorKey';
-        final isLocallyFollowed = prefs.getBool(uniqueKey) ?? false;
-
-        final bool serverIsFollowing = (response['is_following'] ?? false) || isLocallyFollowed;
-        
-        setState(() {
-          _likeCount = response['likes_count'] ?? _likeCount;
-          _commentCount = response['comments_count'] ?? _commentCount;
-          _shareCount = response['shares_count'] ?? _shareCount;
-          _followersCount = response['followers_count'] ?? 0;
-          _isFollowing = serverIsFollowing;
-          
-          if (serverIsFollowing) {
-            _hidePlusSignPermanently = true;
-          }
-        });
-
-        if (serverIsFollowing) {
-          await prefs.setBool(uniqueKey, true);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error fetching engagement data: $e');
-    }
+    // ከሰርቨር የሚደረግ ዳታ ጥያቄ ጠፍቷል: await _fetchEngagementData();
   }
 
   // 🌟 (+) ወይም የፕሮፋይል አዝራሩ ሲነካ ወደ ቻት የሚወስድበት ትክክለኛ ኮድ
@@ -186,22 +144,6 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     String resolvedName = widget.userName ?? 'ተጠቃሚ';
     String? resolvedAvatar = widget.userAvatar;
     String resolvedId = widget.creatorId ?? '';
-
-    try {
-      final profileQuery = await Supabase.instance.client
-          .from('profiles')
-          .select()
-          .limit(1)
-          .maybeSingle();
-      
-      if (profileQuery != null) {
-        resolvedName = profileQuery['full_name'] ?? resolvedName;
-        resolvedAvatar = profileQuery['avatar_url'] ?? profileQuery['profile_pic'] ?? resolvedAvatar;
-        resolvedId = profileQuery['id']?.toString() ?? resolvedId;
-      }
-    } catch (e) {
-      debugPrint('Error fetching profile on click: $e');
-    }
 
     if (mounted) {
       Navigator.push(
@@ -229,63 +171,23 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
     final creatorKey = widget.userName ?? widget.userAvatar ?? 'creator_unknown';
     final uniqueKey = 'followed_creator_$creatorKey';
     await prefs.setBool(uniqueKey, newFollowState);
-
-    try {
-      final query = Supabase.instance.client.from('videos');
-      if (widget.videoId != null) {
-        await query.update({
-          'followers_count': newFollowersCount,
-          'is_following': newFollowState,
-        }).eq('id', widget.videoId!);
-      } else {
-        await query.update({
-          'followers_count': newFollowersCount,
-          'is_following': newFollowState,
-        }).eq('video_url', widget.videoUrl);
-      }
-    } catch (e) {
-      debugPrint('Failed to update follow status on server: $e');
-    }
   }
 
   Future<void> _handleLikePressed() async {
     _keepButtonsVisibleTemporarily();
-    final newLikeState = !_isLiked;
-    final newLikeCount = newLikeState ? _likeCount + 1 : _likeCount - 1;
-
     setState(() {
-      _isLiked = newLikeState;
-      _likeCount = newLikeCount;
+      _isLiked = !_isLiked;
+      _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
     });
-
-    try {
-      final query = Supabase.instance.client.from('videos');
-      if (widget.videoId != null) {
-        await query.update({'likes_count': newLikeCount}).eq('id', widget.videoId!);
-      } else {
-        await query.update({'likes_count': newLikeCount}).eq('video_url', widget.videoUrl);
-      }
-    } catch (e) {
-      debugPrint('Failed to update like on server: $e');
-    }
   }
 
   Future<void> _handleSharePressed() async {
     _keepButtonsVisibleTemporarily();
     try {
       await Share.share('Check out this amazing chat app: ${widget.videoUrl}');
-      final newShareCount = _shareCount + 1;
-      
       setState(() {
-        _shareCount = newShareCount;
+        _shareCount = _shareCount + 1;
       });
-
-      final query = Supabase.instance.client.from('videos');
-      if (widget.videoId != null) {
-        await query.update({'shares_count': newShareCount}).eq('id', widget.videoId!);
-      } else {
-        await query.update({'shares_count': newShareCount}).eq('video_url', widget.videoUrl);
-      }
     } catch (e) {
       debugPrint('Error sharing: $e');
     }
@@ -345,7 +247,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 🛑 ቪዲዮው ሲዘጋ ገጹ ልሙጥ ሆኖ ዳራው ብቻ እንዲቀመጥ ተደርጓል (ሰርቨር ነፃ ነው)
+          // 🛑 ቪዲዮው ሲዘጋ ገጹ ልሙጥ ሆኖ ዳራው ብቻ እንዲቀመጥ ተደርጓል (ሰርቨር 100% ነፃ ነው)
           Container(
             color: Colors.black,
             child: const Center(
@@ -418,7 +320,7 @@ class _AdVideoItemState extends State<AdVideoItem> with TickerProviderStateMixin
             ),
           ),
 
-          // 👤 የቀኝ በኩል የፕሮፋይል ፎቶ እና ሌሎች አዝራሮች (ተጠብቀዋል፣ ሰርቨር አያጨናነቁም)
+          // 👤 የቀኝ በኩል የፕሮፋይል ፎቶ እና ሌሎች አዝራሮች
           Positioned(
             right: 12,
             bottom: 80,
