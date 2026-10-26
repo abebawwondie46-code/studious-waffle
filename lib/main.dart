@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/feed_screen.dart';
-import 'screens/create_screen.dart'; // አዲሱ የቪዲዮ መፍጠሪያ ፋይል
-import 'screens/profile_screen.dart'; // አዲሱ የፕሮፋይል ፋይል
-import 'admin/admin_service.dart'; // <--- አዲሱን የአድሚን ሰርቪስ ፋይል እዚህ አስመጣን
+import 'screens/profile_screen.dart'; // <--- የ CreateScreen ማስገቢያ ሙሉ በሙሉ ጠፍቷል
+import 'admin/admin_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // አዲሶቹ የሱፓቤስ ማገናኛ ቁልፎችዎ በትክክል ተካትተዋል
   await Supabase.initialize(
     url: 'https://jhwjfzqxfxbnzdvqrovk.supabase.co',
     anonKey: 'sb_publishable_56iB7uF1-mwh6NcObNv1PA_t4uTnOdG',
@@ -45,10 +43,9 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  // ሦስቱን ዋና ዋና ስክሪኖች እዚህ በንጹህ መልኩ አካተናል
+  // 🛑 ቪዲዮ መፍጠሪያው ስክሪን ሙሉ በሙሉ ተወግዶ Home እና Profile ብቻ ቀርተዋል
   final List<Widget> _screens = [
     const FeedScreen(),
-    const CreateScreen(),
     const ProfileScreen(),
   ];
 
@@ -56,7 +53,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     
-    // አፕ ሲከፈት ከ Supabase የሰርቨር ቅንብሮችን (Maintenance mode እና Announcement) ማረጋገጥ
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AdminService.checkAppStatus(context);
     });
@@ -82,7 +78,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             icon: Icon(Icons.home),
             label: 'Home',
           ),
-           BottomNavigationBarItem(
+          BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
           ),
