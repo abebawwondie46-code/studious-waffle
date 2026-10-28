@@ -37,6 +37,11 @@ jobs:
         run: |
           sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' android/app/src/main/AndroidManifest.xml
 
+      - name: Generate App Icon
+        run: |
+          flutter pub get
+          flutter pub run flutter_launcher_icons:main
+          
       - name: Get Dependencies
         run: flutter pub get
 
