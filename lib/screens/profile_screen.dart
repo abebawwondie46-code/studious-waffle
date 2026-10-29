@@ -520,8 +520,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            
+            // 👉 እዚህ ጋር የተጠቃሚውን ነጥብ የሚያሳይ ዊንጅት ተጨምሯል
+            const UserPointsWidget(telegramId: 'YOUR_USER_TELEGRAM_ID'),
+
+            const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// 👉 የነጥብ ማሳያ ዊንጅት (User Points Widget)
+class UserPointsWidget extends StatefulWidget {
+  final String telegramId;
+
+  const UserPointsWidget({Key? key, required this.telegramId}) : super(key: key);
+
+  @override
+  _UserPointsWidgetState createState() => _UserPointsWidgetState();
+}
+
+class _UserPointsWidgetState extends State<UserPointsWidget> {
+  final SupabaseClient supabase = Supabase.instance.client;
+  int userPoints = 0;
+  bool isLoading = true;
+
+ @override
+  void initState() {
+    super.initState();
+    _fetchUserPoints();
+  }
+
+  Future<void> _fetchUserPoints() async {
+    try {
+      final response = await supabase
+          .from('user_points')
+          .select('points')
+          .eq('telegram_id', widget.telegramId)
+          .maybeSingle();
+
+      if (response != null && response['points'] != null) {
+        setState(() {
+          userPoints = response['points'];
+        });
+      }
+    } catch (e) {
+      debugPrint('ነጥብ በማንበብ ጊዜ ስህተት ተፈጥሯል: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: const Color(0xFF16161A),
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: Colors.white10, width: 0.5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.emoji_events, color: Colors.amber, size: 28),
+              SizedBox(width: 12),
+              Text(
+                'የእርስዎ ነጥብ (My Points)',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                )
+              : Text(
+                  '$userPoints ነጥብ',
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ],
       ),
     );
   }
