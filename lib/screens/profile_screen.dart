@@ -532,7 +532,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// 👉 የነጥብ ማሳያ ዊንጅት (User Points Widget)
+// 👉 የተስተካከለው የነጥብ ማሳያ ዊንጅት (User Points Widget)
 class UserPointsWidget extends StatefulWidget {
   final String telegramId;
 
@@ -547,7 +547,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
   int userPoints = 0;
   bool isLoading = true;
 
- @override
+  @override
   void initState() {
     super.initState();
     _fetchUserPoints();
@@ -582,17 +582,17 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
       decoration: BoxDecoration(
         color: const Color(0xFF16161A),
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Colors.white10, width: 0.5),
+        border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1), // ከወርቃማ ከለር ጋር የሚስማማ ቦርደር
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Row(
             children: [
-              Icon(Icons.emoji_events, color: Colors.amber, size: 28),
+              Icon(Icons.emoji_events, color: Colors.amber, size: 28), // የሽልማት ዋንጫ ከለር
               SizedBox(width: 12),
               Text(
-                'የእርስዎ ነጥብ (My Points)',
+                'My Points', // አጭር እና ግልፅ በእንግሊዝኛ
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
@@ -601,12 +601,12 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
               ? const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
                 )
               : Text(
-                  '$userPoints ነጥብ',
+                  '$userPoints Points',
                   style: const TextStyle(
-                    color: Colors.redAccent,
+                    color: Colors.amber, // ከሽልማት ጋር የሚሄድ ውብ ወርቃማ ከለር
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
