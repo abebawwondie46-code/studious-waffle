@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ሲጠፋ ነጥቦቹን ወደ 0 ማድረግ
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
       final List existing = await _supabase.from('app_settings').select('id');
@@ -270,8 +270,7 @@ class AdminService {
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
                                 final Map data = (snapshot.data as Map?) ?? {};
-                                // ከሰርቨር የሚመጣውን ትክክለኛ ዋልዩ ይወስዳል፤ ከሌለ በዲፎልት false እንዲሆን ተደርጓል
-                                bool competitionValue = data['is_competition_active'] ?? false;
+                                bool competitionValue = data['is_competition_active'] ?? true;
 
                                 return StatefulBuilder(
                                   builder: (context, setSwitchState) {
@@ -309,7 +308,7 @@ class AdminService {
                                               if (!context.mounted) return;
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
-                                                  content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ጠፍቷል! ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
+                                                  content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ቆሟል! ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
                                                   backgroundColor: val ? Colors.green : Colors.orange,
                                                   duration: const Duration(seconds: 2),
                                                 ),
