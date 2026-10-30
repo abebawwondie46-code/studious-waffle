@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) በሰኩዮር መልኩ ማሻሻል
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ሲጠፋ ነጥቦችን ወደ 0 መመለስ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
       final List existing = await _supabase.from('app_settings').select('id');
@@ -81,6 +81,12 @@ class AdminService {
           'is_competition_active': isActive,
         });
       }
+
+      // 👉 ውድድሩ ኦፍ (OFF) ሲደረግ ነጥቦቹን በሙሉ በራስ-ሰር ወደ 0 ይመልሳል
+      if (!isActive) {
+        await resetAllPoints();
+      }
+
       return true;
     } catch (e) {
       debugPrint('Error updating competition status: $e');
@@ -259,7 +265,7 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (በStatefulBuilder የታገዘ ትክክለኛ ኦን/ኦፍ)
+                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል
                             FutureBuilder(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
@@ -287,7 +293,7 @@ class AdminService {
                                       SwitchListTile(
                                         title: const Text('የውድድር ነጥብ አሰጣጥ (Competition)', style: TextStyle(color: Colors.white, fontSize: 12)),
                                         subtitle: Text(
-                                          competitionValue ? 'ውድድሩ በሥራ ላይ ነው (ON)' : 'ውድድሩ ቆሟል (OFF)',
+                                          competitionValue ? 'ውድድሩ በሥራ ላይ ነው (ON)' : 'ውድድሩ ቆሟል (OFF) - ነጥቦች ሪሴት ሆነዋል',
                                           style: TextStyle(color: competitionValue ? Colors.greenAccent : Colors.redAccent, fontSize: 11),
                                         ),
                                         value: competitionValue,
@@ -297,6 +303,13 @@ class AdminService {
                                             competitionValue = val;
                                           });
                                           await toggleCompetitionStatus(val);
+                                          if (!context.mounted) return;
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ተቁሟል! ሁሉም ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
+                                              backgroundColor: val ? Colors.green : Colors.orange,
+                                            ),
+                                          );
                                         },
                                       ),
                                       const Divider(color: Colors.white12),
