@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ሲጠፋ ነጥቦቹን ወደ 0 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
       final List existing = await _supabase.from('app_settings').select('id');
@@ -82,7 +82,7 @@ class AdminService {
         });
       }
 
-      // ውድድሩ ኦፍ (OFF) ሲደረግ ነጥቦቹን በሙሉ ወደ 0 ይመልሳል
+      // 👉 ማብሪያው ኦፍ (OFF) ሲደረግ የሁሉንም ተጠቃሚዎች ነጥብ በራስ-ሰር ወደ 0 ይመልሳል
       if (!isActive) {
         await resetAllPoints();
       }
@@ -265,12 +265,13 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (በተስተካከለ StatefulBuilder የተያዘ)
+                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል
                             FutureBuilder(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
                                 final Map data = (snapshot.data as Map?) ?? {};
-                                bool competitionValue = data['is_competition_active'] ?? true;
+                                // ከሰርቨር የሚመጣውን ትክክለኛ ዋልዩ ይወስዳል፤ ከሌለ በዲፎልት false እንዲሆን ተደርጓል
+                                bool competitionValue = data['is_competition_active'] ?? false;
 
                                 return StatefulBuilder(
                                   builder: (context, setSwitchState) {
