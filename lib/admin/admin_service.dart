@@ -4,8 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ
-  static Future<bool> checkIfUserIsAdmin() async {
+  /// 1. አድሚን መሆን አለመሆኑን ማረጋገጥ
+  static Future checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return false;
@@ -25,8 +25,8 @@ class AdminService {
     return false;
   }
 
-  /// 2. የ app_settings መረጃዎችን ከሰርቨር ማንበብ
-  static Future?> fetchAppSettings() async {
+  /// 2. የ app_settings መረጃዎችን ማንበብ
+  static Future fetchAppSettings() async {
     try {
       final response = await _supabase
           .from('app_settings')
@@ -41,12 +41,12 @@ class AdminService {
   }
 
   /// 3. የ app_settings መረጃዎችን ማሻሻል
-  static Future<bool> updateAppSettings({
+  static Future updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
   }) async {
     try {
-      final List<dynamic> existing = await _supabase.from('app_settings').select('id');
+      final List existing = await _supabase.from('app_settings').select('id');
       
       if (existing.isNotEmpty) {
         final id = existing[0]['id'];
@@ -67,10 +67,10 @@ class AdminService {
     }
   }
 
-  /// የውድድር ሁኔታን (Competition Status) ማሻሻል
-  static Future<bool> toggleCompetitionStatus(bool isActive) async {
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል
+  static Future toggleCompetitionStatus(bool isActive) async {
     try {
-      final List<dynamic> existing = await _supabase.from('app_settings').select('id');
+      final List existing = await _supabase.from('app_settings').select('id');
       if (existing.isNotEmpty) {
         final id = existing[0]['id'];
         await _supabase.from('app_settings').update({
@@ -84,8 +84,8 @@ class AdminService {
     }
   }
 
-  /// የሁሉም ተጠቃሚዎች ነጥብ ወደ ዜሮ መመለሻ (Reset Points)
-  static Future<bool> resetAllPoints() async {
+  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points)
+  static Future resetAllPoints() async {
     try {
       await _supabase.from('user_points').update({'points': 0});
       return true;
@@ -95,8 +95,8 @@ class AdminService {
     }
   }
 
-  /// 4. አፕ ሲከፈት ማስታወቂያዎችን ብቻ የሚያሳይ
-  static Future<void> checkAppStatus(BuildContext context) async {
+  /// 6. አፕ ሲከፈት ማስታወቂያ የሚያሳይ
+  static Future checkAppStatus(BuildContext context) async {
     final settings = await fetchAppSettings();
     if (settings == null) return;
 
@@ -115,8 +115,8 @@ class AdminService {
     }
   }
 
-  /// 5. አጠቃላይ ስታቲስቲክስ ማምጣት
-  static Future> fetchAppStatistics() async {
+  /// 7. አጠቃላይ ስታቲስቲክስ ማምጣት
+  static Future fetchAppStatistics() async {
     try {
       final usersRes = await _supabase.from('profiles').select('id');
       final postsRes = await _supabase.from('posts').select('id');
@@ -132,22 +132,22 @@ class AdminService {
     }
   }
 
-  /// 6. አክቲቭ ተጠቃሚዎችን በነጥብ ማምጣት (Leaderboard)
-  static Future<List>> fetchTopActiveUsers() async {
+  /// 8. አክቲቭ ተጠቃሚዎችን በነጥብ ማምጣት (Leaderboard)
+  static Future fetchTopActiveUsers() async {
     try {
       final response = await _supabase
           .from('user_points')
           .select('telegram_id, username, points')
           .order('points', ascending: false)
           .limit(10);
-      return List>.from(response);
+      return List.from(response);
     } catch (e) {
       return [];
     }
   }
 
-  /// 7. ተጠቃሚን ማገድ ወይም መክፈት (Ban User)
-  static Future<bool> toggleUserBan(String email, bool banStatus) async {
+  /// 9. ተጠቃሚን ማገድ ወይም መክፈት (Ban User)
+  static Future toggleUserBan(String email, bool banStatus) async {
     try {
       await _supabase
           .from('profiles')
@@ -159,7 +159,7 @@ class AdminService {
     }
   }
 
-  /// 8. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ
+  /// 10. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ
   static void showAdminPanel(BuildContext context) async {
     final settings = await fetchAppSettings();
     
@@ -177,8 +177,8 @@ class AdminService {
         child: AlertDialog(
           backgroundColor: const Color(0xFF16161A),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: const [
+          title: const Row(
+            children: [
               Icon(Icons.admin_panel_settings, color: Colors.redAccent),
               SizedBox(width: 10),
               Text('የአድሚን ማዕከል (Admin Control)', style: TextStyle(color: Colors.white, fontSize: 15)),
@@ -255,11 +255,12 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (በወርቃማ ከለር)
-                            FutureBuilder?>(
+                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል
+                            FutureBuilder(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
-                                bool competitionValue = snapshot.data?['is_competition_active'] ?? true;
+                                final Map? data = snapshot.data as Map?;
+                                bool competitionValue = data?['is_competition_active'] ?? true;
 
                                 return Container(
                                   padding: const EdgeInsets.all(12),
@@ -340,13 +341,13 @@ class AdminService {
                       ),
 
                       // Tab 2: Analytics
-                      FutureBuilder>(
+                      FutureBuilder(
                         future: fetchAppStatistics(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
-                          final stats = snapshot.data ?? {};
+                          final Map stats = (snapshot.data as Map?) ?? {};
                           return ListView(
                             children: [
                               _buildStatCard('ጠቅላላ ተጠቃሚዎች (Total Users)', '${stats['total_users'] ?? 0}', Icons.group, Colors.blue),
@@ -358,13 +359,13 @@ class AdminService {
                       ),
 
                       // Tab 3: Users Management
-                      FutureBuilder<List>>(
+                      FutureBuilder(
                         future: _supabase.from('profiles').select('full_name, email, is_banned').limit(20),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
-                          final users = snapshot.data ?? [];
+                          final List users = (snapshot.data as List?) ?? [];
                           if (users.isEmpty) return const Center(child: Text('ምንም ተጠቃሚ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
@@ -390,13 +391,13 @@ class AdminService {
                       ),
 
                       // Tab 4: Reward Leaderboard
-                      FutureBuilder<List>>(
+                      FutureBuilder(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
-                          final topUsers = snapshot.data ?? [];
+                          final List topUsers = (snapshot.data as List?) ?? [];
                           if (topUsers.isEmpty) return const Center(child: Text('ምንም መረጃ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
