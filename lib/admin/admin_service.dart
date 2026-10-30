@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል
+  /// 4. የውድድር ሁኔታን (Competition Active) በሰኩዮር መልኩ ማሻሻል
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
       final List existing = await _supabase.from('app_settings').select('id');
@@ -76,6 +76,10 @@ class AdminService {
         await _supabase.from('app_settings').update({
           'is_competition_active': isActive,
         }).eq('id', id);
+      } else {
+        await _supabase.from('app_settings').insert({
+          'is_competition_active': isActive,
+        });
       }
       return true;
     } catch (e) {
@@ -186,7 +190,7 @@ class AdminService {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 450,
+            height: 480,
             child: Column(
               children: [
                 const TabBar(
@@ -255,12 +259,12 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል
+                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (በStatefulBuilder የታገዘ ትክክለኛ ኦን/ኦፍ)
                             FutureBuilder(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
-                                final Map? data = snapshot.data as Map?;
-                                bool competitionValue = data?['is_competition_active'] ?? true;
+                                final Map data = (snapshot.data as Map?) ?? {};
+                                bool competitionValue = data['is_competition_active'] ?? true;
 
                                 return Container(
                                   padding: const EdgeInsets.all(12),
@@ -289,8 +293,10 @@ class AdminService {
                                         value: competitionValue,
                                         activeColor: Colors.amber,
                                         onChanged: (val) async {
+                                          setStateBuilder(() {
+                                            competitionValue = val;
+                                          });
                                           await toggleCompetitionStatus(val);
-                                          setStateBuilder(() {});
                                         },
                                       ),
                                       const Divider(color: Colors.white12),
