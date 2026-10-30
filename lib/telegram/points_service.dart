@@ -4,10 +4,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class TelegramPointsService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  // ተጠቃሚው ነጥብ እንዲኖረው ወይም ነጥቡ እንዲጨምር የሚያደርግ ሎጂክ
+  // ተጠቃሚው ነጥብ እንዲኖረው ወይም ነጥቡ እንዲጨምር የሚያደርግ ሎጂክ (የውድድር ሁኔታን የሚቆጣጠር)
   Future<void> addPoints(String telegramId, String username, int pointsToAdd) async {
     try {
-      // ተጠቃሚው ቀድሞውኑ በዳታቤዝ ውስጥ መኖሩን ማረጋገጥ
+      // 1. መጀመሪያ ውድድሩ በሥራ ላይ መሆኑን (is_competition_active) ከ app_settings ማረጋገጥ
+      final settingsResponse = await _supabase
+          .from('app_settings')
+          .select('is_competition_active')
+          .maybeSingle();
+
+      bool isCompetitionActive = settingsResponse?['is_competition_active'] ?? true;
+
+      // ውድድሩ ኦፍ (OFF) ከሆነ ነጥብ መጨመር ፈጽሞ የተከለከለ ነው!
+      if (!isCompetitionActive) {
+        debugPrint('ውድድሩ ስለጠፋ (OFF) ነጥብ መጨመር አይቻልም!');
+        return;
+      }
+
+      // 2. ተጠቃሚው ቀድሞውኑ በዳታቤዝ ውስጥ መኖሩን ማረጋገጥ
       final existingUser = await _supabase
           .from('user_points')
           .select()
@@ -33,7 +47,7 @@ class TelegramPointsService {
           'points': pointsToAdd,
         });
         
-        debugPrint('አዲስ ተጠቃሚ ተመዝግቦ $pointsPoints ነጥብ ተሰጥቷል!');
+        debugPrint('አዲስ ተጠቃሚ ተመዝግቦ ነጥብ ተሰጥቷል!');
       }
     } catch (e) {
       debugPrint('የነጥብ ማሻሻያ ስህተት: $e');
