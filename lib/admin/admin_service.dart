@@ -25,12 +25,13 @@ class AdminService {
     return false;
   }
 
-  /// 2. የ app_settings መረጃዎችን ማንበብ
+  /// 2. የ app_settings መረጃዎችን በቋሚ id: 1 ማንበብ
   static Future fetchAppSettings() async {
     try {
       final response = await _supabase
           .from('app_settings')
           .select()
+          .eq('id', 1)
           .maybeSingle();
 
       return response;
@@ -40,26 +41,17 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን ማሻሻል
+  /// 3. የ app_settings መረጃዎችን በ id: 1 ማሻሻል
   static Future updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
   }) async {
     try {
-      final List existing = List.from(await _supabase.from('app_settings').select('id'));
-      
-      if (existing.isNotEmpty) {
-        final id = existing[0]['id'];
-        await _supabase.from('app_settings').update({
-          'maintenance_mode': maintenanceMode,
-          'announcement': announcement,
-        }).eq('id', id);
-      } else {
-        await _supabase.from('app_settings').insert({
-          'maintenance_mode': maintenanceMode,
-          'announcement': announcement,
-        });
-      }
+      await _supabase.from('app_settings').upsert({
+        'id': 1,
+        'maintenance_mode': maintenanceMode,
+        'announcement': announcement,
+      });
       return true;
     } catch (e) {
       debugPrint('Error updating app settings: $e');
@@ -67,21 +59,15 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
+  /// 4. የውድድር ሁኔታን (Competition Active) በ id: 1 ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
-      final List existing = List.from(await _supabase.from('app_settings').select('id'));
-      if (existing.isNotEmpty) {
-        final id = existing[0]['id'];
-        await _supabase.from('app_settings').update({
-          'is_competition_active': isActive,
-        }).eq('id', id);
-      } else {
-        await _supabase.from('app_settings').insert({
-          'is_competition_active': isActive,
-        });
-      }
+      await _supabase.from('app_settings').upsert({
+        'id': 1,
+        'is_competition_active': isActive,
+      });
 
+      // 👉 ውድድሩ ኦፍ (OFF) ሲደረግ የሁሉንም ተጠቃሚዎች ነጥብ በራስ-ሰር ወደ 0 ይመልሳል
       if (!isActive) {
         await resetAllPoints();
       }
@@ -264,7 +250,7 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል
+                            // የውድድር ስዊች መቆጣጠሪያ
                             FutureBuilder(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
@@ -313,44 +299,6 @@ class AdminService {
                                                 ),
                                               );
                                             },
-                                          ),
-                                          const Divider(color: Colors.white12),
-                                          SizedBox(
-                                            width: double.infinity,
-                                            child: ElevatedButton.icon(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.amber.shade800,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                              ),
-                                              icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
-                                              label: const Text('ውድድሩን ጨርሶ አዲስ ጀምር (Reset Points)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                              onPressed: () async {
-                                                bool confirmed = await showDialog(
-                                                  context: context,
-                                                  builder: (context) => AlertDialog(
-                                                    backgroundColor: const Color(0xFF1E1E3F),
-                                                    title: const Text('እርግጠኛ ነዎት?', style: TextStyle(color: Colors.white)),
-                                                    content: const Text('ይህ ድርጊት የሁሉንም ተጠቃሚዎች ነጥብ ወደ ዜሮ (0) ይመልሰዋል!', style: TextStyle(color: Colors.white70)),
-                                                    actions: [
-                                                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ይቅር')),
-                                                      ElevatedButton(
-                                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                        onPressed: () => Navigator.pop(context, true), 
-                                                        child: const Text('አዎ ሪሴት አድርግ', style: TextStyle(color: Colors.white)),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ) ?? false;
-
-                                                if (confirmed) {
-                                                  bool success = await resetAllPoints();
-                                                  if (!context.mounted) return;
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(content: Text(success ? 'ሁሉም ነጥቦች ተሰርዘው አዲስ ውድድር ተጀምሯል! 🚀' : 'ማስተካከል አልተቻለም')),
-                                                  );
-                                                }
-                                              },
-                                            ),
                                           ),
                                         ],
                                       ),
