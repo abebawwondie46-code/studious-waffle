@@ -75,19 +75,21 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) በ id: 1 ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
+  /// 4. የውድድር ሁኔታን (Competition Active) በ id: 1 ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን በግድ ወደ 0 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
+      // 1. መጀመሪያ ስዊቹን እናስቀምጣለን
       await _supabase.from('app_settings').upsert({
         'id': 1,
         'is_competition_active': isActive,
       });
 
-      // ውድድሩ ኦፍ (OFF) ሲደረግ የሁሉንም ተጠቃሚዎች ነጥብ በራስ-ሰር ወደ 0 ይመልሳል
+      // 2. ውድድሩ ኦፍ (OFF) ከተደረገ የሁሉንም ተጠቃሚዎች ነጥብ በግድ ወደ 0 እንለውጣለን
       if (!isActive) {
         await resetAllPoints();
       }
 
+      debugPrint('የውድድር ስቴት በተሳካ ሁኔታ ወደ $isActive ተቀይሯል!');
       return true;
     } catch (e) {
       debugPrint('Error updating competition status: $e');
@@ -95,17 +97,26 @@ class AdminService {
     }
   }
 
-  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points)
+  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ በግልጽ እና ያለ ቅድመ ሁኔታ ወደ 0 መመለሻ (Reset Points)
   static Future resetAllPoints() async {
     try {
-      await _supabase.from('user_points').update({'points': 0});
+      // ሁሉንም ረኮርዶች በማምጣት የነጥብ መጠኑን ወደ 0 እንቀይራለን
+      final response = await _supabase.from('user_points').select('telegram_id');
+      
+      if (response != null && (response as List).isNotEmpty) {
+        for (var row in response) {
+          final tId = row['telegram_id'];
+          await _supabase.from('user_points').update({'points': 0}).eq('telegram_id', tId);
+        }
+      }
+
+      debugPrint('ሁሉም የተጠቃሚ ነጥቦች በተሳካ ሁኔታ ወደ 0 ተደምስሰዋል!');
       return true;
     } catch (e) {
       debugPrint('Error resetting points: $e');
       return false;
     }
   }
-
   /// 6. አፕ ሲከፈት ማስታወቂያ የሚያሳይ
   static Future checkAppStatus(BuildContext context) async {
     final settings = await fetchAppSettings();
