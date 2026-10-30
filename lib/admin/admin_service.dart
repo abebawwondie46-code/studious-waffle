@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ሲጠፋ ነጥቦችን ወደ 0 መመለስ
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
       final List existing = await _supabase.from('app_settings').select('id');
@@ -82,7 +82,7 @@ class AdminService {
         });
       }
 
-      // 👉 ውድድሩ ኦፍ (OFF) ሲደረግ ነጥቦቹን በሙሉ በራስ-ሰር ወደ 0 ይመልሳል
+      // ውድድሩ ኦፍ (OFF) ሲደረግ ነጥቦቹን በሙሉ ወደ 0 ይመልሳል
       if (!isActive) {
         await resetAllPoints();
       }
@@ -265,93 +265,98 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል
+                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (በተስተካከለ StatefulBuilder የተያዘ)
                             FutureBuilder(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
                                 final Map data = (snapshot.data as Map?) ?? {};
                                 bool competitionValue = data['is_competition_active'] ?? true;
 
-                                return Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF1E1E2C),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1.5),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Row(
+                                return StatefulBuilder(
+                                  builder: (context, setSwitchState) {
+                                    return Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1E1E2C),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1.5),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Icon(Icons.emoji_events, color: Colors.amber, size: 18),
-                                          SizedBox(width: 8),
-                                          Text('የውድድር እና ነጥብ መቆጣጠሪያ', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SwitchListTile(
-                                        title: const Text('የውድድር ነጥብ አሰጣጥ (Competition)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                        subtitle: Text(
-                                          competitionValue ? 'ውድድሩ በሥራ ላይ ነው (ON)' : 'ውድድሩ ቆሟል (OFF) - ነጥቦች ሪሴት ሆነዋል',
-                                          style: TextStyle(color: competitionValue ? Colors.greenAccent : Colors.redAccent, fontSize: 11),
-                                        ),
-                                        value: competitionValue,
-                                        activeColor: Colors.amber,
-                                        onChanged: (val) async {
-                                          setStateBuilder(() {
-                                            competitionValue = val;
-                                          });
-                                          await toggleCompetitionStatus(val);
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ተቁሟል! ሁሉም ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
-                                              backgroundColor: val ? Colors.green : Colors.orange,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      const Divider(color: Colors.white12),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.amber.shade800,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          const Row(
+                                            children: [
+                                              Icon(Icons.emoji_events, color: Colors.amber, size: 18),
+                                              SizedBox(width: 8),
+                                              Text('የውድድር እና ነጥብ መቆጣጠሪያ', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                                            ],
                                           ),
-                                          icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
-                                          label: const Text('ውድድሩን ጨርሶ አዲስ ጀምር (Reset Points)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                          onPressed: () async {
-                                            bool confirmed = await showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                backgroundColor: const Color(0xFF1E1E3F),
-                                                title: const Text('እርግጠኛ ነዎት?', style: TextStyle(color: Colors.white)),
-                                                content: const Text('ይህ ድርጊት የሁሉንም ተጠቃሚዎች ነጥብ ወደ ዜሮ (0) ይመልሰዋል!', style: TextStyle(color: Colors.white70)),
-                                                actions: [
-                                                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ይቅር')),
-                                                  ElevatedButton(
-                                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                    onPressed: () => Navigator.pop(context, true), 
-                                                    child: const Text('አዎ ሪሴት አድርግ', style: TextStyle(color: Colors.white)),
-                                                  ),
-                                                ],
-                                              ),
-                                            ) ?? false;
-
-                                            if (confirmed) {
-                                              bool success = await resetAllPoints();
+                                          const SizedBox(height: 8),
+                                          SwitchListTile(
+                                            title: const Text('የውድድር ነጥብ አሰጣጥ (Competition)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                            subtitle: Text(
+                                              competitionValue ? 'ውድድሩ በሥራ ላይ ነው (ON)' : 'ውድድሩ ቆሟል (OFF)',
+                                              style: TextStyle(color: competitionValue ? Colors.greenAccent : Colors.redAccent, fontSize: 11),
+                                            ),
+                                            value: competitionValue,
+                                            activeColor: Colors.amber,
+                                            onChanged: (val) async {
+                                              setSwitchState(() {
+                                                competitionValue = val;
+                                              });
+                                              await toggleCompetitionStatus(val);
                                               if (!context.mounted) return;
                                               ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text(success ? 'ሁሉም ነጥቦች ተሰርዘው አዲስ ውድድር ተጀምሯል! 🚀' : 'ማስተካከል አልተቻለም')),
+                                                SnackBar(
+                                                  content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ጠፍቷል! ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
+                                                  backgroundColor: val ? Colors.green : Colors.orange,
+                                                  duration: const Duration(seconds: 2),
+                                                ),
                                               );
-                                            }
-                                          },
-                                        ),
+                                            },
+                                          ),
+                                          const Divider(color: Colors.white12),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.amber.shade800,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              ),
+                                              icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
+                                              label: const Text('ውድድሩን ጨርሶ አዲስ ጀምር (Reset Points)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                              onPressed: () async {
+                                                bool confirmed = await showDialog(
+                                                  context: context,
+                                                  builder: (context) => AlertDialog(
+                                                    backgroundColor: const Color(0xFF1E1E3F),
+                                                    title: const Text('እርግጠኛ ነዎት?', style: TextStyle(color: Colors.white)),
+                                                    content: const Text('ይህ ድርጊት የሁሉንም ተጠቃሚዎች ነጥብ ወደ ዜሮ (0) ይመልሰዋል!', style: TextStyle(color: Colors.white70)),
+                                                    actions: [
+                                                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ይቅር')),
+                                                      ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                        onPressed: () => Navigator.pop(context, true), 
+                                                        child: const Text('አዎ ሪሴት አድርግ', style: TextStyle(color: Colors.white)),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ) ?? false;
+
+                                                if (confirmed) {
+                                                  bool success = await resetAllPoints();
+                                                  if (!context.mounted) return;
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(content: Text(success ? 'ሁሉም ነጥቦች ተሰርዘው አዲስ ውድድር ተጀምሯል! 🚀' : 'ማስተካከል አልተቻለም')),
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    );
+                                  },
                                 );
                               },
                             ),
