@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን በግልጽ ወደ 0 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
       final List existing = await _supabase.from('app_settings').select('id');
@@ -82,7 +82,7 @@ class AdminService {
         });
       }
 
-      // 👉 ማብሪያው ኦፍ (OFF) ሲደረግ የሁሉንም ተጠቃሚዎች ነጥብ በራስ-ሰር ወደ 0 ይመልሳል
+      // 👉 ውድድሩ ኦፍ (OFF) ሲደረግ የሁሉንም ተጠቃሚዎች ነጥብ በግልጽ ወደ 0 ይመልሳል
       if (!isActive) {
         await resetAllPoints();
       }
@@ -97,6 +97,7 @@ class AdminService {
   /// 5. ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points)
   static Future resetAllPoints() async {
     try {
+      // በ user_points ታብ ውስጥ ያሉትን ሁሉንም ረኮርዶች ነጥብ ወደ 0 ይቀይራል
       await _supabase.from('user_points').update({'points': 0});
       return true;
     } catch (e) {
@@ -308,7 +309,7 @@ class AdminService {
                                               if (!context.mounted) return;
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
-                                                  content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ቆሟል! ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
+                                                  content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ጠፍቷል! ሁሉም ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
                                                   backgroundColor: val ? Colors.green : Colors.orange,
                                                   duration: const Duration(seconds: 2),
                                                 ),
