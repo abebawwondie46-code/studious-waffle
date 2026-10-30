@@ -6,6 +6,43 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kuanyngne/Chat/biometric_service.dart';
 import 'package:kuanyngne/screens/profile_screen.dart';
 
+// 👉 1. የ TelegramPointsService ን ሎጂክ እዚህ ጋር እናካትታለን
+class TelegramPointsService {
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  Future<void> addPoints(String telegramId, String username, int pointsToAdd) async {
+    try {
+      final existingUser = await _supabase
+          .from('user_points')
+          .select()
+          .eq('telegram_id', telegramId)
+          .maybeSingle();
+
+      if (existingUser != null) {
+        int currentPoints = (existingUser['points'] as num?)?.toInt() ?? 0;
+        int newPoints = currentPoints + pointsToAdd;
+      
+       await _supabase.from('user_points').update({
+          'points': newPoints,
+          'username': username,
+        }).eq('telegram_id', telegramId);
+        
+        debugPrint('በተሳካ ሁኔታ ነጥብ ተዘምኗል! አጠቃላይ ነጥብ: $newPoints');
+      } else {
+        await _supabase.from('user_points').insert({
+          'telegram_id': telegramId,
+          'username': username,
+          'points': pointsToAdd,
+        });
+        
+        debugPrint('አዲስ ተጠቃሚ ተመዝግቦ $pointsToAdd ነጥብ ተሰጥቷል!');
+      }
+    } catch (e) {
+      debugPrint('የነጥብ ማሻሻያ ስህተት: $e');
+    }
+  }
+}
+
 class SecretChatScreen extends StatefulWidget {
   final String receiverId;
   final String receiverName;
@@ -27,6 +64,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
   final TextEditingController _searchController = TextEditingController();
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  // 👉 2. የ TelegramPointsService ምሳሌ (Instance) መፍጠር
+  final TelegramPointsService _pointsService = TelegramPointsService();
+  
   bool _isFingerprintPassed = false;
   bool _isUnlocked = false;
   static bool _hasEnteredChatOnce = false; 
@@ -501,6 +541,9 @@ class _SecretChatScreenState extends State<SecretChatScreen> with WidgetsBinding
         'content': text,
         'created_at': DateTime.now().toIso8601String(),
       });
+    
+       // ለ. ለተጠቃሚው በቴሌግራም መለያው (ለምሳሌ '12345678') 2 ነጥብ መጨመር
+      await _pointsService.addPoints('12345678', widget.receiverName, 2);
       
       await _fetchMessages();
     } catch (e) {
