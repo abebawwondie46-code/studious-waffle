@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ (ፕሮፋይል ወይም ኢሜል ቢቀየርም የማይለወጥ አስተማማኝ መንገድ)
+  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 👉 የውድድር ሁኔታን (Competition Status) ማሻሻል
+  /// የውድድር ሁኔታን (Competition Status) ማሻሻል
   static Future<bool> toggleCompetitionStatus(bool isActive) async {
     try {
       final List<dynamic> existing = await _supabase.from('app_settings').select('id');
@@ -84,7 +84,7 @@ class AdminService {
     }
   }
 
-  /// 👉 የሁሉም ተጠቃሚዎች ነጥብ ወደ ዜሮ መመለሻ (Reset Points)
+  /// የሁሉም ተጠቃሚዎች ነጥብ ወደ ዜሮ መመለሻ (Reset Points)
   static Future<bool> resetAllPoints() async {
     try {
       await _supabase.from('user_points').update({'points': 0});
@@ -255,7 +255,7 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // 👉 የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (ከ Maintenance ፈጽሞ የተለየ በወርቃማ ከለር)
+                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (በወርቃማ ከለር)
                             FutureBuilder?>(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
