@@ -136,9 +136,9 @@ class AdminService {
   static Future<List>> fetchTopActiveUsers() async {
     try {
       final response = await _supabase
-          .from('profiles')
-          .select('full_name, email, activity_points, avatar_url')
-          .order('activity_points', ascending: false)
+          .from('user_points')
+          .select('telegram_id, username, points')
+          .order('points', ascending: false)
           .limit(10);
       return List>.from(response);
     } catch (e) {
@@ -408,8 +408,8 @@ class AdminService {
                                   backgroundColor: index == 0 ? Colors.amber : Colors.blueAccent,
                                   child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                 ),
-                                title: Text(user['full_name'] ?? 'ተጠቃሚ', style: const TextStyle(color: Colors.white, fontSize: 14)),
-                                trailing: Text('${user['activity_points'] ?? 0} ነጥብ', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                                title: Text(user['username'] ?? 'ተጠቃሚ', style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                trailing: Text('${user['points'] ?? 0} ነጥብ', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
                               );
                             },
                           );
