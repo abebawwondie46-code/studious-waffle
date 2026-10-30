@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ
+  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ (ፕሮፋይል ወይም ኢሜል ቢቀየርም የማይለወጥ አስተማማኝ መንገድ)
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// የውድድር ሁኔታን (Competition Active) ማሻሻል
+  /// 👉 የውድድር ሁኔታን (Competition Status) ማሻሻል
   static Future<bool> toggleCompetitionStatus(bool isActive) async {
     try {
       final List<dynamic> existing = await _supabase.from('app_settings').select('id');
@@ -84,7 +84,7 @@ class AdminService {
     }
   }
 
-  /// ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points)
+  /// 👉 የሁሉም ተጠቃሚዎች ነጥብ ወደ ዜሮ መመለሻ (Reset Points)
   static Future<bool> resetAllPoints() async {
     try {
       await _supabase.from('user_points').update({'points': 0});
@@ -136,9 +136,9 @@ class AdminService {
   static Future<List>> fetchTopActiveUsers() async {
     try {
       final response = await _supabase
-          .from('user_points')
-          .select('telegram_id, username, points')
-          .order('points', ascending: false)
+          .from('profiles')
+          .select('full_name, email, activity_points, avatar_url')
+          .order('activity_points', ascending: false)
           .limit(10);
       return List>.from(response);
     } catch (e) {
@@ -255,7 +255,7 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል
+                            // 👉 የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (ከ Maintenance ፈጽሞ የተለየ በወርቃማ ከለር)
                             FutureBuilder?>(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
@@ -408,8 +408,8 @@ class AdminService {
                                   backgroundColor: index == 0 ? Colors.amber : Colors.blueAccent,
                                   child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                 ),
-                                title: Text(user['username'] ?? 'ተጠቃሚ', style: const TextStyle(color: Colors.white, fontSize: 14)),
-                                trailing: Text('${user['points'] ?? 0} ነጥብ', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                                title: Text(user['full_name'] ?? 'ተጠቃሚ', style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                trailing: Text('${user['activity_points'] ?? 0} ነጥብ', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
                               );
                             },
                           );
