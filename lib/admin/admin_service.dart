@@ -25,14 +25,30 @@ class AdminService {
     return false;
   }
 
-  /// 2. የ app_settings መረጃዎችን በቋሚ id: 1 ማንበብ
+  /// 2. የ app_settings መረጃዎችን በቋሚ id: 1 ማንበብ (ከሌለም ነባሪ መፍጠር)
   static Future fetchAppSettings() async {
     try {
-      final response = await _supabase
+      var response = await _supabase
           .from('app_settings')
           .select()
           .eq('id', 1)
           .maybeSingle();
+
+      // ረኮርዱ ከሌለ በነባሪ እንፈጥራለን
+      if (response == null) {
+        await _supabase.from('app_settings').upsert({
+          'id': 1,
+          'is_competition_active': true,
+          'maintenance_mode': false,
+          'announcement': '',
+        });
+        response = {
+          'id': 1,
+          'is_competition_active': true,
+          'maintenance_mode': false,
+          'announcement': '',
+        };
+      }
 
       return response;
     } catch (e) {
@@ -67,7 +83,7 @@ class AdminService {
         'is_competition_active': isActive,
       });
 
-      // 👉 ውድድሩ ኦፍ (OFF) ሲደረግ የሁሉንም ተጠቃሚዎች ነጥብ በራስ-ሰር ወደ 0 ይመልሳል
+      // ውድድሩ ኦፍ (OFF) ሲደረግ የሁሉንም ተጠቃሚዎች ነጥብ በራስ-ሰር ወደ 0 ይመልሳል
       if (!isActive) {
         await resetAllPoints();
       }
@@ -156,12 +172,14 @@ class AdminService {
 
   /// 10. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ
   static void showAdminPanel(BuildContext context) async {
+    // መረጃዎችን ዳይሎጉ ከመከፈቱ በፊት በትክክል እናጭናለን
     final settings = await fetchAppSettings();
     
     final TextEditingController announcementController = TextEditingController(
       text: settings?['announcement'] ?? '',
     );
     bool maintenanceValue = settings?['maintenance_mode'] ?? false;
+    bool competitionValue = settings?['is_competition_active'] ?? true;
 
     if (!context.mounted) return;
 
@@ -251,61 +269,49 @@ class AdminService {
                             const Divider(color: Colors.white24, height: 30),
 
                             // የውድድር ስዊች መቆጣጠሪያ
-                            FutureBuilder(
-                              future: fetchAppSettings(),
-                              builder: (context, snapshot) {
-                                final Map data = (snapshot.data as Map?) ?? {};
-                                bool competitionValue = data['is_competition_active'] ?? true;
-
-                                return StatefulBuilder(
-                                  builder: (context, setSwitchState) {
-                                    return Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1E1E2C),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1.5),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Row(
-                                            children: [
-                                              Icon(Icons.emoji_events, color: Colors.amber, size: 18),
-                                              SizedBox(width: 8),
-                                              Text('የውድድር እና ነጥብ መቆጣጠሪያ', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          SwitchListTile(
-                                            title: const Text('የውድድር ነጥብ አሰጣጥ (Competition)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                            subtitle: Text(
-                                              competitionValue ? 'ውድድሩ በሥራ ላይ ነው (ON)' : 'ውድድሩ ቆሟል (OFF)',
-                                              style: TextStyle(color: competitionValue ? Colors.greenAccent : Colors.redAccent, fontSize: 11),
-                                            ),
-                                            value: competitionValue,
-                                            activeColor: Colors.amber,
-                                            onChanged: (val) async {
-                                              setSwitchState(() {
-                                                competitionValue = val;
-                                              });
-                                              await toggleCompetitionStatus(val);
-                                              if (!context.mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ጠፍቷል! ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
-                                                  backgroundColor: val ? Colors.green : Colors.orange,
-                                                  duration: const Duration(seconds: 2),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1E2C),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1.5),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.emoji_events, color: Colors.amber, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('የውድድር እና ነጥብ መቆጣጠሪያ', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SwitchListTile(
+                                    title: const Text('የውድድር ነጥብ አሰጣጥ (Competition)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                    subtitle: Text(
+                                      competitionValue ? 'ውድድሩ በሥራ ላይ ነው (ON)' : 'ውድድሩ ቆሟል (OFF)',
+                                      style: TextStyle(color: competitionValue ? Colors.greenAccent : Colors.redAccent, fontSize: 11),
+                                    ),
+                                    value: competitionValue,
+                                    activeColor: Colors.amber,
+                                    onChanged: (val) async {
+                                      setStateBuilder(() {
+                                        competitionValue = val;
+                                      });
+                                      await toggleCompetitionStatus(val);
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ጠፍቷል! ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
+                                          backgroundColor: val ? Colors.green : Colors.orange,
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
