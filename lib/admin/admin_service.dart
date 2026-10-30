@@ -46,7 +46,7 @@ class AdminService {
     required String announcement,
   }) async {
     try {
-      final List existing = await _supabase.from('app_settings').select('id');
+      final List existing = List.from(await _supabase.from('app_settings').select('id'));
       
       if (existing.isNotEmpty) {
         final id = existing[0]['id'];
@@ -67,10 +67,10 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን በግልጽ ወደ 0 ማድረግ
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
-      final List existing = await _supabase.from('app_settings').select('id');
+      final List existing = List.from(await _supabase.from('app_settings').select('id'));
       if (existing.isNotEmpty) {
         final id = existing[0]['id'];
         await _supabase.from('app_settings').update({
@@ -82,7 +82,6 @@ class AdminService {
         });
       }
 
-      // 👉 ውድድሩ ኦፍ (OFF) ሲደረግ የሁሉንም ተጠቃሚዎች ነጥብ በግልጽ ወደ 0 ይመልሳል
       if (!isActive) {
         await resetAllPoints();
       }
@@ -94,12 +93,10 @@ class AdminService {
     }
   }
 
-  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points) - በግልጽ የተስተካከለ
+  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points)
   static Future resetAllPoints() async {
     try {
-      // በ user_points ታብ ውስጥ ያሉትን ሁሉንም ረኮርዶች ነጥብ ወደ 0 ይቀይራል
       await _supabase.from('user_points').update({'points': 0});
-      debugPrint('All points successfully reset to 0');
       return true;
     } catch (e) {
       debugPrint('Error resetting points: $e');
@@ -391,7 +388,7 @@ class AdminService {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
-                          final List users = (snapshot.data as List?) ?? {};
+                          final List users = List.from((snapshot.data as List?) ?? []);
                           if (users.isEmpty) return const Center(child: Text('ምንም ተጠቃሚ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
@@ -423,7 +420,7 @@ class AdminService {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
-                          final List topUsers = (snapshot.data as List?) ?? {};
+                          final List topUsers = List.from((snapshot.data as List?) ?? []);
                           if (topUsers.isEmpty) return const Center(child: Text('ምንም መረጃ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
