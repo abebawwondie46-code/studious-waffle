@@ -551,6 +551,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
   void initState() {
     super.initState();
     _fetchUserPoints();
+    _subscribeToPointsChanges(); // የነጥብ ለውጦችን በቅጽበት ለመከታተል
   }
 
   Future<void> _fetchUserPoints() async {
@@ -575,6 +576,22 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
     }
   }
 
+  // 2. በ Supabase Realtime አማካኝነት ነጥቡ ወደ 0 ሲቀየር በራሱ እንዲያድስ ማድረግ
+  void _subscribeToPointsChanges() {
+    supabase
+        .channel('public:user_points')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'user_points',
+          callback: (payload) {
+            // ማንኛውም የነጥብ ለውጥ ሲኖር ወዲያውኑ ሪፈረሽ ያደርጋል
+            _fetchUserPoints();
+          },
+        )
+        .subscribe();
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Container(
