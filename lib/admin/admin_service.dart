@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ (ፕሮፋይል ወይም ኢሜል ቢቀየርም የማይለወጥ አስተማማኝ መንገድ)
+  /// 1. አድሚን መሆን አለመሆኑን በዩዘር ID ማረጋገጥ
   static Future<bool> checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -26,7 +26,7 @@ class AdminService {
   }
 
   /// 2. የ app_settings መረጃዎችን ከሰርቨር ማንበብ
-  static Future<Map<String, dynamic>?> fetchAppSettings() async {
+  static Future?> fetchAppSettings() async {
     try {
       final response = await _supabase
           .from('app_settings')
@@ -40,7 +40,7 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን ማሻሻል
+  /// 3. የ app_settings መረጃዎችን ማሻሻል (Maintenance & Announcement)
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -67,6 +67,34 @@ class AdminService {
     }
   }
 
+  /// 👉 አዲስ: የውድድር ሁኔታን (Competition Active) ማሻሻል
+  static Future<bool> toggleCompetitionStatus(bool isActive) async {
+    try {
+      final List<dynamic> existing = await _supabase.from('app_settings').select('id');
+      if (existing.isNotEmpty) {
+        final id = existing[0]['id'];
+        await _supabase.from('app_settings').update({
+          'is_competition_active': isActive,
+        }).eq('id', id);
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error updating competition status: $e');
+      return false;
+    }
+  }
+
+  /// 👉 አዲስ: ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points)
+  static Future<bool> resetAllPoints() async {
+    try {
+      await _supabase.from('user_points').update({'points': 0});
+      return true;
+    } catch (e) {
+      debugPrint('Error resetting points: $e');
+      return false;
+    }
+  }
+
   /// 4. አፕ ሲከፈት ማስታወቂያዎችን ብቻ የሚያሳይ
   static Future<void> checkAppStatus(BuildContext context) async {
     final settings = await fetchAppSettings();
@@ -88,7 +116,7 @@ class AdminService {
   }
 
   /// 5. አጠቃላይ ስታቲስቲክስ ማምጣት
-  static Future<Map<String, int>> fetchAppStatistics() async {
+  static Future> fetchAppStatistics() async {
     try {
       final usersRes = await _supabase.from('profiles').select('id');
       final postsRes = await _supabase.from('posts').select('id');
@@ -105,14 +133,14 @@ class AdminService {
   }
 
   /// 6. አክቲቭ ተጠቃሚዎችን በነጥብ ማምጣት (Leaderboard)
-  static Future<List<Map<String, dynamic>>> fetchTopActiveUsers() async {
+  static Future<List>> fetchTopActiveUsers() async {
     try {
       final response = await _supabase
-          .from('profiles')
-          .select('full_name, email, activity_points, avatar_url')
-          .order('activity_points', ascending: false)
+          .from('user_points')
+          .select('telegram_id, username, points')
+          .order('points', ascending: false)
           .limit(10);
-      return List<Map<String, dynamic>>.from(response);
+      return List>.from(response);
     } catch (e) {
       return [];
     }
@@ -158,7 +186,7 @@ class AdminService {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 420,
+            height: 450,
             child: Column(
               children: [
                 const TabBar(
@@ -177,7 +205,7 @@ class AdminService {
                 Expanded(
                   child: TabBarView(
                     children: [
-                      // Tab 1: System Settings
+                      // Tab 1: System Settings & Competition Control
                       StatefulBuilder(
                         builder: (context, setStateBuilder) => ListView(
                           children: [
@@ -207,7 +235,7 @@ class AdminService {
                                 });
                               },
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 10),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                               onPressed: () async {
@@ -225,12 +253,94 @@ class AdminService {
                               },
                               child: const Text('ቅንብሮችን አስቀምጥ', style: TextStyle(color: Colors.white)),
                             ),
+                            const Divider(color: Colors.white24, height: 30),
+
+                            // 👉 የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (በወርቃማ ከለር የተለየ)
+                            FutureBuilder?>(
+                              future: fetchAppSettings(),
+                              builder: (context, snapshot) {
+                                bool competitionValue = snapshot.data?['is_competition_active'] ?? true;
+
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E1E2C),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1.5),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Row(
+                                        children: [
+                                          Icon(Icons.emoji_events, color: Colors.amber, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('የውድድር እና ነጥብ መቆጣጠሪያ', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      SwitchListTile(
+                                        title: const Text('የውድድር ነጥብ አሰጣጥ (Competition)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                        subtitle: Text(
+                                          competitionValue ? 'ውድድሩ በሥራ ላይ ነው (ON)' : 'ውድድሩ ቆሟል (OFF)',
+                                          style: TextStyle(color: competitionValue ? Colors.greenAccent : Colors.redAccent, fontSize: 11),
+                                        ),
+                                        value: competitionValue,
+                                        activeColor: Colors.amber,
+                                        onChanged: (val) async {
+                                          await toggleCompetitionStatus(val);
+                                          setStateBuilder(() {});
+                                        },
+                                      ),
+                                      const Divider(color: Colors.white12),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.amber.shade800,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          ),
+                                          icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
+                                          label: const Text('ውድድሩን ጨርሶ አዲስ ጀምር (Reset Points)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                          onPressed: () async {
+                                            bool confirmed = await showDialog(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                backgroundColor: const Color(0xFF1E1E3F),
+                                                title: const Text('እርግጠኛ ነዎት?', style: TextStyle(color: Colors.white)),
+                                                content: const Text('ይህ ድርጊት የሁሉንም ተጠቃሚዎች ነጥብ ወደ ዜሮ (0) ይመልሰዋል!', style: TextStyle(color: Colors.white70)),
+                                                actions: [
+                                                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ይቅር')),
+                                                  ElevatedButton(
+                                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                    onPressed: () => Navigator.pop(context, true), 
+                                                    child: const Text('አዎ ሪሴት አድርግ', style: TextStyle(color: Colors.white)),
+                                                  ),
+                                                ],
+                                              ),
+                                            ) ?? false;
+
+                                            if (confirmed) {
+                                              bool success = await resetAllPoints();
+                                              if (!context.mounted) return;
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text(success ? 'ሁሉም ነጥቦች ተሰርዘው አዲስ ውድድር ተጀምሯል! 🚀' : 'ማስተካከል አልተቻለም')),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ),
 
                       // Tab 2: Analytics
-                      FutureBuilder<Map<String, int>>(
+                      FutureBuilder>(
                         future: fetchAppStatistics(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -248,7 +358,7 @@ class AdminService {
                       ),
 
                       // Tab 3: Users Management
-                      FutureBuilder<List<Map<String, dynamic>>>(
+                      FutureBuilder<List>>(
                         future: _supabase.from('profiles').select('full_name, email, is_banned').limit(20),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -280,7 +390,7 @@ class AdminService {
                       ),
 
                       // Tab 4: Reward Leaderboard
-                      FutureBuilder<List<Map<String, dynamic>>>(
+                      FutureBuilder<List>>(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -298,8 +408,8 @@ class AdminService {
                                   backgroundColor: index == 0 ? Colors.amber : Colors.blueAccent,
                                   child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                 ),
-                                title: Text(user['full_name'] ?? 'ተጠቃሚ', style: const TextStyle(color: Colors.white, fontSize: 14)),
-                                trailing: Text('${user['activity_points'] ?? 0} ነጥብ', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                                title: Text(user['username'] ?? 'ተጠቃሚ', style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                trailing: Text('${user['points'] ?? 0} ነጥብ', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
                               );
                             },
                           );
