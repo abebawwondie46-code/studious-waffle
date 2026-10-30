@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TelegramPointsService {
@@ -15,31 +16,32 @@ class TelegramPointsService {
 
       if (existingUser != null) {
         // ካለ ነባሩን ነጥብ ማሻሻል (Update)
-        int currentPoints = existingUser['points'] ?? 0;
+        int currentPoints = (existingUser['points'] as num?)?.toInt() ?? 0;
         int newPoints = currentPoints + pointsToAdd;
 
         await _supabase.from('user_points').update({
           'points': newPoints,
           'username': username,
-          'updated_at': DateTime.now().toIso8601String(),
         }).eq('telegram_id', telegramId);
+        
+        debugPrint('በተሳካ ሁኔታ ነጥብ ተዘምኗል! አጠቃላይ ነጥብ: $newPoints');
       } else {
         // አዲስ ተጠቃሚ ከሆነ ማስገባት (Insert)
-        // ማስታወሻ: id UUID ስለሚጠይቅ አዲስ መነሻ id ማመንጨት ይቻላል ወይም auth.users ማያያዝ ይቻላል።
-        // ለቴሌግራም ቦት በሚመች መልኩ አዲስ ሮው ማስገባት፦
         await _supabase.from('user_points').insert({
           'telegram_id': telegramId,
           'username': username,
           'points': pointsToAdd,
         });
+        
+        debugPrint('አዲስ ተጠቃሚ ተመዝግቦ $pointsPoints ነጥብ ተሰጥቷል!');
       }
     } catch (e) {
-      print('የነጥብ ማሻሻያ ስህተት: $e');
+      debugPrint('የነጥብ ማሻሻያ ስህተት: $e');
     }
   }
 
   // የሊደርቦርድ (Leaderboard) ከፍተኛ ነጥብ ያላቸውን ተጠቃሚዎች ማምጣት
-  Future<List<Map<String, dynamic>>> getLeaderboard() async {
+  Future<List>> getLeaderboard() async {
     try {
       final response = await _supabase
           .from('user_points')
@@ -47,9 +49,9 @@ class TelegramPointsService {
           .order('points', ascending: false)
           .limit(10);
       
-      return List<Map<String, dynamic>>.from(response);
+      return List>.from(response);
     } catch (e) {
-      print('ሊደርቦርድ ማምጣት አልተቻለም: $e');
+      debugPrint('ሊደርቦርድ ማምጣት አልተቻለም: $e');
       return [];
     }
   }
