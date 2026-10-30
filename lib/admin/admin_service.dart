@@ -40,7 +40,7 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን ማሻሻል (Maintenance & Announcement)
+  /// 3. የ app_settings መረጃዎችን ማሻሻል
   static Future<bool> updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -67,7 +67,7 @@ class AdminService {
     }
   }
 
-  /// 👉 አዲስ: የውድድር ሁኔታን (Competition Active) ማሻሻል
+  /// የውድድር ሁኔታን (Competition Active) ማሻሻል
   static Future<bool> toggleCompetitionStatus(bool isActive) async {
     try {
       final List<dynamic> existing = await _supabase.from('app_settings').select('id');
@@ -84,7 +84,7 @@ class AdminService {
     }
   }
 
-  /// 👉 አዲስ: ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points)
+  /// ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0 መመለሻ (Reset Points)
   static Future<bool> resetAllPoints() async {
     try {
       await _supabase.from('user_points').update({'points': 0});
@@ -255,7 +255,7 @@ class AdminService {
                             ),
                             const Divider(color: Colors.white24, height: 30),
 
-                            // 👉 የውድድር እና የነጥብ መቆጣጠሪያ ፓነል (በወርቃማ ከለር የተለየ)
+                            // የውድድር እና የነጥብ መቆጣጠሪያ ፓነል
                             FutureBuilder?>(
                               future: fetchAppSettings(),
                               builder: (context, snapshot) {
