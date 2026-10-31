@@ -25,7 +25,7 @@ class AdminService {
     return false;
   }
 
-  /// 2. የ app_settings መረጃዎችን በቋሚ id: 1 ማንበብ
+  /// 2. የ app_settings መረጃዎችን በቋሚ id: 1 ማንበብ (ከሌለም ነባሪ መፍጠር)
   static Future fetchAppSettings() async {
     try {
       var response = await _supabase
@@ -56,7 +56,7 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን ማሻሻል
+  /// 3. የ app_settings መረጃዎችን በ id: 1 ማሻሻል
   static Future updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -74,7 +74,7 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
+  /// 4. የውድድር ሁኔታን (Competition Active) በ id: 1 ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን በግድ ወደ 0 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
       await _supabase.from('app_settings').upsert({
@@ -94,7 +94,7 @@ class AdminService {
     }
   }
 
-  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ በግልጽ ወደ 0 መመለሻ (Reset Points)
+  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ በግልጽ እና ያለ ቅድመ ሁኔታ ወደ 0 መመለሻ (Reset Points)
   static Future resetAllPoints() async {
     try {
       final response = await _supabase.from('user_points').select('telegram_id');
@@ -151,18 +151,51 @@ class AdminService {
     }
   }
 
-  /// 8. አክቲቭ ተጠቃሚዎችን በቀጥታ ከ user_points ቴብል ማምጣት (Leaderboard)
+  /// 8. አክቲቭ ተጠቃሚዎችን ከ profiles ቴብል ስም እና ፎቶ ጋር አቀናጅቶ ማምጣት (Leaderboard)
   static Future fetchTopActiveUsers() async {
     try {
-      final response = await _supabase
+      // ከ user_points ነጥባቸው ከፍ ያለውን እናመጣለን
+      final pointsResponse = await _supabase
           .from('user_points')
-          .select('telegram_id, username, points')
+          .select()
           .order('points', ascending: false)
-          .limit(20);
+          .limit(10);
 
-      if (response == null) return [];
-      
-      return List>.from(response);
+      if (pointsResponse == null || (pointsResponse as List).isEmpty) {
+        return [];
+      }
+
+      List> leaderboardList = [];
+
+      for (var pointRow in pointsResponse) {
+        final telegramId = pointRow['telegram_id'];
+        
+        // ከ profiles ቴብል ትክክለኛውን ስም (full_name ወይም username) እና ፎቶ (avatar_url) እንፈልጋለን
+        var profileResponse;
+        if (telegramId != null) {
+          profileResponse = await _supabase
+              .from('profiles')
+              .select('full_name, username, avatar_url')
+              .eq('telegram_id', telegramId)
+              .maybeSingle();
+        }
+
+        String displayName = profileResponse?['full_name'] ?? 
+                             profileResponse?['username'] ?? 
+                             pointRow['username'] ?? 
+                             'ስም የሌለው ተጠቃሚ';
+
+        String avatarUrl = profileResponse?['avatar_url'] ?? '';
+
+        leaderboardList.add({
+          'telegram_id': telegramId ?? 'N/A',
+          'username': displayName,
+          'avatar_url': avatarUrl,
+          'points': pointRow['points'] ?? 0,
+        });
+      }
+
+      return leaderboardList;
     } catch (e) {
       debugPrint('Error fetching leaderboard: $e');
       return [];
@@ -378,7 +411,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 4: Reward Leaderboard (የተስተካከለ - ስሙ እና ቴሌግራም ID በግልጽ የሚታይበት)
+                      // Tab 4: Reward Leaderboard (የፕሮፋይል ፎቶ እና ትክክለኛ ስም የሚታይበት)
                       FutureBuilder(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
@@ -386,7 +419,7 @@ class AdminService {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
                           final List topUsers = List.from((snapshot.data as List?) ?? []);
-                          if (topUsers.isEmpty) return const Center(child: Text('ምንም ተወዳዳሪ የለም', style: TextStyle(color: Colors.white54)));
+                          if (topUsers.isEmpty) return const Center(child: Text('ምንም መረጃ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
                             itemCount: topUsers.length,
@@ -395,80 +428,75 @@ class AdminService {
                               
                               Color rankColor;
                               if (index == 0) {
-                                rankColor = Colors.amber; // 1ኛ (ወርቃማ)
+                                rankColor = Colors.amber;
                               } else if (index == 1) {
-                                rankColor = Colors.grey.shade400; // 2ኛ (ብር)
+                                rankColor = Colors.grey.shade400;
                               } else if (index == 2) {
-                                rankColor = Colors.brown.shade300; // 3ኛ (ነሐስ)
+                                rankColor = Colors.brown.shade300;
                               } else {
                                 rankColor = Colors.blueAccent;
                               }
 
-                              String username = user['username'] ?? 'ስም የሌለው ተጠቃሚ';
-                              String firstLetter = username.isNotEmpty ? username[0].toUpperCase() : 'U';
+                              String username = user['username'] ?? 'ተጠቃሚ';
+                              String avatarUrl = user['avatar_url'] ?? '';
 
                               return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF1E1E2C),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: rankColor.withOpacity(0.5), width: 1.5),
+                                  border: Border.all(color: rankColor.withOpacity(0.6), width: 1.5),
                                 ),
                                 child: Row(
                                   children: [
+                                    // 🥇 የደረጃ ቁጥር
                                     CircleAvatar(
                                       backgroundColor: rankColor,
-                                      radius: 18,
+                                      radius: 16,
                                       child: Text(
                                         '${index + 1}',
-                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
+                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12),
                                       ),
                                     ),
                                     const SizedBox(width: 10),
-                                    // 👤 የተጠቃሚው የመጀመሪያ ፊደል አምሳያ (Avatar)
+                                    
+                                    // 🖼️ የፕሮፋይል ፎቶ (ካለ ፎቶውን ከሌለ የስሙን የመጀመሪያ ፊደል ያሳያል)
                                     CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: Colors.blueAccent,
-                                      child: Text(
-                                        firstLetter,
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                                      ),
+                                      radius: 18,
+                                      backgroundColor: Colors.grey[800],
+                                      backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                                      child: avatarUrl.isEmpty
+                                          ? Text(
+                                              username.isNotEmpty ? username[0].toUpperCase() : 'U',
+                                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                            )
+                                          : null,
                                     ),
                                     const SizedBox(width: 10),
-                                    // 👤 የተጠቃሚው ስም እና ቴሌግራም ID በአንድ መስመር ውብ ሆኖ እንዲታይ
+
+                                    // 👤 የተጠቃሚው ስም
                                     Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            username,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'ID: ${user['telegram_id'] ?? 'N/A'}',
-                                            style: const TextStyle(color: Colors.white54, fontSize: 11),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
+                                      child: Text(
+                                        username,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
+
                                     // 🏆 ነጥብ
                                     Text(
                                       '${user['points'] ?? 0} ነጥብ',
                                       style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
                                     ),
                                     const SizedBox(width: 4),
+
                                     // 🎁 የሽልማት መስጫ ቁልፍ
                                     IconButton(
                                       icon: const Icon(Icons.card_giftcard, color: Colors.amber, size: 22),
