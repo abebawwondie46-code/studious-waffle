@@ -152,9 +152,8 @@ class AdminService {
   }
 
   /// 8. አክቲቭ ተጠቃሚዎችን ከ profiles ቴብል ስም እና ፎቶ ጋር አቀናጅቶ ማምጣት (Leaderboard)
-  static Future fetchTopActiveUsers() async {
+  static Future<List>> fetchTopActiveUsers() async {
     try {
-      // ከ user_points ነጥባቸው ከፍ ያለውን እናመጣለን
       final pointsResponse = await _supabase
           .from('user_points')
           .select()
@@ -170,7 +169,6 @@ class AdminService {
       for (var pointRow in pointsResponse) {
         final telegramId = pointRow['telegram_id'];
         
-        // ከ profiles ቴብል ትክክለኛውን ስም (full_name ወይም username) እና ፎቶ (avatar_url) እንፈልጋለን
         var profileResponse;
         if (telegramId != null) {
           profileResponse = await _supabase
