@@ -551,7 +551,8 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
   void initState() {
     super.initState();
     _fetchUserPoints();
-   }
+   _subscribeToPointsChanges(); // የነጥብ ለውጦችን በቅጽበት ለመከታተል
+  }
 
   Future<void> _fetchUserPoints() async {
     try {
