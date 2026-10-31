@@ -532,7 +532,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// 👉 የተስተካከለው የነጥብ ማሳያ ዊንጅት (User Points Widget)
+// 👉 የተስተካከለው እና ሰርቨር ላይ ያለውን ትክክለኛ ዜሮ (0) ချက်ချင်း የሚያመጣው ዊንጅት
 class UserPointsWidget extends StatefulWidget {
   final String telegramId;
 
@@ -547,13 +547,13 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
   int userPoints = 0;
   bool isLoading = true;
 
-  @override
+  @Override
   void initState() {
     super.initState();
     _fetchUserPoints();
-    _subscribeToPointsChanges(); // የነጥብ ለውጦችን በቅጽበት ለመከታተል
   }
 
+  // ከሰርቨር (Supabase) የቱን ያህል ነጥብ እንዳለ በቀጥታ ማምጣት
   Future<void> _fetchUserPoints() async {
     try {
       final response = await supabase
@@ -564,52 +564,45 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
 
       if (response != null && response['points'] != null) {
         setState(() {
-          userPoints = response['points'];
+          userPoints = (response['points'] as num).toInt();
+        });
+      } else {
+        setState(() {
+          userPoints = 0;
         });
       }
     } catch (e) {
       debugPrint('ነጥብ በማንበብ ጊዜ ስህተት ተፈጥሯል: $e');
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
-  // 2. በ Supabase Realtime አማካኝነት ነጥቡ ወደ 0 ሲቀየር በራሱ እንዲያድስ ማድረግ
-  void _subscribeToPointsChanges() {
-    supabase
-        .channel('public:user_points')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'user_points',
-          callback: (payload) {
-            // ማንኛውም የነጥብ ለውጥ ሲኖር ወዲያውኑ ሪፈረሽ ያደርጋል
-            _fetchUserPoints();
-          },
-        )
-        .subscribe();
-  }
-  
   @override
   Widget build(BuildContext context) {
+    // ገጹ ሪፈረሽ ሲደረግ ወይም ዊንጅቱ ሲገነባ የሰርቨሩን የቅርብ ጊዜ መረጃ በኃይል (Force) እናመጣለን
+    _fetchUserPoints();
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: const Color(0xFF16161A),
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1), // ከወርቃማ ከለር ጋር የሚስማማ ቦርደር
+        border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Row(
             children: [
-              Icon(Icons.emoji_events, color: Colors.amber, size: 28), // የሽልማት ዋንጫ ከለር
+              Icon(Icons.emoji_events, color: Colors.amber, size: 28),
               SizedBox(width: 12),
               Text(
-                'My Points', // አጭር እና ግልፅ በእንግሊዝኛ
+                'My Points',
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
@@ -623,7 +616,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
               : Text(
                   '$userPoints Points',
                   style: const TextStyle(
-                    color: Colors.amber, // ከሽልማት ጋር የሚሄድ ውብ ወርቃማ ከለር
+                    color: Colors.amber,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -633,7 +626,6 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
     );
   }
 }
-
 class _ProfileStatItem extends StatelessWidget {
   final String title;
   final String count;
