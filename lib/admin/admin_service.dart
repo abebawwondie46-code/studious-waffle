@@ -374,7 +374,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 4: Reward Leaderboard (1ኛ፣ 2ኛ፣ 3ኛ እና የሽልማት መስጫ)
+                      // Tab 4: Reward Leaderboard (የተስተካከለ - ስሙ በአንድ መስመር የሚታይበት)
                       FutureBuilder(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
@@ -389,7 +389,6 @@ class AdminService {
                             itemBuilder: (context, index) {
                               final user = topUsers[index];
                               
-                              // ለ 1ኛ፣ 2ኛ እና 3ኛ ተወዳዳሪዎች ልዩ ከለር መስጠት
                               Color rankColor;
                               if (index == 0) {
                                 rankColor = Colors.amber; // 1ኛ (ወርቃማ)
@@ -402,46 +401,66 @@ class AdminService {
                               }
 
                               return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF1E1E2C),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: rankColor.withOpacity(0.5), width: 1.5),
                                 ),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: rankColor,
-                                    child: Text(
-                                      '${index + 1}',
-                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: rankColor,
+                                      radius: 18,
+                                      child: Text(
+                                        '${index + 1}',
+                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
                                     ),
-                                  ),
-                                  title: Text(
-                                    user['username'] ?? 'ስም የሌለው ተጠቃሚ',
-                                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                                  ),
-                                  subtitle: Text(
-                                    'ቴሌግራም ID: ${user['telegram_id'] ?? 'አልተገኘም'}',
-                                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        '${user['points'] ?? 0} ነጥብ',
-                                        style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                                    const SizedBox(width: 12),
+                                    // 👤 የተጠቃሚው ስም እና ቴሌግራም ID በአንድ መስመር ውብ ሆኖ እንዲታይ
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            user['username'] ?? 'ስም የሌለው ተጠቃሚ',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'ID: ${user['telegram_id'] ?? 'N/A'}',
+                                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 8),
-                                      // 🎁 የሽልማት መስጫ ቁልፍ (Award Prize Button)
-                                      IconButton(
-                                        icon: const Icon(Icons.card_giftcard, color: Colors.amber),
-                                        tooltip: 'ተጠቃሚውን ሽልማት ስጥ',
-                                        onPressed: () {
-                                          _showAwardDialog(context, user['username'] ?? 'ተጠቃሚው', user['telegram_id']);
-                                        },
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // 🏆 ነጥብ
+                                    Text(
+                                      '${user['points'] ?? 0} ነጥብ',
+                                      style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    // 🎁 የሽልማት መስጫ ቁልፍ
+                                    IconButton(
+                                      icon: const Icon(Icons.card_giftcard, color: Colors.amber, size: 22),
+                                      tooltip: 'ተጠቃሚውን ሽልማት ስጥ',
+                                      onPressed: () {
+                                        _showAwardDialog(context, user['username'] ?? 'ተጠቃሚው', user['telegram_id']);
+                                      },
+                                    ),
+                                  ],
                                 ),
                               );
                             },
