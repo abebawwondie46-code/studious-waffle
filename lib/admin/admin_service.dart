@@ -25,7 +25,7 @@ class AdminService {
     return false;
   }
 
-  /// 2. የ app_settings መረጃዎችን በቋሚ id: 1 ማንበብ (ከሌለም ነባሪ መፍጠር)
+  /// 2. የ app_settings መረጃዎችን በቋሚ id: 1 ማንበብ
   static Future fetchAppSettings() async {
     try {
       var response = await _supabase
@@ -34,7 +34,6 @@ class AdminService {
           .eq('id', 1)
           .maybeSingle();
 
-      // ረኮርዱ ከሌለ በነባሪ እንፈጥራለን
       if (response == null) {
         await _supabase.from('app_settings').upsert({
           'id': 1,
@@ -57,7 +56,7 @@ class AdminService {
     }
   }
 
-  /// 3. የ app_settings መረጃዎችን በ id: 1 ማሻሻል
+  /// 3. የ app_settings መረጃዎችን ማሻሻል
   static Future updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
@@ -75,16 +74,14 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) በ id: 1 ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን በግድ ወደ 0 ማድረግ
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
-      // 1. መጀመሪያ ስዊቹን እናስቀምጣለን
       await _supabase.from('app_settings').upsert({
         'id': 1,
         'is_competition_active': isActive,
       });
 
-      // 2. ውድድሩ ኦፍ (OFF) ከተደረገ የሁሉንም ተጠቃሚዎች ነጥብ በግድ ወደ 0 እንለውጣለን
       if (!isActive) {
         await resetAllPoints();
       }
@@ -97,10 +94,9 @@ class AdminService {
     }
   }
 
-  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ በግልጽ እና ያለ ቅድመ ሁኔታ ወደ 0 መመለሻ (Reset Points)
+  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ በግልጽ ወደ 0 መመለሻ (Reset Points)
   static Future resetAllPoints() async {
     try {
-      // ሁሉንም ረኮርዶች በማምጣት የነጥብ መጠኑን ወደ 0 እንቀይራለን
       final response = await _supabase.from('user_points').select('telegram_id');
       
       if (response != null && (response as List).isNotEmpty) {
@@ -117,6 +113,7 @@ class AdminService {
       return false;
     }
   }
+
   /// 6. አፕ ሲከፈት ማስታወቂያ የሚያሳይ
   static Future checkAppStatus(BuildContext context) async {
     final settings = await fetchAppSettings();
@@ -161,7 +158,7 @@ class AdminService {
           .from('user_points')
           .select('telegram_id, username, points')
           .order('points', ascending: false)
-          .limit(10);
+          .limit(20);
       return List.from(response);
     } catch (e) {
       return [];
@@ -183,7 +180,6 @@ class AdminService {
 
   /// 10. አድሚን ፓነል ዋና ዳሽቦርድ መክፈቻ
   static void showAdminPanel(BuildContext context) async {
-    // መረጃዎችን ዳይሎጉ ከመከፈቱ በፊት በትክክል እናጭናለን
     final settings = await fetchAppSettings();
     
     final TextEditingController announcementController = TextEditingController(
@@ -378,7 +374,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 4: Reward Leaderboard
+                      // Tab 4: Reward Leaderboard (1ኛ፣ 2ኛ፣ 3ኛ እና የሽልማት መስጫ)
                       FutureBuilder(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
@@ -386,19 +382,67 @@ class AdminService {
                             return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
                           }
                           final List topUsers = List.from((snapshot.data as List?) ?? []);
-                          if (topUsers.isEmpty) return const Center(child: Text('ምንም መረጃ የለም', style: TextStyle(color: Colors.white54)));
+                          if (topUsers.isEmpty) return const Center(child: Text('ምንም ተወዳዳሪ የለም', style: TextStyle(color: Colors.white54)));
 
                           return ListView.builder(
                             itemCount: topUsers.length,
                             itemBuilder: (context, index) {
                               final user = topUsers[index];
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: index == 0 ? Colors.amber : Colors.blueAccent,
-                                  child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              
+                              // ለ 1ኛ፣ 2ኛ እና 3ኛ ተወዳዳሪዎች ልዩ ከለር መስጠት
+                              Color rankColor;
+                              if (index == 0) {
+                                rankColor = Colors.amber; // 1ኛ (ወርቃማ)
+                              } else if (index == 1) {
+                                rankColor = Colors.grey.shade400; // 2ኛ (ብር)
+                              } else if (index == 2) {
+                                rankColor = Colors.brown.shade300; // 3ኛ (ነሐስ)
+                              } else {
+                                rankColor = Colors.blueAccent;
+                              }
+
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E1E2C),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: rankColor.withOpacity(0.5), width: 1.5),
                                 ),
-                                title: Text(user['username'] ?? 'ተጠቃሚ', style: const TextStyle(color: Colors.white, fontSize: 14)),
-                                trailing: Text('${user['points'] ?? 0} ነጥብ', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: rankColor,
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    user['username'] ?? 'ስም የሌለው ተጠቃሚ',
+                                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Text(
+                                    'ቴሌግራም ID: ${user['telegram_id'] ?? 'አልተገኘም'}',
+                                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '${user['points'] ?? 0} ነጥብ',
+                                        style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      // 🎁 የሽልማት መስጫ ቁልፍ (Award Prize Button)
+                                      IconButton(
+                                        icon: const Icon(Icons.card_giftcard, color: Colors.amber),
+                                        tooltip: 'ተጠቃሚውን ሽልማት ስጥ',
+                                        onPressed: () {
+                                          _showAwardDialog(context, user['username'] ?? 'ተጠቃሚው', user['telegram_id']);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               );
                             },
                           );
@@ -417,6 +461,77 @@ class AdminService {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// ተጠቃሚን የመሸለሚያ ፖፕ-አፕ ዳይሎግ (Award Dialog)
+  static void _showAwardDialog(BuildContext context, String username, String telegramId) {
+    final TextEditingController prizeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.card_giftcard, color: Colors.amber),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'ለሽልማት መምረጫ: $username',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'ለዚህ አሸናፊ የሚሰጡትን ሽልማት (ለምሳሌ፦ የብር መጠን፣ ስጦታ ወይም ሰርተፍኬት) ከታች ይጻፉ:',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: prizeController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'ለምሳሌ፦ 1000 ብር ወይም ልዩ ስጦታ',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: const Color(0xFF16161A),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ይቅር', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+            onPressed: () async {
+              String prize = prizeController.text.trim();
+              if (prize.isEmpty) return;
+
+              Navigator.pop(context);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('🎉 $username ውብ ሽልማት ተሰጥቶታል: $prize!'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            },
+            child: const Text('ሽልማት ላክ', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
