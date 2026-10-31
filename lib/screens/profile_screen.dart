@@ -562,21 +562,23 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
           .eq('telegram_id', widget.telegramId)
           .maybeSingle();
 
-      if (response != null && response['points'] != null) {
+      if (mounted) {
         setState(() {
-          userPoints = response['points'] as num).toInt();
-        });
-      } else {
-        setState(() {
-          userPoints = 0;
+          if (response != null && response['points'] != null) {
+            userPoints = (response['points'] as num).toInt();
+          } else {
+            userPoints = 0;
+          }
+          isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('ነጥብ በማንበብ ጊዜ ስህተት ተፈጥሯል: $e');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
