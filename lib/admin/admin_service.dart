@@ -152,7 +152,7 @@ class AdminService {
   }
 
   /// 8. አክቲቭ ተጠቃሚዎችን ከ profiles ቴብል ስም እና ፎቶ ጋር አቀናጅቶ ማምጣት (Leaderboard)
-  static Future fetchTopActiveUsers() async {
+  static Future<List>> fetchTopActiveUsers() async {
     try {
       final pointsResponse = await _supabase
           .from('user_points')
@@ -164,18 +164,22 @@ class AdminService {
         return [];
       }
 
-      List leaderboardList = [];
+      List> leaderboardList = [];
 
       for (var pointRow in pointsResponse) {
         final telegramId = pointRow['telegram_id'];
         
         var profileResponse;
         if (telegramId != null) {
-          profileResponse = await _supabase
-              .from('profiles')
-              .select('full_name, username, avatar_url')
-              .eq('telegram_id', telegramId)
-              .maybeSingle();
+          try {
+            profileResponse = await _supabase
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .eq('telegram_id', telegramId)
+                .maybeSingle();
+          } catch (_) {
+            profileResponse = null;
+          }
         }
 
         String displayName = profileResponse?['full_name'] ?? 
