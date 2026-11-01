@@ -32,7 +32,7 @@ class TelegramPointsService {
 
       if (existingUser != null) {
         String? lastDateStr = existingUser['last_active_date'];
-        double currentPoints = (existingUser['points'] as num?)?.toDouble() ?? 0.01;
+        double currentPoints = (existingUser['points'] as num?)?.toDouble() ?? 0.001;
         int accumulatedSeconds = (existingUser['active_seconds'] as num?)?.toInt() ?? 0;
 
         // የቀን ቆጠራ እና የ Streak ንጽጽር
@@ -43,11 +43,10 @@ class TelegramPointsService {
           int dayDifference = today.difference(lastActiveDay).inDays;
 
           if (dayDifference > 1) {
-            // ከ 1 ቀን በላይ ካለፈ (ቀን ካልገባ) ነጥቡ እና ሰዓቱ ወደ 0.01 እና 0 ይመለሳሉ!
-            currentPoints = 0.01;
+            // ከ 1 ቀን በላይ ካለፈ ነጥቡ እና ሰዓቱ ወደ 0.001 እና 0 ይመለሳሉ!
+            currentPoints = 0.001;
             accumulatedSeconds = 0;
           } else if (dayDifference == 1 && lastDateStr != todayStr) {
-            // አዲስ ቀን ጀምሯል (Streak ተጠብቋል) - ሰዓቱን ለአዲስ ቀን እናስተካክላለን
             accumulatedSeconds = 0;
           }
         }
@@ -55,11 +54,11 @@ class TelegramPointsService {
         // በ 24 ሰዓት ውስጥ የተጠራቀመውን ሰዓት እንጨምራለን
         accumulatedSeconds += sessionSeconds;
 
-        // 30 ደቂቃ (1800 ሰኮንድ) በ 24 ሰዓት ውስጥ ሞልቶ ከሆነ ነጥብ (0.01) ይጨምራል
+        // 30 ደቂቃ (1800 ሰኮንድ) ሞልቶ ከሆነ 0.001 ነጥብ ይጨምራል
         if (accumulatedSeconds >= 1800) {
-          currentPoints += 0.01;
-          accumulatedSeconds = 0; // ለቀጣይ 30 ደቂቃ እንደገና ይጀምራል
-          debugPrint('30 ደቂቃ ተሞልቷል! 0.01 ነጥብ ተጨምሯል።');
+          currentPoints += 0.001;
+          accumulatedSeconds = 0;
+          debugPrint('30 ደቂቃ ተሞልቷል! 0.001 ነጥብ ተጨምሯል።');
         }
 
         await _supabase.from('user_points').update({
@@ -71,23 +70,23 @@ class TelegramPointsService {
 
         debugPrint('ነጥብ እና ሰዓት ተዘምኗል! አጠቃላይ ነጥብ: $currentPoints');
       } else {
-        // አዲስ ተጠቃሚ ከሆነ በ 0.01 ነጥብ እንጀምራለን
+        // አዲስ ተጠቃሚ ከሆነ በ 0.001 ነጥብ እንጀምራለን
         await _supabase.from('user_points').insert({
           'telegram_id': telegramId,
           'username': username,
-          'points': 0.01,
+          'points': 0.001,
           'active_seconds': sessionSeconds,
           'last_active_date': todayStr,
         });
 
-        debugPrint('አዲስ ተጠቃሚ በ 0.01 ነጥብ ተመዝግቧል!');
+        debugPrint('አዲስ ተጠቃሚ በ 0.001 ነጥብ ተመዝግቧል!');
       }
     } catch (e) {
       debugPrint('የነጥብ እና ሰዓት ማሻሻያ ስህተት: $e');
     }
   }
 
-  // የሊደርቦርድ (Leaderboard) ከፍተኛ ነጥብ ያላቸውን ተጠቃሚዎች ማምጣት
+  // የሊደርቦርድ ከፍተኛ ነጥብ ያላቸውን ተጠቃሚዎች ማምጣት
   Future<List>> getLeaderboard() async {
     try {
       final response = await _supabase
