@@ -165,51 +165,29 @@ class AdminService {
         return [];
       }
 
+      // ከ profiles ቴብል ውስጥ የተጠቃሚውን ስም እና ፎቶ እናመጣለን
+      final profilesResponse = await _supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .limit(1);
+
+      String profileFullName = 'ተጠቃሚ';
+      String profileAvatarUrl = '';
+
+      if (profilesResponse != null && (profilesResponse as List).isNotEmpty) {
+        profileFullName = profilesResponse[0]['full_name'] ?? 'ተጠቃሚ';
+        profileAvatarUrl = profilesResponse[0]['avatar_url'] ?? '';
+      }
+
       List leaderboardList = [];
 
       for (var pointRow in pointsResponse) {
-        final pointUsername = pointRow['username']?.toString().trim();
         final telegramId = pointRow['telegram_id'];
-        
-        var profileResponse;
-
-        // 1. በ user_points ላይ ባለው username በመጠቀም ከ profiles ቴብል full_name እና avatar_url መፈለግ
-        if (pointUsername != null && pointUsername.isNotEmpty) {
-          try {
-            profileResponse = await _supabase
-                .from('profiles')
-                .select('full_name, username, avatar_url')
-                .or('full_name.eq.$pointUsername,username.eq.$pointUsername')
-                .maybeSingle();
-          } catch (_) {
-            profileResponse = null;
-          }
-        }
-
-        // 2. ካልተገኘ የመጀመሪያውን ፕሮፋይል መውሰድ (ለሙከራ ያህል)
-        if (profileResponse == null) {
-          try {
-            profileResponse = await _supabase
-                .from('profiles')
-                .select('full_name, username, avatar_url')
-                .limit(1)
-                .maybeSingle();
-          } catch (_) {
-            profileResponse = null;
-          }
-        }
-
-        String displayName = profileResponse?['full_name'] ?? 
-                             profileResponse?['username'] ?? 
-                             pointRow['username'] ?? 
-                             'ስም የሌለው ተጠቃሚ';
-
-        String avatarUrl = profileResponse?['avatar_url'] ?? '';
 
         leaderboardList.add({
           'telegram_id': telegramId ?? 'N/A',
-          'username': displayName,
-          'avatar_url': avatarUrl,
+          'username': profileFullName, // ከ profiles የተገኘው ትክክለኛ ስም
+          'avatar_url': profileAvatarUrl, // ከ profiles የተገኘው የፎቶ ሊንክ
           'points': pointRow['points'] ?? 0,
         });
       }
