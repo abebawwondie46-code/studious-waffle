@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class TelegramPointsService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// ተጠቃሚው አፑን ተጠቅሞ ሰዓት ሲያጠራቅም ወይም ነጥብ ሲያገኝ የሚጠራ ሎጂክ (በ 0.10 ጭማሪ)
+  /// ተጠቃሚው አፑን ተጠቅሞ ሰዓት ሲያጠራቅም ወይም ነጥብ ሲያገኝ የሚጠራ ሎጂክ
   Future<void> addOrUpdateDailyPoints(String telegramId, String username, int sessionSeconds) async {
     try {
       // 1. መጀመሪያ ውድድሩ በሥራ ላይ መሆኑን ከ app_settings ማረጋገጥ
@@ -51,14 +51,16 @@ class TelegramPointsService {
           }
         }
 
-        // በ 24 ሰዓት ውስጥ የተጠራቀመውን ሰዓት እንጨምራለን
-        accumulatedSeconds += sessionSeconds;
+        // በ 24 ሰዓት ውስጥ የተጠራቀመውን ሰዓት እንጨምራለን (ቻት ሲጻፍ sessionSeconds 0 መሆኑን ማረጋገጥ ይመረጣል)
+        if (sessionSeconds > 0) {
+          accumulatedSeconds += sessionSeconds;
 
-        // 30 ደቂቃ (1800 ሰኮንድ) ሞልቶ ከሆነ 0.10 ነጥብ ይጨምራል
-        if (accumulatedSeconds >= 1800) {
-          currentPoints += 0.10;
-          accumulatedSeconds = 0;
-          debugPrint('30 ደቂቃ ተሞልቷል! 0.10 ነጥብ ተጨምሯል።');
+          // 30 ደቂቃ (1800 ሰኮንድ) ሞልቶ ከሆነ ብቻ 0.10 ነጥብ ይጨምራል
+          if (accumulatedSeconds >= 1800) {
+            currentPoints += 0.10;
+            accumulatedSeconds = 0;
+            debugPrint('30 ደቂቃ ተሞልቷል! 0.10 ነጥብ ተጨምሯል።');
+          }
         }
 
         await _supabase.from('user_points').update({
@@ -75,7 +77,7 @@ class TelegramPointsService {
           'telegram_id': telegramId,
           'username': username,
           'points': 0.10,
-          'active_seconds': sessionSeconds,
+          'active_seconds': sessionSeconds > 0 ? sessionSeconds : 0,
           'last_active_date': todayStr,
         });
 
