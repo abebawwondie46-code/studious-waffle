@@ -522,7 +522,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 20),
             
             // 👉 እዚህ ጋር የተጠቃሚውን ነጥብ የሚያሳይ ዊንጅት ተጨምሯል
-            UserPointsWidget(telegramId: _emailController.text.isNotEmpty ? _emailController.text : '12345678'),
+            const UserPointsWidget(telegramId: '12345678'),
+
             const SizedBox(height: 20),
           ],
         ),
@@ -543,14 +544,14 @@ class UserPointsWidget extends StatefulWidget {
 
 class _UserPointsWidgetState extends State<UserPointsWidget> {
   final SupabaseClient supabase = Supabase.instance.client;
-  double userPoints = 0.10; 
+  double userPoints = 0.0;  // ከ int ወደ double ተቀይሯል
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _fetchUserPoints();
-    _subscribeToPointsChanges();
+   _subscribeToPointsChanges(); // የነጥብ ለውጦችን በቅጽበት ለመከታተል
   }
 
   Future<void> _fetchUserPoints() async {
@@ -564,15 +565,8 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
       if (mounted) {
         setState(() {
           if (response != null && response['points'] != null) {
-            double fetchedPoints = (response['points'] as num).toDouble();
-            
-            // 🌟 ጥንቃቄ: ቁጥሩ በዘፈቀደ ከፍ ያለ ሆኖ ከመጣ (ለምሳሌ ከ 10 በላይ) 
-            // ወይም የተሳሳተ ከሆነ ወደ መነሻው 0.10 እንቆጣጠረዋለን
-            if (fetchedPoints <= 0.0 || fetchedPoints > 100.0) {
-              userPoints = 0.10;
-            } else {
-              userPoints = fetchedPoints;
-            }
+            // .toDouble() በመጠቀም የደርዘን ነጥቦቹን በሙሉ እንይዛለን
+            userPoints = (response['points'] as num).toDouble();
           } else {
             userPoints = 0.10;
           }
@@ -583,13 +577,13 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
       debugPrint('ነጥብ በማንበብ ጊዜ ስህተት ተፈጥሯል: $e');
       if (mounted) {
         setState(() {
-          userPoints = 0.10; // ስህተት ሲያጋጥም በመነሻው እንዲቆይ
           isLoading = false;
         });
       }
     }
   }
 
+  // 2. በ Supabase Realtime አማካኝነት ነጥቡ ወደ 0 ሲቀየር በራሱ እንዲያድስ ማድረግ
   void _subscribeToPointsChanges() {
     supabase
         .channel('public:user_points')
@@ -598,6 +592,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
           schema: 'public',
           table: 'user_points',
           callback: (payload) {
+            // ማንኛውም የነጥብ ለውጥ ሲኖር ወዲያውኑ ሪፈረሽ ያደርጋል
             _fetchUserPoints();
           },
         )
@@ -606,22 +601,22 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
   
   @override
   Widget build(BuildContext context) {
-    return Container(
+     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: const Color(0xFF16161A),
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1),
+        border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1), // ከወርቃማ ከለር ጋር የሚስማማ ቦርደር
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Row(
             children: [
-              Icon(Icons.emoji_events, color: Colors.amber, size: 28),
+              Icon(Icons.emoji_events, color: Colors.amber, size: 28), // የሽልማት ዋንጫ ከለር
               SizedBox(width: 12),
               Text(
-                'My Points',
+                'My Points', // አጭር እና ግልፅ በእንግሊዝኛ
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
@@ -635,7 +630,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
               : Text(
                   '${userPoints.toStringAsFixed(2)} Points',
                   style: const TextStyle(
-                    color: Colors.amber,
+                    color: Colors.amber, // ከሽልማት ጋር የሚሄድ ውብ ወርቃማ ከለር
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -645,6 +640,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
     );
   }
 }
+
 class _ProfileStatItem extends StatelessWidget {
   final String title;
   final String count;
