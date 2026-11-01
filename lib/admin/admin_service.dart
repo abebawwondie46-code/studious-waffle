@@ -6,7 +6,7 @@ class AdminService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
   /// 1. አድሚን መሆን አለመሆኑን ማረጋገጥ
-  static Future<bool> checkIfUserIsAdmin() async {
+  static Future checkIfUserIsAdmin() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return false;
@@ -27,7 +27,7 @@ class AdminService {
   }
 
   /// 2. የ app_settings መረጃዎችን በቋሚ id: 1 ማንበብ
-  static Future?> fetchAppSettings() async {
+  static Future fetchAppSettings() async {
     try {
       var response = await _supabase
           .from('app_settings')
@@ -58,7 +58,7 @@ class AdminService {
   }
 
   /// 3. የ app_settings መረጃዎችን ማሻሻል
-  static Future<bool> updateAppSettings({
+  static Future updateAppSettings({
     required bool maintenanceMode,
     required String announcement,
   }) async {
@@ -76,7 +76,7 @@ class AdminService {
   }
 
   /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
-  static Future<bool> toggleCompetitionStatus(bool isActive) async {
+  static Future toggleCompetitionStatus(bool isActive) async {
     try {
       await _supabase.from('app_settings').upsert({
         'id': 1,
@@ -96,7 +96,7 @@ class AdminService {
   }
 
   /// 5. ሁሉንም ተጠቃሚዎች ነጥብ በግልጽ ወደ 0 መመለሻ (Reset Points)
-  static Future<bool> resetAllPoints() async {
+  static Future resetAllPoints() async {
     try {
       final response = await _supabase.from('user_points').select('telegram_id');
       
@@ -116,7 +116,7 @@ class AdminService {
   }
 
   /// 6. አፕ ሲከፈት ማስታወቂያ የሚያሳይ
-  static Future<void> checkAppStatus(BuildContext context) async {
+  static Future checkAppStatus(BuildContext context) async {
     final settings = await fetchAppSettings();
     if (settings == null) return;
 
@@ -136,7 +136,7 @@ class AdminService {
   }
 
   /// 7. አጠቃላይ ስታቲስቲክስ ማምጣት
-  static Future> fetchAppStatistics() async {
+  static Future fetchAppStatistics() async {
     try {
       final usersRes = await _supabase.from('profiles').select('id');
       final postsRes = await _supabase.from('posts').select('id');
@@ -153,7 +153,7 @@ class AdminService {
   }
 
   /// 8. አክቲቭ ተጠቃሚዎችን ከ profiles ቴብል ስም እና ፎቶ ጋር አቀናጅቶ ማምጣት (Leaderboard)
-  static Future<List>> fetchTopActiveUsers() async {
+  static Future fetchTopActiveUsers() async {
     try {
       final pointsResponse = await _supabase
           .from('user_points')
@@ -165,7 +165,7 @@ class AdminService {
         return [];
       }
 
-      List> leaderboardList = [];
+      List leaderboardList = [];
 
       for (var pointRow in pointsResponse) {
         final telegramId = pointRow['telegram_id'];
@@ -206,7 +206,7 @@ class AdminService {
   }
 
   /// 9. ተጠቃሚን ማገድ ወይም መክፈት (Ban User)
-  static Future<bool> toggleUserBan(String email, bool banStatus) async {
+  static Future toggleUserBan(String email, bool banStatus) async {
     try {
       await _supabase
           .from('profiles')
