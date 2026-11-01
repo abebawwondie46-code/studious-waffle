@@ -522,8 +522,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 20),
             
             // 👉 እዚህ ጋር የተጠቃሚውን ነጥብ የሚያሳይ ዊንጅት ተጨምሯል
-            const UserPointsWidget(telegramId: '12345678'),
-
+            UserPointsWidget(telegramId: _emailController.text.isNotEmpty ? _emailController.text : '12345678'),
             const SizedBox(height: 20),
           ],
         ),
