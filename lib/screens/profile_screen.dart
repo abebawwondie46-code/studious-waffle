@@ -601,9 +601,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
   
   @override
   Widget build(BuildContext context) {
-    _fetchUserPoints();
-    
-    return Container(
+     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: const Color(0xFF16161A),
