@@ -75,7 +75,7 @@ class AdminService {
     }
   }
 
-  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0 ማድረግ
+  /// 4. የውድድር ሁኔታን (Competition Active) ማሻሻል እና ኦፍ ሲደረግ ነጥቦቹን ወደ 0.10 ማድረግ
   static Future toggleCompetitionStatus(bool isActive) async {
     try {
       await _supabase.from('app_settings').upsert({
@@ -95,7 +95,7 @@ class AdminService {
     }
   }
 
-  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ በግልጽ ወደ 0 መመለሻ (Reset Points)
+  /// 5. ሁሉንም ተጠቃሚዎች ነጥብ ወደ 0.10 መመለሻ (Reset Points)
   static Future resetAllPoints() async {
     try {
       final response = await _supabase.from('user_points').select('telegram_id');
@@ -103,11 +103,12 @@ class AdminService {
       if (response != null && (response as List).isNotEmpty) {
         for (var row in response) {
           final tId = row['telegram_id'];
-          await _supabase.from('user_points').update({'points': 0}).eq('telegram_id', tId);
+          // ወደ 0 ሳይሆን ወደ መነሻው 0.10 ይመለሳል
+          await _supabase.from('user_points').update({'points': 0.10}).eq('telegram_id', tId);
         }
       }
 
-      debugPrint('ሁሉም የተጠቃሚ ነጥቦች በተሳካ ሁኔታ ወደ 0 ተደምስሰዋል!');
+      debugPrint('ሁሉም የተጠቃሚ ነጥቦች በተሳካ ሁኔታ ወደ 0.10 ተመልሰዋል!');
       return true;
     } catch (e) {
       debugPrint('Error resetting points: $e');
@@ -187,7 +188,7 @@ class AdminService {
           'telegram_id': telegramId,
           'username': profileFullName,
           'avatar_url': profileAvatarUrl,
-          'points': pointRow['points'] ?? 0,
+          'points': pointRow['points'] ?? 0.10,
         });
       }
 
@@ -343,7 +344,7 @@ class AdminService {
                                       if (!context.mounted) return;
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ጠፍቷል! ነጥቦች ወደ 0 ተመልሰዋል 🔄'),
+                                          content: Text(val ? 'ውድድሩ ተጀምሯል! 🚀' : 'ውድድሩ ጠፍቷል! ነጥቦች ወደ 0.10 ተመልሰዋል 🔄'),
                                           backgroundColor: val ? Colors.green : Colors.orange,
                                           duration: const Duration(seconds: 2),
                                         ),
@@ -397,6 +398,7 @@ class AdminService {
                                   icon: Icon(isBanned ? Icons.lock : Icons.lock_open, color: isBanned ? Colors.red : Colors.green),
                                   onPressed: () async {
                                     await toggleUserBan(user['email'], !isBanned);
+                                    if (!context.mounted) return;
                                     Navigator.pop(context);
                                     showAdminPanel(context);
                                   },
@@ -447,7 +449,6 @@ class AdminService {
                                 ),
                                 child: Row(
                                   children: [
-                                    // 🥇 1 ቁጥር ያለበት ቢጫ ክብ
                                     CircleAvatar(
                                       backgroundColor: rankColor,
                                       radius: 13,
@@ -458,7 +459,6 @@ class AdminService {
                                     ),
                                     const SizedBox(width: 6),
                                     
-                                    // 🖼️ የፕሮፋይል ፎቶ ክበብ
                                     CircleAvatar(
                                       radius: 13,
                                       backgroundColor: Colors.grey[800],
@@ -472,7 +472,6 @@ class AdminService {
                                     ),
                                     const SizedBox(width: 6),
 
-                                    // 👤 ስም እና ID
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,14 +499,12 @@ class AdminService {
                                     ),
                                     const SizedBox(width: 4),
 
-                                    // 🏆 ነጥብ
                                     Text(
-                                      '${user['points'] ?? 0} ነጥብ',
+                                      '${(user['points'] ?? 0.10).toStringAsFixed(2)} ነጥብ',
                                       style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11),
                                     ),
                                     const SizedBox(width: 2),
 
-                                    // 🎁 የሽልማት መስጫ አዝራር
                                     IconButton(
                                       constraints: const BoxConstraints(),
                                       padding: EdgeInsets.zero,
@@ -617,8 +614,8 @@ class AdminService {
                   });
                 } catch (_) {}
 
-                // 3. የተጠቃሚውን ነጥብ ወደ 0 መመለስ
-                await _supabase.from('user_points').update({'points': 0}).eq('telegram_id', telegramId);
+                // 3. የተጠቃሚውን ነጥብ ወደ መነሻው 0.10 መመለስ
+                await _supabase.from('user_points').update({'points': 0.10}).eq('telegram_id', telegramId);
 
                 if (!context.mounted) return;
                 Navigator.pop(context);
