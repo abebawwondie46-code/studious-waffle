@@ -103,7 +103,6 @@ class AdminService {
       if (response != null && (response as List).isNotEmpty) {
         for (var row in response) {
           final tId = row['telegram_id'];
-          // ወደ 0 ሳይሆን ወደ መነሻው 0.10 ይመለሳል
           await _supabase.from('user_points').update({'points': 0.10}).eq('telegram_id', tId);
         }
       }
@@ -153,7 +152,7 @@ class AdminService {
     }
   }
 
-  /// 8. አክቲቭ ተጠቃሚዎችን ከ profiles ቴብል full_name እና avatar_url ጋር አቀናጅቶ ማምጣት
+  /// 8. 🌟 የተስተካከለው: አክቲቭ ተጠቃሚዎችን በትክክል ከ profiles እና user_points ጋር አቀናጅቶ ማምጣት
   static Future fetchTopActiveUsers() async {
     try {
       final pointsResponse = await _supabase
@@ -166,29 +165,34 @@ class AdminService {
         return [];
       }
 
-      final profilesResponse = await _supabase
-          .from('profiles')
-          .select('full_name, avatar_url')
-          .limit(1);
-
-      String profileFullName = 'ተጠቃሚ';
-      String profileAvatarUrl = '';
-
-      if (profilesResponse != null && (profilesResponse as List).isNotEmpty) {
-        profileFullName = profilesResponse[0]['full_name'] ?? 'ተጠቃሚ';
-        profileAvatarUrl = profilesResponse[0]['avatar_url'] ?? '';
-      }
-
       List leaderboardList = [];
 
       for (var pointRow in pointsResponse) {
         final telegramId = pointRow['telegram_id']?.toString() ?? 'N/A';
+        final points = (pointRow['points'] as num?)?.toDouble() ?? 0.10;
+
+        // እያንዳንዱን ተጠቃሚ በtelegram_id ወይም በዩዘር መረጃው መሰረት ከprofiles እናገኛለን
+        String username = pointRow['username'] ?? 'ተጠቃሚ';
+        String avatarUrl = '';
+
+        try {
+          final profileRes = await _supabase
+              .from('profiles')
+              .select('full_name, avatar_url, profile_pic')
+              .eq('telegram_id', telegramId)
+              .maybeSingle();
+
+          if (profileRes != null) {
+            username = profileRes['full_name'] ?? username;
+            avatarUrl = profileRes['avatar_url'] ?? profileRes['profile_pic'] ?? '';
+          }
+        } catch (_) {}
 
         leaderboardList.add({
           'telegram_id': telegramId,
-          'username': profileFullName,
-          'avatar_url': profileAvatarUrl,
-          'points': pointRow['points'] ?? 0.10,
+          'username': username,
+          'avatar_url': avatarUrl,
+          'points': points,
         });
       }
 
@@ -426,11 +430,11 @@ class AdminService {
                               
                               Color rankColor;
                               if (index == 0) {
-                                rankColor = Colors.amber; // 1ኛ (ወርቃማ)
+                                rankColor = Colors.amber;
                               } else if (index == 1) {
-                                rankColor = Colors.grey.shade400; // 2ኛ (ብር)
+                                rankColor = Colors.grey.shade400;
                               } else if (index == 2) {
-                                rankColor = Colors.brown.shade300; // 3ኛ (ነሐስ)
+                                rankColor = Colors.brown.shade300;
                               } else {
                                 rankColor = Colors.blueAccent;
                               }
@@ -538,7 +542,7 @@ class AdminService {
     );
   }
 
-  /// ተጠቃሚን የመሸለሚያ እና በአፑ ኖቲፊኬሽን የመላኪያ ዳይሎግ (Award & Send Notification)
+  /// ተጠቃሚን የመሸለሚያ እና በአፑ ኖቲፊኬሽን የመላኪያ ዳይሎግ
   static void _showAwardDialog(BuildContext context, String username, String telegramId) {
     final TextEditingController prizeController = TextEditingController();
 
@@ -593,28 +597,21 @@ class AdminService {
               if (prize.isEmpty) return;
 
               try {
-                // 1. ሽልማቱን በ Supabase ዳታቤዝ 'awards_history' ቴብል መመዝገብ
-                try {
-                  await _supabase.from('awards_history').insert({
-                    'telegram_id': telegramId,
-                    'username': username,
-                    'prize_description': prize,
-                    'created_at': DateTime.now().toIso8601String(),
-                  });
-                } catch (_) {}
+                await _supabase.from('awards_history').insert({
+                  'telegram_id': telegramId,
+                  'username': username,
+                  'prize_description': prize,
+                  'created_at': DateTime.now().toIso8601String(),
+                });
 
-                // 2. ለአሸናፊው በአፑ የኖቲፊኬሽን ቴብል ('notifications') ማስታወቂያ መላክ
-                try {
-                  await _supabase.from('notifications').insert({
-                    'telegram_id': telegramId,
-                    'title': '🎉 እንኳን ደስ አለዎት! የውድድር አሸናፊ ሆነዋል!',
-                    'message': 'ውድ $username፣ በውድድራችን ከፍተኛ ነጥብ በማስመዝገብ የ $prize ሽልማት ተበርክቶልዎታል።',
-                    'created_at': DateTime.now().toIso8601String(),
-                    'is_read': false,
-                  });
-                } catch (_) {}
+                await _supabase.from('notifications').insert({
+                  'telegram_id': telegramId,
+                  'title': '🎉 እንኳን ደስ አለዎት! የውድድር አሸናፊ ሆነዋል!',
+                  'message': 'ውድ $username፣ በውድድራችን ከፍተኛ ነጥብ በማስመዝገብ የ $prize ሽልማት ተበርክቶልዎታል።',
+                  'created_at': DateTime.now().toIso8601String(),
+                  'is_read': false,
+                });
 
-                // 3. የተጠቃሚውን ነጥብ ወደ መነሻው 0.10 መመለስ
                 await _supabase.from('user_points').update({'points': 0.10}).eq('telegram_id', telegramId);
 
                 if (!context.mounted) return;
