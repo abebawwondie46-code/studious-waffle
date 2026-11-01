@@ -4,10 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class TelegramPointsService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  // ተጠቃሚው ነጥብ እንዲኖረው ወይም ነጥቡ እንዲጨምር የሚያደርግ ሎጂክ (የውድድር ሁኔታን የሚቆጣጠር)
-  Future<void> addPoints(String telegramId, String username, int pointsToAdd) async {
+  /// ተጠቃሚው አፑን ተጠቅሞ ሰዓት ሲያጠራቅም ወይም ነጥብ ሲያገኝ የሚጠራ ሎጂክ
+  Future<void> addOrUpdateDailyPoints(String telegramId, String username, int sessionSeconds) async {
     try {
-      // 1. መጀመሪያ ውድድሩ በሥራ ላይ መሆኑን (is_competition_active) ከ app_settings ማረጋገጥ
+      // 1. መጀመሪያ ውድድሩ በሥራ ላይ መሆኑን ከ app_settings ማረጋገጥ
       final settingsResponse = await _supabase
           .from('app_settings')
           .select('is_competition_active')
@@ -15,13 +15,15 @@ class TelegramPointsService {
 
       bool isCompetitionActive = settingsResponse?['is_competition_active'] ?? true;
 
-      // ውድድሩ ኦፍ (OFF) ከሆነ ነጥብ መጨመር ፈጽሞ የተከለከለ ነው!
       if (!isCompetitionActive) {
         debugPrint('ውድድሩ ስለጠፋ (OFF) ነጥብ መጨመር አይቻልም!');
         return;
       }
 
-      // 2. ተጠቃሚው ቀድሞውኑ በዳታቤዝ ውስጥ መኖሩን ማረጋገጥ
+      final now = DateTime.now();
+      final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+      // 2. ተጠቃሚው ዳታቤዝ ውስጥ መኖሩን ማረጋገጥ
       final existingUser = await _supabase
           .from('user_points')
           .select()
@@ -29,28 +31,59 @@ class TelegramPointsService {
           .maybeSingle();
 
       if (existingUser != null) {
-        // ካለ ነባሩን ነጥብ ማሻሻል (Update)
-        int currentPoints = (existingUser['points'] as num?)?.toInt() ?? 0;
-        int newPoints = currentPoints + pointsToAdd;
+        String? lastDateStr = existingUser['last_active_date'];
+        double currentPoints = (existingUser['points'] as num?)?.toDouble() ?? 0.01;
+        int accumulatedSeconds = (existingUser['active_seconds'] as num?)?.toInt() ?? 0;
+
+        // የቀን ቆጠራ እና የ Streak ንጽጽር
+        if (lastDateStr != null) {
+          DateTime lastActive = DateTime.parse(lastDateStr);
+          final lastActiveDay = DateTime(lastActive.year, lastActive.month, lastActive.day);
+          final today = DateTime(now.year, now.month, now.day);
+          int dayDifference = today.difference(lastActiveDay).inDays;
+
+          if (dayDifference > 1) {
+            // ከ 1 ቀን በላይ ካለፈ (ቀን ካልገባ) ነጥቡ እና ሰዓቱ ወደ 0.01 እና 0 ይመለሳሉ!
+            currentPoints = 0.01;
+            accumulatedSeconds = 0;
+          } else if (dayDifference == 1 && lastDateStr != todayStr) {
+            // አዲስ ቀን ጀምሯል (Streak ተጠብቋል) - ሰዓቱን ለአዲስ ቀን እናስተካክላለን
+            accumulatedSeconds = 0;
+          }
+        }
+
+        // በ 24 ሰዓት ውስጥ የተጠራቀመውን ሰዓት እንጨምራለን
+        accumulatedSeconds += sessionSeconds;
+
+        // 30 ደቂቃ (1800 ሰኮንድ) በ 24 ሰዓት ውስጥ ሞልቶ ከሆነ ነጥብ (0.01) ይጨምራል
+        if (accumulatedSeconds >= 1800) {
+          currentPoints += 0.01;
+          accumulatedSeconds = 0; // ለቀጣይ 30 ደቂቃ እንደገና ይጀምራል
+          debugPrint('30 ደቂቃ ተሞልቷል! 0.01 ነጥብ ተጨምሯል።');
+        }
 
         await _supabase.from('user_points').update({
-          'points': newPoints,
+          'points': currentPoints,
+          'active_seconds': accumulatedSeconds,
+          'last_active_date': todayStr,
           'username': username,
         }).eq('telegram_id', telegramId);
-        
-        debugPrint('በተሳካ ሁኔታ ነጥብ ተዘምኗል! አጠቃላይ ነጥብ: $newPoints');
+
+        debugPrint('ነጥብ እና ሰዓት ተዘምኗል! አጠቃላይ ነጥብ: $currentPoints');
       } else {
-        // አዲስ ተጠቃሚ ከሆነ ማስገባት (Insert)
+        // አዲስ ተጠቃሚ ከሆነ በ 0.01 ነጥብ እንጀምራለን
         await _supabase.from('user_points').insert({
           'telegram_id': telegramId,
           'username': username,
-          'points': pointsToAdd,
+          'points': 0.01,
+          'active_seconds': sessionSeconds,
+          'last_active_date': todayStr,
         });
-        
-        debugPrint('አዲስ ተጠቃሚ ተመዝግቦ ነጥብ ተሰጥቷል!');
+
+        debugPrint('አዲስ ተጠቃሚ በ 0.01 ነጥብ ተመዝግቧል!');
       }
     } catch (e) {
-      debugPrint('የነጥብ ማሻሻያ ስህተት: $e');
+      debugPrint('የነጥብ እና ሰዓት ማሻሻያ ስህተት: $e');
     }
   }
 
