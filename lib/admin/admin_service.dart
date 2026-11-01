@@ -152,7 +152,7 @@ class AdminService {
     }
   }
 
-  /// 8. አክቲቭ ተጠቃሚዎችን ከ profiles ቴብል ስም እና ፎቶ ጋር አቀናጅቶ ማምጣት (Leaderboard)
+  /// 8. አክቲቭ ተጠቃሚዎችን ከ profiles ቴብል full_name እና avatar_url ጋር አቀናጅቶ ማምጣት
   static Future fetchTopActiveUsers() async {
     try {
       final pointsResponse = await _supabase
@@ -168,15 +168,31 @@ class AdminService {
       List leaderboardList = [];
 
       for (var pointRow in pointsResponse) {
+        final pointUsername = pointRow['username']?.toString().trim();
         final telegramId = pointRow['telegram_id'];
         
         var profileResponse;
-        if (telegramId != null) {
+
+        // 1. በ user_points ላይ ባለው username በመጠቀም ከ profiles ቴብል full_name እና avatar_url መፈለግ
+        if (pointUsername != null && pointUsername.isNotEmpty) {
           try {
             profileResponse = await _supabase
                 .from('profiles')
                 .select('full_name, username, avatar_url')
-                .eq('telegram_id', telegramId)
+                .or('full_name.eq.$pointUsername,username.eq.$pointUsername')
+                .maybeSingle();
+          } catch (_) {
+            profileResponse = null;
+          }
+        }
+
+        // 2. ካልተገኘ የመጀመሪያውን ፕሮፋይል መውሰድ (ለሙከራ ያህል)
+        if (profileResponse == null) {
+          try {
+            profileResponse = await _supabase
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .limit(1)
                 .maybeSingle();
           } catch (_) {
             profileResponse = null;
@@ -414,7 +430,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 4: Reward Leaderboard (የፕሮፋይል ፎቶ እና ትክክለኛ ስም የሚታይበት)
+                      // Tab 4: Reward Leaderboard (የፕሮፋይል ፎቶ እና ትክክለኛ ስም ከ profiles የሚመጣበት)
                       FutureBuilder(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
@@ -464,7 +480,7 @@ class AdminService {
                                     ),
                                     const SizedBox(width: 10),
                                     
-                                    // 🖼️ የፕሮፋይል ፎቶ (ፎቶ ከሌለ የስሙ የመጀመሪያ ፊደል)
+                                    // 🖼️ የፕሮፋይል ፎቶ (ከ profiles ቴብል የሚመጣ)
                                     CircleAvatar(
                                       radius: 18,
                                       backgroundColor: Colors.grey[800],
