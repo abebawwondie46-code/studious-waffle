@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class TelegramPointsService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// ተጠቃሚው አፑን ተጠቅሞ ሰዓት ሲያጠራቅም ወይም ነጥብ ሲያገኝ የሚጠራ ሎጂክ
+  /// ተጠቃሚው አፑን ተጠቅሞ ሰዓት ሲያጠራቅም ወይም ነጥብ ሲያገኝ የሚጠራ ሎጂክ (በ 0.10 ጭማሪ)
   Future<void> addOrUpdateDailyPoints(String telegramId, String username, int sessionSeconds) async {
     try {
       // 1. መጀመሪያ ውድድሩ በሥራ ላይ መሆኑን ከ app_settings ማረጋገጥ
@@ -32,7 +32,7 @@ class TelegramPointsService {
 
       if (existingUser != null) {
         String? lastDateStr = existingUser['last_active_date'];
-        double currentPoints = (existingUser['points'] as num?)?.toDouble() ?? 0.001;
+        double currentPoints = (existingUser['points'] as num?)?.toDouble() ?? 0.10;
         int accumulatedSeconds = (existingUser['active_seconds'] as num?)?.toInt() ?? 0;
 
         // የቀን ቆጠራ እና የ Streak ንጽጽር
@@ -43,8 +43,8 @@ class TelegramPointsService {
           int dayDifference = today.difference(lastActiveDay).inDays;
 
           if (dayDifference > 1) {
-            // ከ 1 ቀን በላይ ካለፈ ነጥቡ እና ሰዓቱ ወደ 0.001 እና 0 ይመለሳሉ!
-            currentPoints = 0.001;
+            // ከ 1 ቀን በላይ ካለፈ ነጥቡ እና ሰዓቱ ወደ 0.10 እና 0 ይመለሳሉ!
+            currentPoints = 0.10;
             accumulatedSeconds = 0;
           } else if (dayDifference == 1 && lastDateStr != todayStr) {
             accumulatedSeconds = 0;
@@ -54,11 +54,11 @@ class TelegramPointsService {
         // በ 24 ሰዓት ውስጥ የተጠራቀመውን ሰዓት እንጨምራለን
         accumulatedSeconds += sessionSeconds;
 
-        // 30 ደቂቃ (1800 ሰኮንድ) ሞልቶ ከሆነ 0.001 ነጥብ ይጨምራል
+        // 30 ደቂቃ (1800 ሰኮንድ) ሞልቶ ከሆነ 0.10 ነጥብ ይጨምራል
         if (accumulatedSeconds >= 1800) {
-          currentPoints += 0.001;
+          currentPoints += 0.10;
           accumulatedSeconds = 0;
-          debugPrint('30 ደቂቃ ተሞልቷል! 0.001 ነጥብ ተጨምሯል።');
+          debugPrint('30 ደቂቃ ተሞልቷል! 0.10 ነጥብ ተጨምሯል።');
         }
 
         await _supabase.from('user_points').update({
@@ -70,16 +70,16 @@ class TelegramPointsService {
 
         debugPrint('ነጥብ እና ሰዓት ተዘምኗል! አጠቃላይ ነጥብ: $currentPoints');
       } else {
-        // አዲስ ተጠቃሚ ከሆነ በ 0.001 ነጥብ እንጀምራለን
+        // አዲስ ተጠቃሚ ከሆነ በ 0.10 ነጥብ እንጀምራለን
         await _supabase.from('user_points').insert({
           'telegram_id': telegramId,
           'username': username,
-          'points': 0.001,
+          'points': 0.10,
           'active_seconds': sessionSeconds,
           'last_active_date': todayStr,
         });
 
-        debugPrint('አዲስ ተጠቃሚ በ 0.001 ነጥብ ተመዝግቧል!');
+        debugPrint('አዲስ ተጠቃሚ በ 0.10 ነጥብ ተመዝግቧል!');
       }
     } catch (e) {
       debugPrint('የነጥብ እና ሰዓት ማሻሻያ ስህተት: $e');
