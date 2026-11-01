@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -51,20 +52,20 @@ class TelegramPointsService {
           }
         }
 
-        // በ 24 ሰዓት ውስጥ የተጠራቀመውን ሰዓት እንጨምራለን (ቻት ሲጻፍ sessionSeconds 0 መሆኑን ማረጋገጥ ይመረጣል)
+        // 🌟 sessionSeconds ከ 0 በላይ ከሆነ እንጨምራለን
         if (sessionSeconds > 0) {
           accumulatedSeconds += sessionSeconds;
 
-          // 30 ደቂቃ (1800 ሰኮንድ) ሞልቶ ከሆነ ብቻ 0.10 ነጥብ ይጨምራል
-          if (accumulatedSeconds >= 1800) {
+          // 30 ደቂቃ (1800 ሰኮንድ) ሲሞላ 0.10 ነጥብ ይጨምራል
+          while (accumulatedSeconds >= 1800) {
             currentPoints += 0.10;
-            accumulatedSeconds = 0;
-            debugPrint('30 ደቂቃ ተሞልቷል! 0.10 ነጥብ ተጨምሯል።');
+            accumulatedSeconds -= 1800; // ቀሪውን ሰኮንድ እንይዛለን
+            debugPrint('30 ደቂቃ ተሞልቷል! 0.10 ነጥብ ተጨምሯል። አጠቃላይ ነጥብ: $currentPoints');
           }
         }
 
         await _supabase.from('user_points').update({
-          'points': currentPoints,
+          'points': double.parse(currentPoints.toStringAsFixed(2)), // ነጥቡን በሁለት ደርዘን ገድበን እንልካለን
           'active_seconds': accumulatedSeconds,
           'last_active_date': todayStr,
           'username': username,
