@@ -182,12 +182,12 @@ class AdminService {
       List leaderboardList = [];
 
       for (var pointRow in pointsResponse) {
-        final telegramId = pointRow['telegram_id'];
+        final telegramId = pointRow['telegram_id']?.toString() ?? 'N/A';
 
         leaderboardList.add({
-          'telegram_id': telegramId ?? 'N/A',
-          'username': profileFullName, // ከ profiles የተገኘው ትክክለኛ ስም
-          'avatar_url': profileAvatarUrl, // ከ profiles የተገኘው የፎቶ ሊንክ
+          'telegram_id': telegramId,
+          'username': profileFullName,
+          'avatar_url': profileAvatarUrl,
           'points': pointRow['points'] ?? 0,
         });
       }
@@ -408,7 +408,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 4: Reward Leaderboard (የፕሮፋይል ፎቶ እና ትክክለኛ ስም ከ profiles የሚመጣበት)
+                      // Tab 4: Reward Leaderboard (የስም እና ID አቀማመጥ የተስተካከለበት)
                       FutureBuilder(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
@@ -436,6 +436,7 @@ class AdminService {
 
                               String username = user['username'] ?? 'ስም የሌለው ተጠቃሚ';
                               String avatarUrl = user['avatar_url'] ?? '';
+                              String telegramId = user['telegram_id'] ?? 'N/A';
 
                               return Container(
                                 margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -450,29 +451,29 @@ class AdminService {
                                     // 🥇 የደረጃ ቁጥር ባጅ
                                     CircleAvatar(
                                       backgroundColor: rankColor,
-                                      radius: 18,
+                                      radius: 16,
                                       child: Text(
                                         '${index + 1}',
-                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
+                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12),
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
+                                    const SizedBox(width: 8),
                                     
-                                    // 🖼️ የፕሮፋይል ፎቶ (ከ profiles ቴብል የሚመጣ)
+                                    // 🖼️ የፕሮፋይል ፎቶ
                                     CircleAvatar(
-                                      radius: 18,
+                                      radius: 16,
                                       backgroundColor: Colors.grey[800],
                                       backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
                                       child: avatarUrl.isEmpty
                                           ? Text(
                                               username.isNotEmpty ? username[0].toUpperCase() : 'U',
-                                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                                             )
                                           : null,
                                     ),
-                                    const SizedBox(width: 10),
+                                    const SizedBox(width: 8),
 
-                                    // 👤 የተጠቃሚው ስም እና ቴሌግራም ID
+                                    // 👤 የተጠቃሚው ስም እና ቴሌግራም ID (በሰፊው ቦታ እንዲታይ የተደረገ)
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,7 +483,7 @@ class AdminService {
                                             username,
                                             style: const TextStyle(
                                               color: Colors.white,
-                                              fontSize: 14,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.bold,
                                             ),
                                             maxLines: 1,
@@ -490,29 +491,31 @@ class AdminService {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            'ID: ${user['telegram_id'] ?? 'N/A'}',
-                                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                            'ID: $telegramId',
+                                            style: const TextStyle(color: Colors.white54, fontSize: 10),
                                             maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            overflow: TextOverflow.visible,
                                           ),
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 4),
 
                                     // 🏆 ነጥብ
                                     Text(
                                       '${user['points'] ?? 0} ነጥብ',
-                                      style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 12),
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 2),
 
                                     // 🎁 የሽልማት መስጫ ቁልፍ
                                     IconButton(
-                                      icon: const Icon(Icons.card_giftcard, color: Colors.amber, size: 22),
+                                      constraints: const BoxConstraints(),
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(Icons.card_giftcard, color: Colors.amber, size: 20),
                                       tooltip: 'ተጠቃሚውን ሽልማት ስጥ',
                                       onPressed: () {
-                                        _showAwardDialog(context, username, user['telegram_id']);
+                                        _showAwardDialog(context, username, telegramId);
                                       },
                                     ),
                                   ],
