@@ -544,7 +544,7 @@ class UserPointsWidget extends StatefulWidget {
 
 class _UserPointsWidgetState extends State<UserPointsWidget> {
   final SupabaseClient supabase = Supabase.instance.client;
-  int userPoints = 0;
+  double userPoints = 0.0;  // ከ int ወደ double ተቀይሯል
   bool isLoading = true;
 
   @override
@@ -565,9 +565,10 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
       if (mounted) {
         setState(() {
           if (response != null && response['points'] != null) {
-            userPoints = (response['points'] as num).toInt();
+            // .toDouble() በመጠቀም የደርዘን ነጥቦቹን በሙሉ እንይዛለን
+            userPoints = (response['points'] as num).toDouble();
           } else {
-            userPoints = 0;
+            userPoints = 0.001;
           }
           isLoading = false;
         });
@@ -629,7 +630,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
                 )
               : Text(
-                  '$userPoints Points',
+                  '${userPoints.toStringAsFixed(3)} Points',
                   style: const TextStyle(
                     color: Colors.amber, // ከሽልማት ጋር የሚሄድ ውብ ወርቃማ ከለር
                     fontSize: 18,
