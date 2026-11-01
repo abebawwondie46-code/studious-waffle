@@ -165,7 +165,6 @@ class AdminService {
         return [];
       }
 
-      // ከ profiles ቴብል ውስጥ የተጠቃሚውን ስም እና ፎቶ እናመጣለን
       final profilesResponse = await _supabase
           .from('profiles')
           .select('full_name, avatar_url')
@@ -408,7 +407,7 @@ class AdminService {
                         },
                       ),
 
-                      // Tab 4: Reward Leaderboard (የመጠኖችና የቅርጸ-ቁምፊዎች መጠን የተቀነሱበት)
+                      // Tab 4: Reward Leaderboard
                       FutureBuilder(
                         future: fetchTopActiveUsers(),
                         builder: (context, snapshot) {
@@ -448,7 +447,7 @@ class AdminService {
                                 ),
                                 child: Row(
                                   children: [
-                                    // 🥇 1 ቁጥር ያለበት ቢጫ ክብ (መጠኑ ቀንሷል)
+                                    // 🥇 1 ቁጥር ያለበት ቢጫ ክብ
                                     CircleAvatar(
                                       backgroundColor: rankColor,
                                       radius: 13,
@@ -459,7 +458,7 @@ class AdminService {
                                     ),
                                     const SizedBox(width: 6),
                                     
-                                    // 🖼️ የፕሮፋይል ፎቶ ክበብ (መጠኑ ቀንሷል)
+                                    // 🖼️ የፕሮፋይል ፎቶ ክበብ
                                     CircleAvatar(
                                       radius: 13,
                                       backgroundColor: Colors.grey[800],
@@ -473,7 +472,7 @@ class AdminService {
                                     ),
                                     const SizedBox(width: 6),
 
-                                    // 👤 ስም እና ID (ፎንታቸውና መጠናቸው ቀንሷል)
+                                    // 👤 ስም እና ID
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,7 +541,7 @@ class AdminService {
     );
   }
 
-  /// ተጠቃሚን የመሸለሚያ ፖፕ-አፕ ዳይሎግ (Award Dialog)
+  /// ተጠቃሚን የመሸለሚያ እና በአፑ ኖቲፊኬሽን የመላኪያ ዳይሎግ (Award & Send Notification)
   static void _showAwardDialog(BuildContext context, String username, String telegramId) {
     final TextEditingController prizeController = TextEditingController();
 
@@ -568,7 +567,7 @@ class AdminService {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'ለዚህ አሸናፊ የሚሰጡትን ሽልማት (ለምሳሌ፦ የብር መጠን፣ ስጦታ ወይም ሰርተፍኬት) ከታች ይጻፉ:',
+              'ለዚህ አሸናፊ የሚሰጡትን ሽልማት (ለምሳሌ፦ 1000 ብር ወይም ስጦታ) ከታች ይጻፉ። ለተጠቃሚው በኖቲፊኬሽን ይደርሰዋል!',
               style: TextStyle(color: Colors.white70, fontSize: 12),
             ),
             const SizedBox(height: 12),
@@ -576,7 +575,7 @@ class AdminService {
               controller: prizeController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'ለምሳሌ፦ 1000 ብር ወይም ልዩ ስጦታ',
+                hintText: 'ለምሳሌ፦ 1000 ብር',
                 hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
                 fillColor: const Color(0xFF16161A),
@@ -596,17 +595,53 @@ class AdminService {
               String prize = prizeController.text.trim();
               if (prize.isEmpty) return;
 
-              Navigator.pop(context);
+              try {
+                // 1. ሽልማቱን በ Supabase ዳታቤዝ 'awards_history' ቴብል መመዝገብ
+                try {
+                  await _supabase.from('awards_history').insert({
+                    'telegram_id': telegramId,
+                    'username': username,
+                    'prize_description': prize,
+                    'created_at': DateTime.now().toIso8601String(),
+                  });
+                } catch (_) {}
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('🎉 $username ውብ ሽልማት ተሰጥቶታል: $prize!'),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
+                // 2. ለአሸናፊው በአፑ የኖቲፊኬሽን ቴብል ('notifications') ማስታወቂያ መላክ
+                try {
+                  await _supabase.from('notifications').insert({
+                    'telegram_id': telegramId,
+                    'title': '🎉 እንኳን ደስ አለዎት! የውድድር አሸናፊ ሆነዋል!',
+                    'message': 'ውድ $username፣ በውድድራችን ከፍተኛ ነጥብ በማስመዝገብ የ $prize ሽልማት ተበርክቶልዎታል።',
+                    'created_at': DateTime.now().toIso8601String(),
+                    'is_read': false,
+                  });
+                } catch (_) {}
+
+                // 3. የተጠቃሚውን ነጥብ ወደ 0 መመለስ
+                await _supabase.from('user_points').update({'points': 0}).eq('telegram_id', telegramId);
+
+                if (!context.mounted) return;
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('🎉 $username የተሰጠው ሽልማት ($prize) ተመዝግቧል፤ ኖቲፊኬሽንም ተልኳል!'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('ሽልማቱን መመዝገብ ተሳክቷል!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
             },
-            child: const Text('ሽልማት ላክ', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            child: const Text('ሽልማት እና ኖቲፊኬሽን ላክ', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ],
       ),
