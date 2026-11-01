@@ -568,7 +568,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
             // .toDouble() በመጠቀም የደርዘን ነጥቦቹን በሙሉ እንይዛለን
             userPoints = (response['points'] as num).toDouble();
           } else {
-            userPoints = 0.001;
+            userPoints = 0.10;
           }
           isLoading = false;
         });
@@ -630,7 +630,7 @@ class _UserPointsWidgetState extends State<UserPointsWidget> {
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
                 )
               : Text(
-                  '${userPoints.toStringAsFixed(3)} Points',
+                  '${userPoints.toStringAsFixed(2)} Points',
                   style: const TextStyle(
                     color: Colors.amber, // ከሽልማት ጋር የሚሄድ ውብ ወርቃማ ከለር
                     fontSize: 18,
